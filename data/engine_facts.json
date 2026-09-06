@@ -1,0 +1,542 @@
+{
+  "schema_version": 1,
+  "generated": "2026-09-05",
+  "facts": [
+    {
+      "id": "text.trigger_color_first_tag_only",
+      "statement": "AoE2DE trigger text channels apply only the first color tag in a message; later color tags do not recolor subsequent text.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/AOE2DE_TEXT_AND_ASSETS.md; docs/AOE2DE_CAPTIONS.md; Timer/Text color-fix live verification",
+      "domains": ["scenario", "text", "trigger"],
+      "lint_rule": {
+        "target": "trigger_effect_text",
+        "predicate": "multiple_color_tags_or_color_tag_not_at_start",
+        "severity": "warning"
+      }
+    },
+    {
+      "id": "text.white_tag_not_supported",
+      "statement": "The literal <WHITE> markup tag is not a supported AoE2DE trigger text color tag and should not be emitted.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/AOE2DE_TEXT_AND_ASSETS.md; Decima intro/color-fix verification",
+      "domains": ["scenario", "text", "trigger"],
+      "lint_rule": {
+        "target": "trigger_effect_text",
+        "predicate": "contains_<WHITE>",
+        "severity": "warning"
+      }
+    },
+    {
+      "id": "scenario.looping_display_effect_spams",
+      "statement": "A looping trigger with a display-instructions effect can emit text every tick after timer conditions become permanently true.",
+      "tier": "engine_verified",
+      "verified_date": "2026-07-21",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC.md; v1 crash eyewitness and v2 safe respin",
+      "domains": ["scenario", "trigger", "text"],
+      "lint_rule": {
+        "target": "trigger_effect",
+        "predicate": "looping && effect_type == display_instructions",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "scenario.active_computer_starter_injection",
+      "statement": "In DE scenario-mode runs, active non-human player slots with zero authored units can receive starter-state injection and contaminate diagnostics; observed negative controls show that placing at least one authored unit suppresses the injection.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V141_CASTLE_KILL_CALIBRATION.md; docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V142_CASTLE_KILL_CALIBRATION.md; chrae editor negative controls: Kill test.aoe2scenario and Fog of war.aoe2scenario",
+      "domains": ["scenario", "player_slots", "diagnostics"],
+      "lint_rule": {
+        "target": "player_slot",
+        "predicate": "active && !human && authored_unit_count == 0",
+        "severity": "warning"
+      }
+    },
+    {
+      "id": "scenario.single_player_lobby_has_no_victory_dropdown",
+      "statement": "The DE single-player scenario lobby does not expose the random-map Victory dropdown; fixture victory behavior must be authored in the scenario.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V14_CASTLE_KILL_CALIBRATION.md; protocol correction from chrae",
+      "domains": ["scenario", "victory", "diagnostics"],
+      "lint_rule": {
+        "target": "documentation",
+        "predicate": "informational",
+        "severity": "info"
+      }
+    },
+    {
+      "id": "scenario.unit_rotation_type_dependent_slot",
+      "statement": "Scenario unit rotation is a type-dependent per-object slot, not always a geometric angle. Confirmed examples: INDIANSTATUES uses integer rotation values as artwork indices across sixteen single-frame angle variants, while Gaia fish units use rotation as an animation-frame/phase selector; ordinary mobile units still use radian facing angles. Authoring consequence: variant-selecting types reward deliberate artwork diversity, while animation-frame types reward deliberate phase choices and tooling must not treat shared phase as under-use.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-20",
+      "fixture_ref": "Mandala Foundry palette/palette-usage readback; chrae author confirmation for fish animation-frame rotation; cross-reference replay.sync_word_4_object_carry_sum for the same generic-slot engine pattern",
+      "domains": ["scenario", "dat", "artwork", "authoring"]
+    },
+    {
+      "id": "xs.scenario_entry_filename_literal",
+      "statement": "AoE2DE scenario XS startup resolves the literal scenario XS filename fields; Map.script_name and Files.script_file_path must agree and name the deployed .xs entry.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/XS_AUTHORING.md; v3 failed-to-open result and corrected run",
+      "domains": ["scenario", "xs", "deploycheck"],
+      "lint_rule": {
+        "target": "xs_attachment",
+        "predicate": "script_name/path mismatch, missing extension, or unresolved deployed entry",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "xs.include_resolves_deployed_tree",
+      "statement": "XS include directives resolve from the deployed XS module tree, not by embedding arbitrary sibling source inside the scenario.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/XS_AUTHORING.md; XS source-of-truth reset",
+      "domains": ["xs", "deploycheck"],
+      "lint_rule": {
+        "target": "xs_include",
+        "predicate": "unresolved include under deploy tree",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "xs.cross_file_symbols_require_extern",
+      "statement": "XS constants or globals referenced across files must be declared with extern in the shared module.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/XS_AUTHORING.md; deploycheck cross-file extern tests",
+      "domains": ["xs", "deploycheck"],
+      "lint_rule": {
+        "target": "xs_symbol",
+        "predicate": "cross_file_use_without_extern",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "xs.script_call_uses_message_field",
+      "statement": "Scenario trigger script_call stores the function call source in the effect message field, not in a separate xs_function scenario field.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "DEX_TASK_xs_source_of_truth_2026-08-13.md; v8 authoring Tier-1 verification",
+      "domains": ["scenario", "xs", "trigger"]
+    },
+    {
+      "id": "xs.file_bare_name_cross_scenario_read",
+      "statement": "XS file I/O can read a sidecar written by another scenario using the bare scenario/file stem convention.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V8_1_XS_RECIPE.json; v9 cross-scenario persistence probe",
+      "domains": ["xs", "persistence", "campaign"]
+    },
+    {
+      "id": "xs.file_append_and_flush_are_observable",
+      "statement": "XS sidecar writes are observable after close/flush behavior; partial files may exist if a fixture ends before writing its footer.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V12_EXECUTIONER_LEDGER.md; v8.2 sidecar recovery",
+      "domains": ["xs", "sidecar", "persistence"]
+    },
+    {
+      "id": "dat.effect_resource_commands_apply_via_scenario_research",
+      "statement": "DAT effect command type 1 resource_modifier and type 6 resource_multiplier apply to the player when their containing technology is invoked by scenario research effects. In DAT Semantics Diagnostic Run 3, XS sidecar rows showed P1 resources moving from 0/0/0/0 to food=1111, wood=100, gold=222, and then wood=300 after the multiplier command.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md; DAT Semantics Diagnostic Run 3.xsdat",
+      "domains": ["dat", "scenario", "technology", "resources"]
+    },
+    {
+      "id": "dat.effect_hitpoint_commands_apply_with_survival_oracle",
+      "statement": "DAT effect command types 0, 4, and 5 can set, add to, and multiply unit hit points when invoked through scenario research effects. In DAT Semantics Diagnostic Run 3, a normal villager castle-fire control disappeared while a villager spawned after set/add/multiply HP commands remained present through the later sidecar check; this proves runtime survival behavior, not direct raw HP values.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md; in-replay human comment at 00:01:21 reported boosted villager HP 2747/2912",
+      "domains": ["dat", "scenario", "technology", "unit_attributes", "hit_points"]
+    },
+    {
+      "id": "dat.effect_enable_unit_not_required_for_scenario_create_object",
+      "statement": "Scenario create_object can create a unit even when that unit is disabled in the player's civ availability table. In DAT Semantics Diagnostic Run 3, a P1 scout created before the enable_unit technology was researched and a second scout created after it; this proves trigger creation bypasses availability and does not prove UI trainability.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md",
+      "domains": ["dat", "scenario", "technology", "unit_availability", "triggers"]
+    },
+    {
+      "id": "scenario.research_effect_force0_bypasses_tech_cost",
+      "statement": "Scenario research-technology effects with force=0 can still invoke a technology effect despite an intentionally unaffordable configured resource cost. In DAT Semantics Diagnostic Run 3, an unforced target technology with 9000 food cost added stone +777 while P1 food remained far below that cost, so this path is not a cost-gated UI-research oracle.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md",
+      "domains": ["scenario", "dat", "technology", "triggers"]
+    },
+    {
+      "id": "dat.effect_set_tech_cost_type_100",
+      "statement": "DAT set_tech_cost is effect command type 100; type 101 is the additive tech-cost modifier path. The DAT Semantics Diagnostic Run 3 expected ledger was corrected after the generated command decoded as type=100, A=target tech, B=resource, C=-1, D=amount.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md; kit dat effect 1426",
+      "domains": ["dat", "technology", "effect_commands"]
+    },
+    {
+      "id": "dat.effect_202_local_building_multiply_attribute",
+      "statement": "DAT effect command type 202 is interpreted as multiply attribute for the local building instance where a type-32 building-specific technology was researched. This follows the official 200/201 local-building command family, the 0/4/5 set/add/multiply arithmetic pattern, and current-DE DAT rows such as Herbal Medicine garrison_heal_rate x6, Masonry/Architecture hit_points x1.1, and Conscription work_rate x1.33.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-09-05",
+      "fixture_ref": "official Update 128442 local-building type 200/201 notes; AGE effect command family oracle; current empires2_x2_p1.dat command matrix",
+      "domains": ["dat", "technology", "effect_commands", "local_building"]
+    },
+    {
+      "id": "dat.effect_204_local_building_advanced_add_attribute",
+      "statement": "DAT effect command type 204 is interpreted as an advanced additive local-building attribute command used by current-DE emplacement-style rows. It carries local-building attribute deltas including scalar combat fields and packed attack/armor values such as 770=(3<<8)+2 pierce armor, 1026=(4<<8)+2 melee armor, and 771=(3<<8)+3 pierce attack.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-09-05",
+      "fixture_ref": "official Update 128442 local-building type 200/201 notes; AGE packed attack/armor oracle; current empires2_x2_p1.dat Defensive/Offensive Emplacement rows",
+      "domains": ["dat", "technology", "effect_commands", "local_building", "attack_armor"]
+    },
+    {
+      "id": "dat.effect_disable_tech_blocks_later_scenario_research",
+      "statement": "DAT disable_tech can block a later scenario research attempt against the disabled target technology. In DAT Semantics Diagnostic Run 3, the positive-control target added stone to 2109, then disable_tech fired, and the disabled target attempt left stone unchanged at 2109.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md",
+      "domains": ["dat", "scenario", "technology", "effect_commands"]
+    },
+    {
+      "id": "dat.effect_upgrade_unit_noop_in_forced_scenario_research_fixture",
+      "statement": "DAT upgrade_unit did not transform units in the tested forced scenario-research path. In DAT Semantics Diagnostic Run 3, the type=3 command row 74->75 was structurally present and invoked, but sidecar rows showed militia=1/man-at-arms=0 before the command, militia=1/man-at-arms=0 after it, and a later create_object militia also remained militia.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md",
+      "domains": ["dat", "scenario", "technology", "effect_commands", "unit_upgrade"]
+    },
+    {
+      "id": "dat.effect_spawn_unit_noop_in_forced_scenario_research_fixture",
+      "statement": "DAT spawn_unit did not add units in the tested forced scenario-research path. In DAT Semantics Diagnostic Run 3, the type=7 spawn villager-at-Town-Center command row was structurally present and invoked while P1 Town Center count stayed stable at 1, but villager count stayed 1 instead of increasing by 2.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-04",
+      "fixture_ref": "save-analysis/diagnostics/a2ksem_run3_results_dir/RUN3_READBACK.md",
+      "domains": ["dat", "scenario", "technology", "effect_commands", "unit_creation"]
+    },
+    {
+      "id": "replay.trigger_chat_not_recorded",
+      "statement": "Trigger-effect chat is not retained in replay chat timelines.",
+      "tier": "engine_verified",
+      "verified_date": "2026-07-18",
+      "fixture_ref": "AI_GUIDE.md replay/feedback boundary; SDSDBGBridge telemetry tests",
+      "domains": ["replay", "chat", "trigger"]
+    },
+    {
+      "id": "replay.ai_chat_recorded",
+      "statement": "Custom AI chat is recorded in replays and can be used as a telemetry bridge.",
+      "tier": "engine_verified",
+      "verified_date": "2026-07-18",
+      "fixture_ref": "SDSDBGBridge AI-chat bridge verification; AI_GUIDE.md",
+      "domains": ["replay", "chat", "ai"]
+    },
+    {
+      "id": "replay.initial_chat_backlog_injection",
+      "statement": "AoE2DE can inject prior-session chat into the early body chat timeline; same-timestamp bursts near game start should be treated as backlog candidates.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V12_READBACK_AND_GENERATION_REPORT.md",
+      "domains": ["replay", "chat"]
+    },
+    {
+      "id": "replay.game_end_may_omit_final_defeat",
+      "statement": "AoE2DE recordings can terminate at game end before recording a final losing player's defeat/resign event; end-of-stream absence of a defeat is not by itself winner evidence and must be corroborated with team/outcome context.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "cba2.aoe2record chrae live diagnosis; CBA team-outcome regression",
+      "domains": ["replay", "result", "retention"]
+    },
+    {
+      "id": "replay.lobby_chat_buffer_limit_51",
+      "statement": "The replay lobby-chat parser observes a bounded recent lobby-chat buffer; current evidence supports a 51-line retained window.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-13",
+      "fixture_ref": "DEX_TASK_kit_wishlist_2026-08-13.md; lobby chat real-corpus smoke",
+      "domains": ["replay", "chat", "lobby"]
+    },
+    {
+      "id": "replay.sync_word_1_resource_sum",
+      "statement": "Replay op=2 checksum matrix word_1 is the current stockpiled food+wood+stone+gold sum for the player row.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V12_READBACK_AND_GENERATION_REPORT.md; docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.sync_word_2_unit_type_sum",
+      "statement": "Replay op=2 checksum matrix word_2 tracks the current living object unit-type-id sum for the player row.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_V5_READBACK.md; v7 checksum calibration",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.sync_word_6_object_count",
+      "statement": "Replay op=2 checksum matrix word_6 tracks the current living object count for the player row.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_V5_READBACK.md; v12 readback",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.sync_word_7_position_linked",
+      "statement": "Replay op=2 checksum matrix word_7 tracks the current checksum-counted object position sum as (x+y)*100. In the all-visible Kill Factory run, the trigger-created P2 Chu Ko Nu at tile (6,10) added +1700, matching center coordinates (6.5+10.5)*100; the desync p0-sync object dump independently exposes the same XY100 aggregate candidate.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/WORD7_POSITION_SUM_READBACK_2026-08-19.md; docs/KILL_FACTORY_READBACK_2026-08-18.md; docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.sync_word_8_player_number",
+      "statement": "Replay op=2 checksum matrix word_8 carries the player number for the row.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V12_READBACK_AND_GENERATION_REPORT.md; sync matrix row proof",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.sync_word_10_object_id_sum",
+      "statement": "Replay op=2 checksum matrix word_10 tracks a current living object instance-id sum for the player row.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_V5_READBACK.md; v12 delete semantics readback",
+      "domains": ["replay", "sync", "checksum"]
+    },
+    {
+      "id": "replay.checksum_removal_not_kill_attribution",
+      "statement": "A checksum object-count removal is evidence that an object disappeared from a player's current object set; it is not by itself a death, kill, raze, or player-caused action.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V12_READBACK_AND_GENERATION_REPORT.md",
+      "domains": ["replay", "sync", "combat"]
+    },
+    {
+      "id": "replay.fog_reveal_markers_count_as_objects",
+      "statement": "Under normal fog, AoE2DE can add counted vision-marker objects to replay op=2 checksum rows. In the Kill Factory A/B, the fog-on run added three unit 112 fog-reveal marker objects to P1 and P2 rows (+336 unit-type sum, +3 objects), while the all-visible run had zero unit 112 objects and P1 remained exactly one Castle object throughout.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/KILL_FACTORY_READBACK_2026-08-18.md",
+      "domains": ["replay", "sync", "checksum", "fog"]
+    },
+    {
+      "id": "replay.player_flare_ping_counts_in_all_rows",
+      "statement": "A player flare ping is represented in replay checksum rows as unit 274 FLARE2 and is counted once in every target player's row for the sampling window. In the all-visible Kill Factory run, a single P1 flare targeting players 1-4 produced simultaneous +274 unit-type sum, +3 word_3, and +15 word_4 in all four rows.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/KILL_FACTORY_READBACK_2026-08-18.md",
+      "domains": ["replay", "sync", "checksum", "flare"]
+    },
+    {
+      "id": "replay.unit_death_replaces_live_unit_with_corpse",
+      "statement": "A unit death need not decrement replay checksum object count immediately. In the Kill Factory run, unit 73 CHUKN became unit 28 CHUKN_D, producing a unit-type-sum delta of -45 with no object-count decrement; the later corpse expiration is the separate disappearance event.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/KILL_FACTORY_READBACK_2026-08-18.md",
+      "domains": ["replay", "sync", "checksum", "combat"]
+    },
+    {
+      "id": "replay.sync_word_4_object_carry_sum",
+      "statement": "Replay op=2 checksum matrix word_4 is the sum of the per-object carry field for the row's current checksum-counted objects. The field is generic: villagers use carry for held resources, monks for faith, flares/markers for lifetime, and corpses/rubble for decay timer. In the 500473166 desync comparison, P1 log carry_sum was 1972 versus replay word_4 1935 across a 9.152s gap; P2 log carry_sum was 829, and subtracting the KIPCHAK_D corpse carry of 297 gives 532 versus replay word_4 527.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt; docs/KILL_FACTORY_READBACK_2026-08-18.md",
+      "domains": ["replay", "sync", "checksum", "object_state", "combat"]
+    },
+    {
+      "id": "replay.sync_word_4_not_raw_retarget_timer_sum",
+      "statement": "Replay op=2 checksum matrix word_4 is not the raw sum of object retargetTimer values. In the 500473166 desync rough comparison, P1's nearest replay word_4 was 1935 while the first sync-log P1 retargetTimer sum was 303693.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "checksum", "object_state"]
+    },
+    {
+      "id": "replay.sync_word_4_not_raw_research_or_train_timer_sum",
+      "statement": "Replay op=2 checksum matrix word_4 is not a raw active research/training timer sum in the Silent Frontier probe. P1 Feudal research ran from 00:11:01 to 00:13:11 while word_4 stayed at 0 across every checksum sample in that window; later dense unit-queue/research windows around 00:38:03-00:42:04 kept word_4 flat at 25 while other object aggregate words moved.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/SILENT_FRONTIER_WORD4_TIMER_READBACK_2026-08-19.md; diagnostics/SP Replay v101.103.48987.0 @2026.08.18 185848.aoe2record",
+      "domains": ["replay", "sync", "checksum", "object_state", "research", "training"]
+    },
+    {
+      "id": "replay.checksum_matrix_does_not_include_object_hp",
+      "statement": "Trigger-driven object hit point changes did not affect the replay op=2 checksum matrix in the pavilion HP control: a P1 unit 626 pavilion was repeatedly modified by +19 HP and reached 1469 HP in the UI while the player's checksum object words stayed frozen across 36 samples.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/WORD9_PHASE_REVIEW_2026-08-18.md; diagnostics/SP Replay v101.103.48987.0 @2026.08.18 165104.aoe2record",
+      "domains": ["replay", "sync", "checksum", "object_state"]
+    },
+    {
+      "id": "replay.sync_word_3_object_state_weight",
+      "statement": "Replay op=2 checksum matrix word_3 is best explained as the sum of the engine per-object state field for the player's current objects. Normal living objects mostly contribute state=2; flares/markers contribute state=3; corpse/rubble rows observed in the 500473166 desync log contribute state=5, so the +3 death-replacement fixture delta is the live-to-corpse state delta (5-2), not the corpse's absolute state.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V7_CHECKSUM_CALIBRATION.md; docs/KILL_FACTORY_READBACK_2026-08-18.md; docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "checksum", "object_state"]
+    },
+    {
+      "id": "replay.sync_log_object_state_enumeration_sample",
+      "statement": "The 500473166 desync p0-sync object dump exposed a concrete object-state census: state=2 appeared on 5672 rows and is the normal living-object state; state=3 appeared on 318 FLARE rows with hp=0; state=5 appeared on 70 hp=0 rows dominated by _D corpses, with a few zero-carry projectile rows also present. States 0, 4, 7, and 8 were rare in this artifact and remain uncharacterized.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "desync", "object_state"]
+    },
+    {
+      "id": "replay.defeated_row_word2_word6_stabilizes",
+      "statement": "In the Dawn Accord manual kill probe, rows narrated as defeated stopped changing checksum word_2 and word_6 after the defeat window while another checksum word continued periodic drift; this is a defeat-state signature candidate, not defeat proof.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/DAWN_ACCORD_KILL_ATTRIBUTION_READBACK_2026-08-14.md",
+      "domains": ["replay", "sync", "checksum", "combat"]
+    },
+    {
+      "id": "replay.campaign_kill_probe_no_clean_killer_counter",
+      "statement": "In the Bohemond of Taranto spaced manual kill probe, decoded replay checksum rows bracket victim-side object lifecycle changes, but no decoded P1 checksum word behaved as a clean killer-side kill counter and victim row deltas did not reliably equal narrated unit-type IDs.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/BOHEMOND_KILL_PROBE_READBACK_2026-08-14.md",
+      "domains": ["replay", "sync", "checksum", "combat"]
+    },
+    {
+      "id": "replay.v15_no_clean_checksum_kill_counter",
+      "statement": "In the v15 Castle Kill Ground Truth run, the XS sidecar showed P1 credited kills attr20 moving 0->1->2->3, but no P1 replay op=2 checksum word mirrored that sequence; word_8 remained the player number and only false-matched while attr20 was 1.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md",
+      "domains": ["replay", "sync", "checksum", "combat"]
+    },
+    {
+      "id": "xs.kill_attrs_directed_counters_v15",
+      "statement": "In the v15 Castle Kill Ground Truth run, XS player attribute 20 tracked P1 total credited kills and the directed kill attributes agreed with victim incoming-from-P1 attr326 for actual credited kills: P1 vs P3 = P3 attr326 = 1 and P1 vs P4 = P4 attr326 = 2; P2 killed-by-others attr154 reached 2 while P2 attr326 stayed 0, showing attr154 is not directed killed-by-P1.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md",
+      "domains": ["xs", "score", "combat", "kills"]
+    },
+    {
+      "id": "xs.directed_kill_counters_resist_attr20_noise_v16",
+      "statement": "In the v16 Semantic Promotion run, P1 aggregate kills attr20 ended at 8 while the fixture's expected kill column was 4 after uncontrolled wandering-unit noise. P1 directed outgoing counters attr302/303/304 ended 1/2/1 and exactly matched victim incoming-from-P1 attr326 for P2/P3/P4, showing the directed counters were narrower than aggregate attr20 in this noisy engine run. The victim distribution did not match the original plan, so this supports directed-counter robustness, not exact fixture execution.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V16_READBACK.md",
+      "domains": ["xs", "score", "combat", "kills"]
+    },
+    {
+      "id": "replay.sync_word_9_not_displayed_score",
+      "statement": "In the Emperor Romanos II all-visible visible-score probe, replay checksum word_9 did not match displayed player score or one fixed displayed-score scale; P1 visible score rose 1040->1187 while P1 word_9 moved 2098->1966, and defeated enemy rows used sentinel-like word_9 values near 0xFFFFFFFF while visible scores floored at the all-visible exploration component of 1000.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["replay", "sync", "checksum", "score"]
+    },
+    {
+      "id": "replay.sync_word_9_not_exploration_only",
+      "statement": "In the Dawn Accord autoscout/fog probe, P1's position-linked checksum word_7 froze during the narrated autoscout-off window, but P1 word_9 still changed 1019->1204->1145; word_9 is therefore not explained solely by movement or exploration drift.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/SCORE_WORD9_FOG_ADDENDUM_2026-08-14.md",
+      "domains": ["replay", "sync", "checksum", "score", "fog"]
+    },
+    {
+      "id": "replay.checksum_matrix_identical_across_multiplayer_povs",
+      "statement": "Two independent POV recordings of the same ranked multiplayer match produced identical replay op=2 checksum matrices for every checksum sample, player row, and word 0..10 when report-local path fields were ignored. This proves the tested multiplayer checksum matrix is synced simulation state rather than local camera/input state.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/CROSS_POV_CHECKSUM_MATRIX_READBACK_2026-08-18.md; save-analysis/insights_rm_pov5725572.zip; save-analysis/insights_rm_team_493687875.zip",
+      "domains": ["replay", "sync", "checksum", "multiplayer"]
+    },
+    {
+      "id": "replay.desync_sync_log_exposes_local_object_state",
+      "statement": "AoE2DE desync p0-sync logs expose local client-computed object state in text form, including object name, instance id, dbid, hp, x/y/z position, state, carry, actionType, actionState, and retargetTimer inside per-player object dumps.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "desync", "object_state"]
+    },
+    {
+      "id": "replay.desync_sync_log_exposes_truncated_player_attributes",
+      "statement": "AoE2DE desync p0-sync logs expose a per-player Attributes block that declares a 601-wide player attribute array, but the 500473166 artifact printed only indices 0, 1, 2, and 3 in each of 20 player blocks. Attr20 kills, attr154 deaths, and directed kill/death attributes were not printed in this artifact.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "desync", "player_attributes", "combat"]
+    },
+    {
+      "id": "replay.sync_word_1_engine_resource_attributes",
+      "statement": "Replay op=2 checksum matrix word_1 is supported by engine text output as the sum of player attributes 0..3, the food/wood/stone/gold stockpile. In the 500473166 desync rough comparison, P1's printed attr0..3 sum was 1090.697 versus replay word_1 1538 in the nearest prior checksum sample 9.152 seconds earlier; the comparison is directional rather than exact because the windows do not overlap.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-19",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "desync", "checksum", "resources"]
+    },
+    {
+      "id": "replay.desync_sync_log_exposes_rng_streams",
+      "statement": "AoE2DE desync p0-sync logs expose eight separately named RNG streams in text form: Action, World, AI, Object, Player, Editor, Comm, and UI, with SetSeed and Rand events tied to engine callsite labels and line numbers.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/desync_500473166_p0-sync.txt",
+      "domains": ["replay", "sync", "desync", "rng"]
+    },
+    {
+      "id": "replay.desync_pov_replays_share_received_checksum_stream",
+      "statement": "In the 500473166 desync fixture, two POV replay files had identical op=2 checksum matrices after ignoring report-local source offsets, while the p0-sync text log exposed later local-computation state. Replay cross-POV diffing alone cannot diagnose this desync class.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-18",
+      "fixture_ref": "docs/DESYNC_SYNC_LOG_READBACK_2026-08-18.md; save-analysis/diagnostics/MP Replay v101.103.48987.0 @2026.08.18 215323 (1).aoe2record; save-analysis/diagnostics/desync_pov2_500473166.zip",
+      "domains": ["replay", "sync", "desync", "checksum"]
+    },
+    {
+      "id": "score.defeated_player_visible_floor_1000",
+      "statement": "In the Emperor Romanos II all-visible visible-score probe, defeated players' visible scores floored at exactly 1000 for both Red and Yellow; this is the 100 percent explored endpoint of the exploration score component, not a universal defeat constant.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/SCORE_PROBE_READBACK_2026-08-14.md; docs/FOGGED_SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["score", "defeat"]
+    },
+    {
+      "id": "score.exploration_component_10_per_percent",
+      "statement": "AoE2DE score includes an exploration component of 10 points per percent map explored. Evidence: the all-visible Romanos defeat floor was 1000 at 100 percent explored, and the fogged Shahanshah Kavadh postgame screens showed Technology/exploration score 40 at 4 percent explored and 10 at 1 percent explored.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/SCORE_PROBE_READBACK_2026-08-14.md; docs/FOGGED_SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["score", "defeat", "fog"]
+    },
+    {
+      "id": "score.technology_score_includes_exploration",
+      "statement": "AoE2DE postgame Statistics Technology score includes the exploration component: in the Shahanshah Kavadh fogged score probe, Research Count was 0 for all players while Technology score was 40/10/10/10 for Percent Map Explored 4/1/1/1.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/FOGGED_SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["score", "postgame", "fog"]
+    },
+    {
+      "id": "postgame.statistics_screens_ground_truth_richer_than_replay_op6",
+      "statement": "AoE2DE postgame Statistics screens can show per-player score components, kills/losses, research count, and percent map explored even when the recorded replay op=6 postgame payload contains only metadata/leaderboard/world-time blocks and no serialized per-player stats.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/FOGGED_SCORE_PROBE_READBACK_2026-08-14.md; docs/FULL_PARSE_SPEC.md",
+      "domains": ["score", "postgame", "replay"]
+    },
+    {
+      "id": "score.display_x_slash_y_own_and_team_score",
+      "statement": "AoE2DE's in-game score display appears to use X/Y as own score / combined team score; this is consistent with chrae's fogged score screenshot transcription and the prior team-score mean observations, but still needs a deliberately nontrivial team composition probe before engine_verified promotion.",
+      "tier": "strong_hypothesis",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/FOGGED_SCORE_PROBE_READBACK_2026-08-14.md; docs/SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["score", "team"]
+    },
+    {
+      "id": "score.team_score_floor_mean",
+      "statement": "In the Emperor Romanos II visible-score probe, the displayed allied team score matched floor(mean(member visible scores)) across six score readings.",
+      "tier": "engine_verified",
+      "verified_date": "2026-08-14",
+      "fixture_ref": "docs/SCORE_PROBE_READBACK_2026-08-14.md",
+      "domains": ["score", "team"]
+    }
+  ]
+}

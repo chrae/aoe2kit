@@ -1,0 +1,82 @@
+{
+  "schema": "aoe2kit.credits.v1",
+  "project": "AoE2Kit",
+  "license": "LGPL-3.0-only",
+  "generated_by": "maintained manually; expose with kit credits",
+  "dependencies": [],
+  "references": [
+    {
+      "id": "age",
+      "category": "tool",
+      "name": "Advanced Genie Editor (AGE)",
+      "authors": ["Tapsa and contributors"],
+      "url": "https://github.com/Tapsa/AGE",
+      "license": "GPL-3.0",
+      "permission": "GPL-3.0",
+      "gave": "A long-standing open-source Genie DAT editor and practical oracle for DAT editing behavior, command terminology, and field naming.",
+      "role": "DAT editor oracle and terminology reference",
+      "relationship": "reference_implementation_and_behavior_oracle",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "give_back_status": "prepared_by_lgpl_release_and_notice",
+      "correction_state": "open_to_correction",
+      "credit": "AoE2Kit's DAT authoring and semantic naming work was informed by AGE's long-standing Genie DAT editor behavior, command names, and field terminology. AGE is credited deliberately as a reference and behavior oracle.",
+      "notes": [
+        "AoE2Kit does not vendor AGE source code.",
+        "AGE remains the community reference editor for Genie DAT files.",
+        "Where AoE2Kit uses AGE-shaped terminology, behavior is still verified through AoE2Kit roundtrip/readback tests and engine evidence when available.",
+        "Personal thanks to Tapsa is a human action and remains owed until it is actually sent."
+      ]
+    },
+    {
+      "id": "genieutils",
+      "category": "tool",
+      "name": "genieutils",
+      "authors": ["Tapsa and contributors"],
+      "url": "https://github.com/Tapsa/genieutils",
+      "license": "LGPL-3.0",
+      "permission": "LGPL-3.0",
+      "gave": "Open-source Genie file library/tooling and a cautionary reference for codec scope, API shape, and file-corruption risk.",
+      "role": "Genie file tooling reference",
+      "relationship": "format_reference",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "AoE2Kit's DAT codec work was designed in conversation with the shape and risks of existing Genie tooling, including genieutils, while choosing a Go-native codec and verification-first architecture.",
+      "notes": [
+        "AoE2Kit does not vendor genieutils source code.",
+        "The codec architecture favors explicit spans, roundtrip gates, and narrow verified writes."
+      ]
+    },
+    {
+      "id": "aoc-mgz",
+      "category": "tool",
+      "name": "aoc-mgz",
+      "authors": ["happyleavesaoc and contributors"],
+      "url": "https://github.com/happyleavesaoc/aoc-mgz",
+      "license": "MIT",
+      "permission": "MIT",
+      "gave": "A mature recorded-game parser ecosystem and reference point for AoE2 replay parsing.",
+      "role": "Recorded-game parser reference",
+      "relationship": "format_reference",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "AoE2Kit's replay work benefits from the aoc-mgz ecosystem and keeps replay claims explicit about what is parsed, inferred, or still opaque."
+    },
+    {
+      "id": "aoe2de-ugc-guide",
+      "category": "documentation",
+      "name": "AoE2DE UGC Guide",
+      "url": "https://ugc.aoe2.rocks/",
+      "permission": "public documentation reference",
+      "gave": "Public documentation for AoE2DE scenario, trigger, XS, and modding concepts.",
+      "role": "Scenario, trigger, XS, and data-mod documentation reference",
+      "relationship": "documentation_reference",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "AoE2Kit uses the UGC Guide as a public reference point for scenario, trigger, XS, and modding concepts, then validates critical behavior against real files and engine runs."
+    }
+  ]
+}

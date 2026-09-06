@@ -1,0 +1,24 @@
+# Local scratch and editor noise.
+*.log
+*.tmp
+*.bak
+*~
+.DS_Store
+
+# Test/build byproducts that are not part of the portable kit payload.
+coverage.out
+dist/
+tmp/
+
+# Compiled binaries: built locally for our own use, never tracked.
+# The kit is distributed as SOURCE; ship a binary only when we know the target.
+/kit
+/cba
+/bin/
+/build/go/
+/build/diagnostics/
+/build/kit-*
+
+# Local handoff archive produced by `./kit pack AoE2Kit.zip`.
+/AoE2Kit.zip
+/AoE2Kit.zip.sha256
