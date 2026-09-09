@@ -3406,6 +3406,9 @@ type PaletteRow struct {
 	UnitID           int    `json:"unit_id"`
 	UnitName         string `json:"unit_name"`
 	CivIndices       []int  `json:"civ_indices,omitempty"`
+	UnitType         int    `json:"unit_type"`
+	UnitClass        int16  `json:"unit_class"`
+	UnitClassName    string `json:"unit_class_name,omitempty"`
 	StandingGraphic1 int    `json:"standing_graphic_1"`
 	GraphicName      string `json:"graphic_name,omitempty"`
 	FileName         string `json:"file_name,omitempty"`
@@ -3418,6 +3421,7 @@ type PaletteRow struct {
 	Classification   string `json:"classification"`
 	Confidence       string `json:"confidence"`
 	Evidence         string `json:"evidence"`
+	RotationEncoding string `json:"rotation_encoding,omitempty"`
 }
 
 type PatchReport struct {
@@ -4217,7 +4221,10 @@ package enginefacts // import "aoe2kit/pkg/enginefacts"
 
 CONSTANTS
 
-const EngineVerified = "engine_verified"
+const (
+	EngineVerified = "engine_verified"
+	SourceVerified = "source_verified"
+)
 
 FUNCTIONS
 
@@ -4554,6 +4561,8 @@ type SLDExportReport struct {
 	Source       string                 `json:"source"`
 	OutputDir    string                 `json:"output_dir"`
 	Frames       int                    `json:"frames"`
+	ManifestPath string                 `json:"manifest_path,omitempty"`
+	ContactSheet string                 `json:"contact_sheet,omitempty"`
 	Exported     []SLDExportedFrame     `json:"exported,omitempty"`
 	Warnings     []string               `json:"warnings,omitempty"`
 }
@@ -4569,6 +4578,11 @@ type SLDExportedFrame struct {
 	Height       int    `json:"height"`
 	HotspotX     int    `json:"hotspot_x"`
 	HotspotY     int    `json:"hotspot_y"`
+	LayerOffsetX int    `json:"layer_offset_x"`
+	LayerOffsetY int    `json:"layer_offset_y"`
+	LayerWidth   int    `json:"layer_width"`
+	LayerHeight  int    `json:"layer_height"`
+	OpaquePixels int    `json:"opaque_pixels"`
 }
 
 type SLDFrame struct {
@@ -4602,6 +4616,29 @@ type SLDLayer struct {
 	Unknown       uint8  `json:"unknown,omitempty"`
 	CommandCount  int    `json:"command_count,omitempty"`
 	DrawBlocks    int    `json:"draw_blocks,omitempty"`
+}
+
+type SLDManifest struct {
+	Version      string                 `json:"version"`
+	Verification aoe2.VerificationClaim `json:"verification"`
+	Source       string                 `json:"source"`
+	FrameCount   int                    `json:"frame_count"`
+	Frames       []SLDManifestFrame     `json:"frames"`
+}
+
+type SLDManifestFrame struct {
+	Index        int    `json:"index"`
+	FrameIndex   uint16 `json:"frame_index"`
+	PNG          string `json:"png"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	AnchorX      int    `json:"anchor_x"`
+	AnchorY      int    `json:"anchor_y"`
+	LayerOffsetX int    `json:"layer_offset_x"`
+	LayerOffsetY int    `json:"layer_offset_y"`
+	LayerWidth   int    `json:"layer_width"`
+	LayerHeight  int    `json:"layer_height"`
+	OpaquePixels int    `json:"opaque_pixels"`
 }
 ```
 
@@ -5361,13 +5398,20 @@ type ChatReport struct {
 func ExtractChat(path string) (*ChatReport, error)
 
 type ChecksumPhaseAllReport struct {
-	Path         string                 `json:"path,omitempty"`
-	Method       string                 `json:"method"`
-	Verification string                 `json:"verification"`
-	Words        []*ChecksumPhaseReport `json:"words"`
+	Path         string                  `json:"path,omitempty"`
+	Method       string                  `json:"method"`
+	Verification string                  `json:"verification"`
+	Summary      ChecksumPhaseAllSummary `json:"summary"`
+	Words        []*ChecksumPhaseReport  `json:"words"`
 }
 
 func BuildChecksumPhaseAll(path string, opts ChecksumPhaseOptions) (*ChecksumPhaseAllReport, error)
+
+type ChecksumPhaseAllSummary struct {
+	ChecksumSamples int `json:"checksum_samples"`
+	Players         int `json:"players"`
+	Words           int `json:"words"`
+}
 
 type ChecksumPhaseOptions struct {
 	WordIndex int
@@ -6052,6 +6096,7 @@ type EffectiveDataModCheckReport struct {
 	Method            string                         `json:"method"`
 	Verification      string                         `json:"verification"`
 	Verdict           string                         `json:"verdict"`
+	DataSet           DataSetIdentity                `json:"data_set_identity"`
 	TemplateCheck     EffectiveTemplateCheck         `json:"template_check"`
 	TargetTemplate    EffectiveDataTemplate          `json:"target_template"`
 	BaselineTemplate  *EffectiveDataTemplate         `json:"baseline_template,omitempty"`
@@ -9019,11 +9064,82 @@ type RWDRow struct {
 }
 ```
 
+## aoe2kit/pkg/rpgshop
+
+```go
+package rpgshop // import "aoe2kit/pkg/rpgshop"
+
+
+CONSTANTS
+
+const (
+	DemoScenarioName = "A2K RPG Shop Demo"
+)
+
+FUNCTIONS
+
+func DemoRecipe(xsPath string, timestamp int) scenario.Recipe
+func XSModule() string
+
+TYPES
+
+type DemoOptions struct {
+	OutputDir    string
+	ScenarioName string
+	Timestamp    int
+}
+
+type DemoReport struct {
+	OutputDir          string               `json:"output_dir"`
+	ScenarioPath       string               `json:"scenario_path"`
+	BaseScenarioPath   string               `json:"base_scenario_path"`
+	RecipePath         string               `json:"recipe_path"`
+	XSPath             string               `json:"xs_path"`
+	InstructionsPath   string               `json:"instructions_path"`
+	ManifestPath       string               `json:"manifest_path"`
+	ScenarioSHA256     string               `json:"scenario_sha256"`
+	XSSHA256           string               `json:"xs_sha256"`
+	BlankReport        scenario.BlankReport `json:"blank_report"`
+	PatchReport        scenario.PatchReport `json:"patch_report"`
+	Variables          []DemoVariable       `json:"variables"`
+	ShopItems          []DemoShopItem       `json:"shop_items"`
+	VerificationClaims []string             `json:"verification_claims"`
+	KnownGaps          []string             `json:"known_gaps"`
+	Files              map[string]string    `json:"files"`
+}
+
+func BuildHeroShopDemo(opts DemoOptions) (*DemoReport, error)
+
+type DemoShopItem struct {
+	Scope      string `json:"scope"`
+	Item       string `json:"item"`
+	Player     int    `json:"player"`
+	Hero       int    `json:"hero"`
+	TokenUnit  int    `json:"token_unit"`
+	HeroUnit   int    `json:"hero_unit"`
+	Cost       int    `json:"cost"`
+	UnlockNote string `json:"unlock_note"`
+}
+
+type DemoVariable struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Scope string `json:"scope"`
+}
+```
+
 ## aoe2kit/pkg/scenario
 
 ```go
 package scenario // import "aoe2kit/pkg/scenario"
 
+
+CONSTANTS
+
+const (
+	MinScenarioMapSize = 80
+	MaxScenarioMapSize = 480
+)
 
 FUNCTIONS
 
@@ -9037,6 +9153,7 @@ func DeflateRaw(payload []byte) ([]byte, error)
 func EffectTypeForOp(op string) (int, bool)
 func EffectTypeName(effectType int) string
 func InflateRaw(compressed []byte) ([]byte, error)
+func ScenarioMapPresetSizesString() string
 func StringContainsDisconnectRecipeFile(path string, text string) ([]int, ReferenceReport, Recipe, error)
 func StringDisconnectRecipeFile(path string, stringID int) (ReferenceReport, Recipe, error)
 func StringPrefixDisconnectRecipeFile(path string, prefix string) ([]int, ReferenceReport, Recipe, error)
@@ -9053,6 +9170,7 @@ func UnitCaptionPrefixDisconnectRecipeFile(path string, prefix string, targetPla
 func UnitDisconnectRecipeFile(path string, referenceID int) (ReferenceReport, Recipe, error)
 func UnitTypeDisconnectRecipeFile(path string, unitConst int, targetPlayer *int) ([]int, ReferenceReport, Recipe, error)
 func UnitsPlayerDisconnectRecipeFile(path string, player int) ([]int, ReferenceReport, Recipe, error)
+func ValidateScenarioMapSize(width, height int) error
 func VariableContainsDisconnectRecipeFile(path string, text string) ([]int, ReferenceReport, Recipe, error)
 func VariableDisconnectRecipeFile(path string, variableID int) (ReferenceReport, Recipe, error)
 func VariableNameDisconnectRecipeFile(path string, name string) (int, ReferenceReport, Recipe, error)
@@ -9088,6 +9206,8 @@ type AnalysisReport struct {
 type BlankOptions struct {
 	PlayerCount       int
 	HumanSlots        int
+	MapWidth          int
+	MapHeight         int
 	Timestamp         int
 	ClearTriggers     bool
 	KeepSeedTriggers  bool
@@ -9098,6 +9218,7 @@ type BlankOptions struct {
 	DummySpacing      float64
 	InactiveRestHuman bool
 	GaiaActive        bool
+	NoConquest        bool
 }
 
 type BlankReport struct {
@@ -9106,16 +9227,22 @@ type BlankReport struct {
 	Version            string `json:"version"`
 	PlayerCount        int    `json:"player_count"`
 	HumanSlots         int    `json:"human_slots"`
+	MapWidth           int    `json:"map_width"`
+	MapHeight          int    `json:"map_height"`
+	TileCount          int    `json:"tile_count"`
 	ClearTriggers      bool   `json:"clear_triggers"`
 	DummyStarters      bool   `json:"dummy_starters"`
 	DummyUnit          int    `json:"dummy_unit,omitempty"`
 	GaiaActive         bool   `json:"gaia_active"`
+	NoConquest         bool   `json:"no_conquest"`
 	TriggerCountBefore int    `json:"trigger_count_before"`
 	TriggerCountAfter  int    `json:"trigger_count_after"`
 	UnitCountBefore    int    `json:"unit_count_before"`
 	UnitCountAfter     int    `json:"unit_count_after"`
 	RebuildOK          bool   `json:"rebuild_ok"`
 	InvariantOK        bool   `json:"invariant_ok"`
+	EditorParityOK     bool   `json:"editor_parity_ok"`
+	EditorParityNote   string `json:"editor_parity_note,omitempty"`
 	Verification       string `json:"verification"`
 }
 
@@ -9147,6 +9274,15 @@ type ConditionRecipe struct {
 	TargetPlayer                   *int   `json:"target_player,omitempty"`
 	IncludeChangeableWeaponObjects *int   `json:"include_changeable_weapon_objects,omitempty"`
 	Inverted                       *int   `json:"inverted,omitempty"`
+}
+
+type ConditionSummary struct {
+	TriggerIndex   int            `json:"trigger_index,omitempty"`
+	TriggerName    string         `json:"trigger_name,omitempty"`
+	ConditionIndex int            `json:"condition_index,omitempty"`
+	Type           int            `json:"type"`
+	TypeName       string         `json:"type_name"`
+	KnownFields    map[string]any `json:"known_fields,omitempty"`
 }
 
 type CreateKillLoopSample struct {
@@ -9354,6 +9490,7 @@ type EffectRecipe struct {
 	Resource2Quantity          *int     `json:"resource_2_quantity,omitempty"`
 	Resource3                  *int     `json:"resource_3,omitempty"`
 	Resource3Quantity          *int     `json:"resource_3_quantity,omitempty"`
+	StringID                   *int     `json:"string_id,omitempty"`
 	ForceResearchTechnology    *int     `json:"force_research_technology,omitempty"`
 	VisibilityState            *int     `json:"visibility_state,omitempty"`
 	Scroll                     *int     `json:"scroll,omitempty"`
@@ -9528,6 +9665,8 @@ func (f *File) AddTrigger(recipe TriggerRecipe) error
 
 func (f *File) AddUnit(recipe UnitRecipe) error
 
+func (f *File) AddUnits(recipes []UnitRecipe) error
+
 func (f *File) AddVariable(recipe VariableRecipe) error
 
 func (f *File) Analyze() AnalysisReport
@@ -9602,6 +9741,8 @@ func (f *File) RemoveUnitsInArea(recipe UnitRecipe) (int, error)
 
 func (f *File) RemoveVariable(recipe VariableRecipe) error
 
+func (f *File) ResizeMap(width, height int) error
+
 func (f *File) SetDiplomacy(recipe DiplomacyRecipe) error
 
 func (f *File) SetDiplomacyOptions(recipe DiplomacyOptionsRecipe) error
@@ -9623,6 +9764,8 @@ func (f *File) SetTerrainRect(recipe MapRecipe) error
 func (f *File) SetXS(recipe XSRecipe) error
 
 func (f *File) SetXSCarrier(recipe XSRecipe, content string) error
+
+func (f *File) SetXSInlineRuntime(recipe XSRecipe, content string) error
 
 func (f *File) Settings() SettingsReport
 
@@ -9850,6 +9993,9 @@ type PaletteUsageRow struct {
 	UnitID                int       `json:"unit_id"`
 	UnitName              string    `json:"unit_name"`
 	Placements            int       `json:"placements"`
+	UnitType              int       `json:"unit_type"`
+	UnitClass             int16     `json:"unit_class"`
+	UnitClassName         string    `json:"unit_class_name,omitempty"`
 	StandingGraphic1      int       `json:"standing_graphic_1"`
 	GraphicName           string    `json:"graphic_name,omitempty"`
 	FileName              string    `json:"file_name,omitempty"`
@@ -9859,6 +10005,7 @@ type PaletteUsageRow struct {
 	SequenceType          uint8     `json:"sequence_type"`
 	Classification        string    `json:"classification"`
 	Confidence            string    `json:"confidence"`
+	RotationEncoding      string    `json:"rotation_encoding,omitempty"`
 	AvailableVariantCount *int      `json:"available_variant_count,omitempty"`
 	UsedIndices           []int     `json:"used_indices,omitempty"`
 	UnusedIndices         []int     `json:"unused_indices,omitempty"`
@@ -10115,6 +10262,17 @@ type ScenarioGlossaryReport struct {
 
 func ScenarioGlossaryFile(path string, opts ScenarioGlossaryOptions) (ScenarioGlossaryReport, error)
 
+type ScenarioMapPreset struct {
+	Name      string `json:"name"`
+	Size      int    `json:"size"`
+	StringID  int    `json:"string_id"`
+	StringKey string `json:"string_key"`
+}
+
+func ScenarioMapPresetBySize(size int) (ScenarioMapPreset, bool)
+
+func ScenarioMapPresets() []ScenarioMapPreset
+
 type ScenarioRecipe struct {
 	PlayerCount         *int `json:"player_count,omitempty"`
 	TimestampOfLastSave *int `json:"timestamp_of_last_save,omitempty"`
@@ -10242,6 +10400,7 @@ type StringReport struct {
 	Messages      map[string]string  `json:"messages"`
 	StringTable   []StringTableEntry `json:"string_table,omitempty"`
 	Variables     []VariableEntry    `json:"variables,omitempty"`
+	TriggerText   []TriggerTextEntry `json:"trigger_text,omitempty"`
 	EffectText    []EffectTextEntry  `json:"effect_text,omitempty"`
 	MarkupSummary MarkupSummary      `json:"markup_summary"`
 	Warnings      []string           `json:"warnings,omitempty"`
@@ -10434,37 +10593,45 @@ type TriggerNeighborhoodReport struct {
 func TriggerNeighborhoodFile(path string, opts TriggerNeighborhoodOptions) (TriggerNeighborhoodReport, error)
 
 type TriggerRecipe struct {
-	Op                       string            `json:"op"`
-	Name                     string            `json:"name"`
-	Message                  string            `json:"message"`
-	TargetIndex              *int              `json:"target_index,omitempty"`
-	TargetIndexes            []int             `json:"target_indexes,omitempty"`
-	TargetName               string            `json:"target_name,omitempty"`
-	TargetPrefix             string            `json:"target_prefix,omitempty"`
-	SetName                  *string           `json:"set_name,omitempty"`
-	DescriptionStringID      *int              `json:"description_string_table_id,omitempty"`
-	ShortDescriptionStringID *int              `json:"short_description_string_table_id,omitempty"`
-	Enabled                  *bool             `json:"enabled,omitempty"`
-	Looping                  *bool             `json:"looping,omitempty"`
-	RemoveEffects            []int             `json:"remove_effects,omitempty"`
-	RemoveConditions         []int             `json:"remove_conditions,omitempty"`
-	ClearEffects             *bool             `json:"clear_effects,omitempty"`
-	ClearConditions          *bool             `json:"clear_conditions,omitempty"`
-	ReplaceEffects           []EffectRecipe    `json:"replace_effects,omitempty"`
-	ReplaceConditions        []ConditionRecipe `json:"replace_conditions,omitempty"`
-	Effects                  []EffectRecipe    `json:"effects,omitempty"`
-	Conditions               []ConditionRecipe `json:"conditions,omitempty"`
-	DisplayTime              *int              `json:"display_time,omitempty"`
-	InstructionPanelPosition *int              `json:"instruction_panel_position,omitempty"`
-	SourcePlayer             *int              `json:"source_player,omitempty"`
-	PlaySound                *int              `json:"play_sound,omitempty"`
-	UseTagColorForIcon       *int              `json:"use_tag_color_for_icon,omitempty"`
-	ObjectListUnitID         *int              `json:"object_list_unit_id,omitempty"`
-	LocationX                *int              `json:"location_x,omitempty"`
-	LocationY                *int              `json:"location_y,omitempty"`
-	ItemID                   *int              `json:"item_id,omitempty"`
-	Facet                    *int              `json:"facet,omitempty"`
-	DisableSound             *int              `json:"disable_sound,omitempty"`
+	Op                        string            `json:"op"`
+	Name                      string            `json:"name"`
+	Message                   string            `json:"message"`
+	Description               string            `json:"description,omitempty"`
+	ShortDescription          string            `json:"short_description,omitempty"`
+	TargetIndex               *int              `json:"target_index,omitempty"`
+	TargetIndexes             []int             `json:"target_indexes,omitempty"`
+	TargetName                string            `json:"target_name,omitempty"`
+	TargetPrefix              string            `json:"target_prefix,omitempty"`
+	SetName                   *string           `json:"set_name,omitempty"`
+	DescriptionStringID       *int              `json:"description_string_table_id,omitempty"`
+	ShortDescriptionStringID  *int              `json:"short_description_string_table_id,omitempty"`
+	DisplayAsObjective        *bool             `json:"display_as_objective,omitempty"`
+	DisplayOnScreen           *bool             `json:"display_on_screen,omitempty"`
+	MakeHeader                *bool             `json:"make_header,omitempty"`
+	MuteObjectives            *bool             `json:"mute_objectives,omitempty"`
+	ExecuteOnLoad             *bool             `json:"execute_on_load,omitempty"`
+	ObjectiveDescriptionOrder *int              `json:"objective_description_order,omitempty"`
+	Enabled                   *bool             `json:"enabled,omitempty"`
+	Looping                   *bool             `json:"looping,omitempty"`
+	RemoveEffects             []int             `json:"remove_effects,omitempty"`
+	RemoveConditions          []int             `json:"remove_conditions,omitempty"`
+	ClearEffects              *bool             `json:"clear_effects,omitempty"`
+	ClearConditions           *bool             `json:"clear_conditions,omitempty"`
+	ReplaceEffects            []EffectRecipe    `json:"replace_effects,omitempty"`
+	ReplaceConditions         []ConditionRecipe `json:"replace_conditions,omitempty"`
+	Effects                   []EffectRecipe    `json:"effects,omitempty"`
+	Conditions                []ConditionRecipe `json:"conditions,omitempty"`
+	DisplayTime               *int              `json:"display_time,omitempty"`
+	InstructionPanelPosition  *int              `json:"instruction_panel_position,omitempty"`
+	SourcePlayer              *int              `json:"source_player,omitempty"`
+	PlaySound                 *int              `json:"play_sound,omitempty"`
+	UseTagColorForIcon        *int              `json:"use_tag_color_for_icon,omitempty"`
+	ObjectListUnitID          *int              `json:"object_list_unit_id,omitempty"`
+	LocationX                 *int              `json:"location_x,omitempty"`
+	LocationY                 *int              `json:"location_y,omitempty"`
+	ItemID                    *int              `json:"item_id,omitempty"`
+	Facet                     *int              `json:"facet,omitempty"`
+	DisableSound              *int              `json:"disable_sound,omitempty"`
 }
 
 type TriggerSearchMatch struct {
@@ -10513,20 +10680,30 @@ type TriggerSearchReport struct {
 func TriggerSearchFile(path string, opts TriggerSearchOptions) (TriggerSearchReport, error)
 
 type TriggerSummary struct {
-	Index       int             `json:"index"`
-	Name        string          `json:"name"`
-	Enabled     uint32          `json:"enabled"`
-	Looping     int8            `json:"looping"`
-	Effects     int             `json:"effects"`
-	EffectData  []EffectSummary `json:"effect_data,omitempty"`
-	Conditions  int             `json:"conditions"`
-	RecordStart int             `json:"record_start"`
-	RecordEnd   int             `json:"record_end"`
+	Index         int                `json:"index"`
+	Name          string             `json:"name"`
+	Enabled       uint32             `json:"enabled"`
+	Looping       int8               `json:"looping"`
+	Effects       int                `json:"effects"`
+	EffectData    []EffectSummary    `json:"effect_data,omitempty"`
+	Conditions    int                `json:"conditions"`
+	ConditionData []ConditionSummary `json:"condition_data,omitempty"`
+	RecordStart   int                `json:"record_start"`
+	RecordEnd     int                `json:"record_end"`
+}
+
+type TriggerTextEntry struct {
+	TriggerIndex int    `json:"trigger_index"`
+	TriggerName  string `json:"trigger_name,omitempty"`
+	Field        string `json:"field"`
+	Text         string `json:"text"`
 }
 
 type UnitInfo struct {
-	Sections []PlayerUnitsInfo `json:"sections"`
-	Total    int               `json:"total"`
+	NumberOfUnitSections int               `json:"number_of_unit_sections"`
+	NumberOfPlayers      int               `json:"number_of_players"`
+	Sections             []PlayerUnitsInfo `json:"sections"`
+	Total                int               `json:"total"`
 }
 
 type UnitRecipe struct {
@@ -10614,16 +10791,17 @@ type WatermarkSignal struct {
 }
 
 type XSCensusCounts struct {
-	EmbeddedCarriers      int `json:"embedded_carriers"`
-	ScriptCalls           int `json:"script_calls"`
-	UniqueCalledFunctions int `json:"unique_called_functions"`
-	Functions             int `json:"functions"`
-	Includes              int `json:"includes"`
-	ResolvedIncludes      int `json:"resolved_includes"`
-	MissingIncludes       int `json:"missing_includes"`
-	Declarations          int `json:"declarations"`
-	CrossFileNonExtern    int `json:"cross_file_nonextern"`
-	Findings              int `json:"findings"`
+	ScriptContentAttachments int `json:"script_content_attachments"`
+	EmbeddedCarriers         int `json:"embedded_carriers"`
+	ScriptCalls              int `json:"script_calls"`
+	UniqueCalledFunctions    int `json:"unique_called_functions"`
+	Functions                int `json:"functions"`
+	Includes                 int `json:"includes"`
+	ResolvedIncludes         int `json:"resolved_includes"`
+	MissingIncludes          int `json:"missing_includes"`
+	Declarations             int `json:"declarations"`
+	CrossFileNonExtern       int `json:"cross_file_nonextern"`
+	Findings                 int `json:"findings"`
 }
 
 type XSCensusOptions struct {
@@ -10636,6 +10814,7 @@ type XSCensusReport struct {
 	Verification          string                   `json:"verification"`
 	OK                    bool                     `json:"ok"`
 	XS                    XSDeployAttachment       `json:"xs"`
+	ScriptContentEmbedded bool                     `json:"script_content_embedded"`
 	EmbeddedCarriers      []XSEmbeddedCarrier      `json:"embedded_carriers,omitempty"`
 	DeployTree            string                   `json:"deploy_tree,omitempty"`
 	ScriptCalls           []XSScriptCall           `json:"script_calls,omitempty"`

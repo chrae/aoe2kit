@@ -79,3 +79,23 @@ AoE2Kit's replay work benefits from the aoc-mgz ecosystem and keeps replay claim
 
 AoE2Kit uses the UGC Guide as a public reference point for scenario, trigger, XS, and modding concepts, then validates critical behavior against real files and engine runs.
 
+### CB Front Towers OG Enhanced
+
+- Authors: SpiRaL
+- URL: https://steamcommunity.com/id/theogspiral/
+- License: All rights reserved by the author
+- Permission: studied for technique only; the author forbids modifying or redistributing the map without consent
+- Gave: A masterclass in scenario-only UGC technique: the reroll shop (train-to-consume renamed button units), object and technology renaming with no data mod, the repeatable-technology purchase trick (disable-then-enable reset), and a live Objective-Panel stats display.
+- Role: Scenario-design technique oracle and inspiration
+- Relationship: behavior_oracle_and_inspiration
+- Rung earned: credited
+- Thanks status: owed
+- Correction state: open_to_correction
+
+AoE2Kit's scenario authoring — its object/technology rename operations, repeatable-technology decode, and shop idioms — was materially informed by studying SpiRaL's CB Front Towers, which has been a direct inspiration. Front Towers served as a behavior oracle; every technique was re-implemented independently and verified against real files.
+
+Notes:
+- AoE2Kit does not vendor, modify, or redistribute CB Front Towers content. The map and its XS were studied for technique only, in keeping with the author's license.
+- The reroll shop, button/technology rename, repeatable-technology reset, and live-panel idioms were reverse-engineered as a behavior oracle and re-implemented from scratch.
+- Personal thanks to SpiRaL is a human action and remains owed until it is actually sent.
+

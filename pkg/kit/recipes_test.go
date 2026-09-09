@@ -44,6 +44,37 @@ func TestRecipeTemplateByName(t *testing.T) {
 	if template.ScenarioRecipe == nil || template.ScenarioRecipe.XS == nil {
 		t.Fatalf("scen.xs-carrier payload = %+v", template)
 	}
+	short, ok := RecipeTemplateByName("caption-marker-unit")
+	if !ok {
+		t.Fatal("short recipe name caption-marker-unit not found")
+	}
+	if short.Name != "scen.caption-marker-unit" {
+		t.Fatalf("short recipe resolved to %q, want scen.caption-marker-unit", short.Name)
+	}
+	victory, ok := RecipeTemplateByName("no-conquest-victory")
+	if !ok {
+		t.Fatal("short recipe name no-conquest-victory not found")
+	}
+	if victory.ScenarioRecipe == nil || victory.ScenarioRecipe.Victory == nil || victory.ScenarioRecipe.Victory.ConquestRequired == nil {
+		t.Fatalf("no-conquest-victory payload = %+v", victory)
+	}
+	if got := *victory.ScenarioRecipe.Victory.ConquestRequired; got != 0 {
+		t.Fatalf("no-conquest-victory conquest_required = %d, want 0", got)
+	}
+	closeout, ok := RecipeTemplateByName("timer-declare-victory")
+	if !ok {
+		t.Fatal("short recipe name timer-declare-victory not found")
+	}
+	if closeout.ScenarioRecipe == nil || len(closeout.ScenarioRecipe.Triggers) != 1 {
+		t.Fatalf("timer-declare-victory payload = %+v", closeout)
+	}
+	trigger := closeout.ScenarioRecipe.Triggers[0]
+	if len(trigger.Conditions) != 1 || trigger.Conditions[0].Timer == nil || *trigger.Conditions[0].Timer != 120 {
+		t.Fatalf("timer-declare-victory conditions = %+v", trigger.Conditions)
+	}
+	if len(trigger.Effects) != 1 || trigger.Effects[0].Op != "declare_victory" {
+		t.Fatalf("timer-declare-victory effects = %+v", trigger.Effects)
+	}
 }
 
 func TestDATDesignerRecipeTemplatesExist(t *testing.T) {

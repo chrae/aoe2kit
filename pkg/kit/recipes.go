@@ -62,6 +62,7 @@ func RecipeTemplates() []RecipeTemplate {
 	enabled := true
 	disabled := false
 	timer5 := 5
+	timer120 := 120
 	displayTime := 8
 	sourcePlayer := 1
 	unitConst := 83
@@ -192,6 +193,50 @@ func RecipeTemplates() []RecipeTemplate {
 						{Op: "send_chat", SourcePlayer: &sourcePlayer, Message: "A2K TEMPLATE: chat line."},
 					},
 				}},
+			},
+		},
+		{
+			Name:         "scen.timer-declare-victory",
+			Domain:       "scenario",
+			Summary:      "Add one timer-gated trigger that declares victory for a chosen player.",
+			AppliesTo:    "Diagnostic scenarios that should close themselves after a fixed readback window.",
+			Command:      "kit scen patch input.aoe2scenario output.aoe2scenario --recipe timer-declare-victory.json",
+			Verification: "structure_verified_not_engine_verified",
+			Notes: []string{
+				"Template fires at 120 seconds for player 1; adjust timer and source_player before a real run.",
+				"Pair with scen.no-conquest-victory for diagnostics where ordinary conquest should not decide the ending first.",
+			},
+			ScenarioRecipe: &scenario.Recipe{
+				Triggers: []scenario.TriggerRecipe{{
+					Op:      "add_trigger",
+					Name:    "A2K Template - timer declare victory",
+					Enabled: &enabled,
+					Looping: &disabled,
+					Conditions: []scenario.ConditionRecipe{
+						{Op: "timer", Timer: &timer120},
+					},
+					Effects: []scenario.EffectRecipe{{
+						Op:           "declare_victory",
+						SourcePlayer: &sourcePlayer,
+					}},
+				}},
+			},
+		},
+		{
+			Name:         "scen.no-conquest-victory",
+			Domain:       "scenario",
+			Summary:      "Disable ordinary conquest as the scenario victory requirement.",
+			AppliesTo:    "Diagnostics, sandboxes, and authored tests whose ending is controlled by triggers.",
+			Command:      "kit scen patch input.aoe2scenario output.aoe2scenario --recipe no-conquest-victory.json",
+			Verification: "structure_verified_not_engine_verified",
+			Notes: []string{
+				"This edits the scenario GlobalVictory conquest field only; it is not a lobby setting.",
+				"Use this when active inert players, Gaia-owned dummies, or controlled kill rigs would otherwise end early.",
+			},
+			ScenarioRecipe: &scenario.Recipe{
+				Victory: &scenario.VictoryRecipe{
+					ConquestRequired: recipeIntPtr(0),
+				},
 			},
 		},
 		{
@@ -573,10 +618,17 @@ func RecipeTemplateSummaries(domain string) (RecipeTemplateListReport, error) {
 
 func RecipeTemplateByName(name string) (RecipeTemplate, bool) {
 	name = strings.TrimSpace(name)
+	var suffixMatches []RecipeTemplate
 	for _, template := range RecipeTemplates() {
 		if template.Name == name {
 			return template, true
 		}
+		if !strings.Contains(name, ".") && strings.HasSuffix(template.Name, "."+name) {
+			suffixMatches = append(suffixMatches, template)
+		}
+	}
+	if len(suffixMatches) == 1 {
+		return suffixMatches[0], true
 	}
 	return RecipeTemplate{}, false
 }

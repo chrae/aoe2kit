@@ -219,6 +219,51 @@ func TestPaletteClassifiesAndCollapsesCivRows(t *testing.T) {
 	}
 }
 
+func TestPaletteClassifiesType10EyecandyAsIntegerArtworkIndex(t *testing.T) {
+	graphics := make([]Graphic, 6)
+	graphics[5] = Graphic{
+		Index:        5,
+		Present:      true,
+		Name:         DebugString{Value: "Rock Limestone Hover"},
+		FileName:     DebugString{Value: "n_rock_limestone_x1"},
+		SLP:          8886,
+		AngleCount:   4,
+		FrameCount:   1,
+		SequenceType: 6,
+	}
+	idx := &Index{
+		Version:  "VER 8.9",
+		Graphics: graphics,
+		Civs: []Civ{
+			{Index: 0, Units: []UnitSummary{{
+				Present:          true,
+				Index:            2411,
+				ID:               2411,
+				Name:             "Rock Limestone Hover",
+				Type:             10,
+				Class:            14,
+				ClassName:        "Eye Candy",
+				StandingGraphic1: 5,
+			}}},
+		},
+	}
+	id := 2411
+	report := idx.Palette(PaletteOptions{ID: &id})
+	if len(report.Rows) != 1 {
+		t.Fatalf("rows = %d, want 1", len(report.Rows))
+	}
+	row := report.Rows[0]
+	if row.UnitType != 10 || row.UnitClass != 14 || row.UnitClassName != "Eye Candy" {
+		t.Fatalf("unit type/class = %d/%d/%q, want 10/14/Eye Candy", row.UnitType, row.UnitClass, row.UnitClassName)
+	}
+	if row.Classification != "multi_variant" || row.RotationEncoding != "integer_artwork_index" || row.Confidence != "editor_fixture" {
+		t.Fatalf("type-10 row = %+v, want editor-fixture integer artwork index", row)
+	}
+	if row.VariantCount == nil || *row.VariantCount != 4 {
+		t.Fatalf("variant_count = %+v, want 4", row.VariantCount)
+	}
+}
+
 func TestCreateGraphicGolden(t *testing.T) {
 	path := testfixtures.Path(t, "reference_aoe2_dump/dat/empires2_x2_p1.dat")
 	compressed, err := os.ReadFile(path)

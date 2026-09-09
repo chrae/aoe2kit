@@ -15,6 +15,7 @@ type StringReport struct {
 	Messages      map[string]string  `json:"messages"`
 	StringTable   []StringTableEntry `json:"string_table,omitempty"`
 	Variables     []VariableEntry    `json:"variables,omitempty"`
+	TriggerText   []TriggerTextEntry `json:"trigger_text,omitempty"`
 	EffectText    []EffectTextEntry  `json:"effect_text,omitempty"`
 	MarkupSummary MarkupSummary      `json:"markup_summary"`
 	Warnings      []string           `json:"warnings,omitempty"`
@@ -29,6 +30,13 @@ type StringTableEntry struct {
 type VariableEntry struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+type TriggerTextEntry struct {
+	TriggerIndex int    `json:"trigger_index"`
+	TriggerName  string `json:"trigger_name,omitempty"`
+	Field        string `json:"field"`
+	Text         string `json:"text"`
 }
 
 type EffectTextEntry struct {
@@ -64,14 +72,9 @@ func (f *File) Strings() StringReport {
 	report.addMessageSection(f.root.section("Cinematics"))
 	report.StringTable = scenarioStringTable(f.root)
 	report.Variables = scenarioVariables(f.root)
+	report.TriggerText = scenarioTriggerText(f.root)
 	report.EffectText = scenarioEffectText(f.root)
 	report.MarkupSummary = summarizeScenarioMarkup(report.allText())
-	for _, variable := range report.Variables {
-		if variable.Name != "" {
-			report.MarkupSummary.VariableRefCounts[variable.Name]++
-		}
-	}
-	report.MarkupSummary.VariableRefs = sortedStringKeys(report.MarkupSummary.VariableRefCounts)
 	return report
 }
 
@@ -121,6 +124,31 @@ func scenarioVariables(root *parsedRoot) []VariableEntry {
 	return out
 }
 
+func scenarioTriggerText(root *parsedRoot) []TriggerTextEntry {
+	section := root.section("Triggers")
+	if section == nil {
+		return nil
+	}
+	var out []TriggerTextEntry
+	for triggerIndex, trigger := range section.list("trigger_data") {
+		triggerName, _ := trigger.stringValue("trigger_name")
+		for _, field := range []string{"trigger_description", "short_description"} {
+			text, _ := trigger.stringValue(field)
+			text = strings.TrimSpace(text)
+			if text == "" {
+				continue
+			}
+			out = append(out, TriggerTextEntry{
+				TriggerIndex: triggerIndex,
+				TriggerName:  triggerName,
+				Field:        field,
+				Text:         text,
+			})
+		}
+	}
+	return out
+}
+
 func scenarioEffectText(root *parsedRoot) []EffectTextEntry {
 	section := root.section("Triggers")
 	if section == nil {
@@ -159,8 +187,8 @@ func (r StringReport) allText() []string {
 	for _, entry := range r.StringTable {
 		out = append(out, entry.Text)
 	}
-	for _, entry := range r.Variables {
-		out = append(out, entry.Name)
+	for _, entry := range r.TriggerText {
+		out = append(out, entry.Text)
 	}
 	for _, entry := range r.EffectText {
 		out = append(out, entry.Text)

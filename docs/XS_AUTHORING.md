@@ -14,21 +14,45 @@ For custom scenarios, the UGC guide's programmer reference says the scenario's
 Map tab names an XS file without the `.xs` suffix, and trigger `Script Call`
 effects call parameterless functions from that XS script.
 
-AoE2Kit supports two XS placement modes:
+AoE2Kit supports three XS placement modes:
 
-- preferred for generated scenarios: parser-style embedded carrier trigger;
+- preferred for self-contained generated scenarios: enabled inline runtime
+  carrier trigger;
+- source-escrow carrier mode: parser-style embedded carrier trigger;
 - legacy/explicit external-file mode: scenario attachment fields plus a shipped
   `.xs` file.
 
-The carrier mode mirrors AoE2ScenarioParser's `xs_manager.add_script(...)`
-pattern. It stores the full XS source in the `message` field of a disabled
-trigger `script_call` effect, usually on a disabled trigger named `XS SCRIPT`.
-That source travels inside the `.aoe2scenario` itself, so the scenario and XS no
-longer drift when copied between machines. `kit scen xs` reports these as
-`embedded_carriers`, analyzes their functions, and excludes the carrier payload
-from ordinary runtime `script_call` function invocations.
+The inline runtime mode mirrors the engine-verified SpiRaL/CB Front Towers
+self-contained shape: trigger 0, effect 0 is an enabled `script_call` effect
+titled `XS string`, and the effect `message` is the full inline XS source.
+`Map.script_name`, `Files.script_file_path`, and `Files.script_file_content` are
+empty, so DE has no external filename to open. This is the mode to use when a
+generated scenario must run without any sibling `.xs` file.
+The empty fields must be encoded as true zero-length strings (`00 00` for
+`str16`, `00 00 00 00` for `str32`), not as NUL-only strings; DE rejected the
+NUL-only form during `readScenario` with a TEMP path-spec error even though the
+parsed view looked identical.
 
-Use this recipe shape for carrier mode:
+Use this recipe shape for inline runtime mode:
+
+```json
+{
+  "xs": {
+    "mode": "inline_runtime",
+    "carrier_title": "XS string",
+    "content_file": "MyScript.xs"
+  }
+}
+```
+
+The source-escrow `carrier` mode stores the full XS source in the `message` field
+of a disabled trigger `script_call` effect. That source travels inside the
+`.aoe2scenario` itself for inspection/extraction, but this mode is not the
+self-contained runtime path. `kit scen xs` reports both runtime and escrow source
+effects as `embedded_carriers`, analyzes their functions, and excludes the
+carrier payload from ordinary runtime `script_call` function invocations.
+
+Use this recipe shape for escrow carrier mode:
 
 ```json
 {
@@ -44,10 +68,12 @@ Use this recipe shape for carrier mode:
 By default `mode:"carrier"` clears the older attachment fields and replaces the
 first existing carrier, avoiding stale duplicate XS blobs. Set
 `carrier_trigger_index` when converting an existing placeholder `script_call`
-trigger into the carrier slot, which keeps the trigger list stable. Use
-`"mode":"attachment"` only when you deliberately want the old external-file
-deployment path, or `"mode":"attachment_and_carrier"` when you are comparing both
-paths.
+trigger into the carrier slot, which keeps the trigger list stable.
+`mode:"inline_runtime"` clears the older attachment fields and inserts an enabled
+trigger-0 carrier when trigger 0 is not already a carrier, shifting trigger-id
+references forward. Use `"mode":"attachment"` only when you deliberately want the
+old external-file deployment path, or `"mode":"attachment_and_carrier"` when you
+are comparing both paths.
 
 The same carrier workflow is available without hand-writing a JSON recipe:
 
@@ -59,11 +85,12 @@ The same carrier workflow is available without hand-writing a JSON recipe:
 ./kit scen xs extract out.aoe2scenario --out /tmp/MyScript.xs --force --text
 ```
 
-`attach` writes the executable scenario XS fields. `deploy` copies the
-scenario-carried source to `resources/_common/xs/` under the supplied deploy
-tree, then `--check` verifies the scenario fields, on-disk entry file, includes,
-and cross-file `extern` requirements. This is the normal path when the XS should
-actually run in DE.
+`attach` writes the executable scenario XS fields for an intentional external
+module tree. `deploy` copies the scenario-carried source to
+`resources/_common/xs/` under the supplied deploy tree, then `--check` verifies
+the scenario fields, on-disk entry file, includes, and cross-file `extern`
+requirements. This is the normal path only when external modules should actually
+run in DE.
 
 `embed` writes the carrier and clears stale attachment fields by default.
 `compare` checks scenario-carried XS against a source file and exits non-zero
@@ -89,7 +116,9 @@ name. AoE2Kit now writes both fields consistently with the `.xs` extension.
 
 So the safe authoring rule is:
 
-- use carrier mode for single-file generated XS whenever possible;
+- use `inline_runtime` mode for single-file generated XS whenever possible;
+- use disabled `carrier` mode only as source escrow / parser-compatible
+  inspection aid;
 - use attachment mode only when a real external module tree is intentional;
 - if using attachment mode, ship the same `.xs` file under the runnable bundle's
   `resources/_common/xs/`;
@@ -97,11 +126,11 @@ So the safe authoring rule is:
 - use ordinary trigger `script_call` effects to invoke named parameterless XS
   functions.
 
-Front Towers provides live-author evidence for the parser-style carrier pattern:
-its scenario attachment fields are empty, while a disabled trigger carries the
-full XS source in a `script_call` message. Kit's carrier writer is
-structure-verified by round-trip tests; keep it labeled not engine-verified until
-we run a local Kit-authored carrier fixture.
+Front Towers provides live-author evidence for the self-contained inline source
+pattern: its scenario attachment fields are empty, while a trigger carries the
+full XS source in a `script_call` message titled `XS string`. Kit's inline
+runtime writer is structure-verified by round-trip tests; keep it labeled not
+engine-verified until we run a local Kit-authored inline fixture.
 
 ## Multi-File XS
 

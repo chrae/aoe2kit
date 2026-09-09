@@ -75,6 +75,7 @@ func (p PackProfile) excludes() []string {
 			"docs/*READBACK*",
 			"docs/*PROBE*",
 			"docs/REPLAY_TRANSPARENCY_*",
+			"docs/REROLL_*",
 			"docs/KILL_ATTRIBUTION_*",
 			"docs/CORPSE_TABLE_*",
 			"docs/CBA_*",
@@ -444,7 +445,7 @@ func shouldSkipPackDir(name string) bool {
 
 func shouldSkipPackFile(name string) bool {
 	switch strings.ToLower(name) {
-	case ".ds_store":
+	case ".ds_store", ".git":
 		return true
 	}
 	return false

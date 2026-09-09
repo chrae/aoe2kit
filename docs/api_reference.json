@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
-  "command_count": 218,
-  "probed_count": 40,
+  "command_count": 220,
+  "probed_count": 41,
   "commands": [
     {
       "path": [
@@ -564,7 +564,20 @@
       "network": false,
       "trait": "read_only",
       "input": "folder",
-      "probe_status": "not_probed"
+      "probe_status": "ok",
+      "probe_args": [
+        "credits",
+        "."
+      ],
+      "output_top_level_keys": [
+        "dependencies",
+        "generated_by",
+        "license",
+        "project",
+        "references",
+        "schema"
+      ],
+      "response_type": "kit.CreditsDocument"
     },
     {
       "path": [
@@ -1310,7 +1323,7 @@
       "network": false,
       "trait": "read_only",
       "input": "dat",
-      "probe_status": "not_probed"
+      "probe_status": "skipped_no_fixture"
     },
     {
       "path": [
@@ -2151,6 +2164,36 @@
     {
       "path": [
         "dat",
+        "sprite"
+      ],
+      "name": "dat sprite",
+      "group": "dat",
+      "usage": "kit dat sprite \u003cfile.sld\u003e [--out dir] [--limit N] [--text]",
+      "flags": [
+        {
+          "name": "--out",
+          "value_hint": "dir"
+        },
+        {
+          "name": "--limit",
+          "value_hint": "N"
+        },
+        {
+          "name": "--text"
+        }
+      ],
+      "positional": [
+        "\u003cfile.sld\u003e"
+      ],
+      "mutates": true,
+      "network": false,
+      "trait": "writes",
+      "input": "other",
+      "probe_status": "skipped_mutating"
+    },
+    {
+      "path": [
+        "dat",
         "tech"
       ],
       "name": "dat tech",
@@ -2254,7 +2297,7 @@
       "network": false,
       "trait": "read_only",
       "input": "dat",
-      "probe_status": "not_probed"
+      "probe_status": "skipped_no_fixture"
     },
     {
       "path": [
@@ -5331,6 +5374,37 @@
     },
     {
       "path": [
+        "rpg",
+        "shop-demo"
+      ],
+      "name": "rpg shop-demo",
+      "group": "rpg",
+      "usage": "kit rpg shop-demo [--out-dir DIR] [--name TEXT] [--timestamp UNIX] [--text|--json]",
+      "flags": [
+        {
+          "name": "--out-dir",
+          "value_hint": "DIR"
+        },
+        {
+          "name": "--name",
+          "value_hint": "TEXT"
+        },
+        {
+          "name": "--timestamp",
+          "value_hint": "UNIX"
+        }
+      ],
+      "positional": [
+        "--text|--json"
+      ],
+      "mutates": true,
+      "network": false,
+      "trait": "writes",
+      "input": "none",
+      "probe_status": "skipped_mutating"
+    },
+    {
+      "path": [
         "scen"
       ],
       "name": "scen",
@@ -5427,8 +5501,20 @@
       ],
       "name": "scen blank",
       "group": "scen",
-      "usage": "kit scen blank \u003cout.aoe2scenario\u003e [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--gaia-active] [--keep-seed-triggers] [--text]",
+      "usage": "kit scen blank \u003cout.aoe2scenario\u003e [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]",
       "flags": [
+        {
+          "name": "--size",
+          "value_hint": "N"
+        },
+        {
+          "name": "--width",
+          "value_hint": "N"
+        },
+        {
+          "name": "--height",
+          "value_hint": "N"
+        },
         {
           "name": "--players",
           "value_hint": "N"
@@ -5457,7 +5543,7 @@
           "value_hint": "N"
         },
         {
-          "name": "--gaia-active"
+          "name": "--no-conquest"
         },
         {
           "name": "--keep-seed-triggers"

@@ -40,6 +40,9 @@ type PaletteUsageRow struct {
 	UnitID                int       `json:"unit_id"`
 	UnitName              string    `json:"unit_name"`
 	Placements            int       `json:"placements"`
+	UnitType              int       `json:"unit_type"`
+	UnitClass             int16     `json:"unit_class"`
+	UnitClassName         string    `json:"unit_class_name,omitempty"`
 	StandingGraphic1      int       `json:"standing_graphic_1"`
 	GraphicName           string    `json:"graphic_name,omitempty"`
 	FileName              string    `json:"file_name,omitempty"`
@@ -49,6 +52,7 @@ type PaletteUsageRow struct {
 	SequenceType          uint8     `json:"sequence_type"`
 	Classification        string    `json:"classification"`
 	Confidence            string    `json:"confidence"`
+	RotationEncoding      string    `json:"rotation_encoding,omitempty"`
 	AvailableVariantCount *int      `json:"available_variant_count,omitempty"`
 	UsedIndices           []int     `json:"used_indices,omitempty"`
 	UnusedIndices         []int     `json:"unused_indices,omitempty"`
@@ -120,6 +124,9 @@ func (f *File) PaletteUsage(palette datfile.PaletteReport) PaletteUsageReport {
 			UnitID:                unitID,
 			UnitName:              paletteRow.UnitName,
 			Placements:            used.count,
+			UnitType:              paletteRow.UnitType,
+			UnitClass:             paletteRow.UnitClass,
+			UnitClassName:         paletteRow.UnitClassName,
 			StandingGraphic1:      paletteRow.StandingGraphic1,
 			GraphicName:           paletteRow.GraphicName,
 			FileName:              paletteRow.FileName,
@@ -129,6 +136,7 @@ func (f *File) PaletteUsage(palette datfile.PaletteReport) PaletteUsageReport {
 			SequenceType:          paletteRow.SequenceType,
 			Classification:        paletteRow.Classification,
 			Confidence:            paletteRow.Confidence,
+			RotationEncoding:      paletteRow.RotationEncoding,
 			AvailableVariantCount: paletteRow.VariantCount,
 			RawRotations:          sortedFloats(used.rotations),
 		}

@@ -64,6 +64,15 @@ type TriggerConditionDump struct {
 	Effects    []EffectSummary  `json:"effects"`
 }
 
+type ConditionSummary struct {
+	TriggerIndex   int            `json:"trigger_index,omitempty"`
+	TriggerName    string         `json:"trigger_name,omitempty"`
+	ConditionIndex int            `json:"condition_index,omitempty"`
+	Type           int            `json:"type"`
+	TypeName       string         `json:"type_name"`
+	KnownFields    map[string]any `json:"known_fields,omitempty"`
+}
+
 type TriggerConditionsOptions struct {
 	Limit            int `json:"limit,omitempty"`
 	MaxInflatedBytes int `json:"max_inflated_bytes,omitempty"`
@@ -165,5 +174,31 @@ func summarizeCondition(cond *parsedNode) map[string]any {
 			entry[field] = v
 		}
 	}
+	if xsFunction, ok := cond.stringValue("xs_function"); ok && xsFunction != "" {
+		entry["xs_function"] = xsFunction
+	}
 	return entry
+}
+
+func summarizeConditionData(cond *parsedNode) ConditionSummary {
+	condType, _ := cond.intValue("condition_type")
+	summary := ConditionSummary{
+		Type:     condType,
+		TypeName: ConditionTypeName(condType),
+	}
+	for _, field := range conditionFieldNames {
+		if v, ok := cond.intValue(field); ok && v != -1 {
+			if summary.KnownFields == nil {
+				summary.KnownFields = map[string]any{}
+			}
+			summary.KnownFields[field] = v
+		}
+	}
+	if xsFunction, ok := cond.stringValue("xs_function"); ok && xsFunction != "" {
+		if summary.KnownFields == nil {
+			summary.KnownFields = map[string]any{}
+		}
+		summary.KnownFields["xs_function"] = xsFunction
+	}
+	return summary
 }

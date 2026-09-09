@@ -68,6 +68,23 @@ func TestSyncRawWordsLatestCBA(t *testing.T) {
 	}
 }
 
+func TestChecksumPhaseAllHasTopLevelSummary(t *testing.T) {
+	path := testfixtures.Path(t, "save-analysis/latest_cba.aoe2record")
+	if _, err := os.Stat(path); err != nil {
+		t.Skipf("golden replay not present: %v", err)
+	}
+	report, err := BuildChecksumPhaseAll(path, ChecksumPhaseOptions{})
+	if err != nil {
+		t.Fatalf("BuildChecksumPhaseAll failed: %v", err)
+	}
+	if report.Summary.Words != 11 {
+		t.Fatalf("words = %d, want 11", report.Summary.Words)
+	}
+	if report.Summary.ChecksumSamples != 53 || report.Summary.Players != 8 {
+		t.Fatalf("summary = %+v, want 53 samples and 8 players", report.Summary)
+	}
+}
+
 func TestSyncStateDeltasUseSignedChecksumWordDelta(t *testing.T) {
 	prev := SyncEvent{
 		TimeMS: 1000,

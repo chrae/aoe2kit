@@ -86,7 +86,7 @@ type carrierLedger struct {
 
 func BuildCarrierReport(path string, opts CarrierOptions) (*CarrierReport, error) {
 	if strings.TrimSpace(opts.LedgerPath) == "" {
-		return nil, fmt.Errorf("--ledger is required")
+		return nil, fmt.Errorf("--ledger is required; pass the diagnostic scenario manifest/ledger JSON, or use kit replay sidecar-sync --schema for schema-based XS sidecar readback")
 	}
 	ledger, err := readCarrierLedger(opts.LedgerPath)
 	if err != nil {

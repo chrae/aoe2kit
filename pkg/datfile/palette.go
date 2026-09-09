@@ -25,6 +25,9 @@ type PaletteRow struct {
 	UnitID           int    `json:"unit_id"`
 	UnitName         string `json:"unit_name"`
 	CivIndices       []int  `json:"civ_indices,omitempty"`
+	UnitType         int    `json:"unit_type"`
+	UnitClass        int16  `json:"unit_class"`
+	UnitClassName    string `json:"unit_class_name,omitempty"`
 	StandingGraphic1 int    `json:"standing_graphic_1"`
 	GraphicName      string `json:"graphic_name,omitempty"`
 	FileName         string `json:"file_name,omitempty"`
@@ -37,6 +40,7 @@ type PaletteRow struct {
 	Classification   string `json:"classification"`
 	Confidence       string `json:"confidence"`
 	Evidence         string `json:"evidence"`
+	RotationEncoding string `json:"rotation_encoding,omitempty"`
 }
 
 func PaletteFile(path string, opts PaletteOptions) (PaletteReport, error) {
@@ -73,6 +77,9 @@ func (idx *Index) Palette(opts PaletteOptions) PaletteReport {
 				newRow := PaletteRow{
 					UnitID:           unitID,
 					UnitName:         unit.Name,
+					UnitType:         unit.Type,
+					UnitClass:        unit.Class,
+					UnitClassName:    unit.ClassName,
 					StandingGraphic1: graphicID,
 				}
 				if ok {
@@ -136,6 +143,7 @@ func classifyPaletteRow(row *PaletteRow) {
 		row.Confidence = "author_confirmed"
 		row.Evidence = "chrae author confirmation: Gaia fish units use rotation as an animation-frame selector"
 		row.VariantNote = fmt.Sprintf("angle_count=%d frame_count=%d sequence_type=%d; fish-family rotation is author-confirmed animation-frame selection", row.AngleCount, row.FrameCount, row.SequenceType)
+		row.RotationEncoding = "integer_animation_phase"
 		return
 	}
 	switch {
@@ -143,20 +151,32 @@ func classifyPaletteRow(row *PaletteRow) {
 		row.Classification = "single_artwork"
 		one := 1
 		row.VariantCount = &one
+		row.RotationEncoding = "ignored_or_single_variant"
+	case row.UnitType == 10 && row.FrameCount <= 1 && row.AngleCount > 1:
+		row.Classification = "multi_variant"
+		count := row.AngleCount
+		row.VariantCount = &count
+		row.Confidence = "editor_fixture"
+		row.Evidence = "editor-authored references show type-10 eyecandy stores small integer scenario rotation values as artwork/angle indices"
+		row.RotationEncoding = "integer_artwork_index"
 	case row.FrameCount <= 1 && row.AngleCount > 1 && row.SequenceType == 6:
 		row.Classification = "multi_variant"
 		count := row.AngleCount
 		row.VariantCount = &count
+		row.RotationEncoding = "integer_artwork_index"
 	case row.FrameCount <= 1 && row.AngleCount > 1:
 		row.Classification = "rotating"
 		row.VariantNote = fmt.Sprintf("angle_count=%d frame_count=%d sequence_type=%d; treated as facing angles, not addressable artwork variants", row.AngleCount, row.FrameCount, row.SequenceType)
+		row.RotationEncoding = "radians_facing_angle"
 	default:
 		row.Classification = "ambiguous"
 		row.VariantNote = fmt.Sprintf("angle_count=%d frame_count=%d sequence_type=%d; animation/facing/frame-addressing semantics are type-dependent, so raw counts are reported without choosing a variant axis", row.AngleCount, row.FrameCount, row.SequenceType)
+		row.RotationEncoding = "type_dependent_unknown"
 	}
 	if row.UnitID == 1777 && row.StandingGraphic1 == 12530 && row.AngleCount == 16 && row.FrameCount == 1 {
 		row.Confidence = "engine_measured_one_case"
 		row.Evidence = "Mandala Foundry/field measurement: scenario rotation values select distinct IndianStatues artworks"
+		row.RotationEncoding = "integer_artwork_index"
 	}
 }
 

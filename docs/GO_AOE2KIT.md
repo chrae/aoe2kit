@@ -340,6 +340,7 @@ Data file:
 ./kit dat palette path/to/empires2_x2_p1.dat --min-variants 16 --text
 ./kit dat graphic path/to/empires2_x2_p1.dat 3396
 ./kit dat graphic path/to/empires2_x2_p1.dat 3396 --spans
+./kit dat sprite path/to/unit.sld --out /tmp/unit_frames --text
 ./kit gfx info path/to/unit.sld --text
 ./kit gfx export path/to/unit.sld --out /tmp/unit_frames --limit 8 --text
 ./kit dat effects path/to/empires2_x2_p1.dat --limit 20
@@ -881,9 +882,9 @@ Current replay and fingerprint support:
   sample-index modulo is not a stable phase oracle.
   `--raw-words` emits one row per checksum sample and player slot with all 11
   matrix words, intended for attribution research and sentinel probes; it is
-  opt-in so normal reports stay compact. Current CBA kill-attribution findings
-  and the proposed attribute-33 sentinel probe live in
-  `docs/KILL_ATTRIBUTION_SYNC_FINDINGS.md`.
+  opt-in so normal reports stay compact. Use `kit replay deaths`,
+  `kit replay sync`, `kit replay sync-log`, and game-specific consumers such as
+  `kit cba` to inspect the current kill-attribution boundary.
 - `kit replay sync-log <p0-sync.txt>` parses AoE2DE's desync-side
   `*-p0-sync.txt` engine trace. This is not replay-byte parsing: it is a
   structured read of the text log the engine writes when a game goes out of
@@ -1116,7 +1117,10 @@ per-POV cache naming.
 - `kit recipe list` and `kit recipe show <name> --recipe-only` expose
   project-neutral scenario/DAT recipe templates using the Kit's native patch
   JSON. These are starting shapes for AI-assisted authoring, not scenario
-  doctrine. The DAT templates cover common designer intents such as resource
+  doctrine. The scenario templates cover common diagnostics such as XS
+  attachment/carrier patterns, timer display/chat probes, timer declare-victory
+  closeouts, no-conquest victory setup, marker units, terrain borders, and
+  basic object spawns. The DAT templates cover common designer intents such as resource
   effects, unit attribute buffs, tech cost/time edits, ability creation,
   semantic disable/delete patterns, unit availability, production-button train
   rows, sound-item removal, sound mutes, player colours, graphics, and
@@ -1138,7 +1142,9 @@ per-POV cache naming.
   summaries. Add `--effect ID_OR_NAME`, `--condition ID_OR_NAME`, `--message
   TEXT`, `--unit-ref ID`, `--unit-type ID`, `--player N`, `--variable N`, or
   `--area x1,y1,x2,y2` to narrow the search, and `--text` for a compact
-  listing.
+  listing. With no search filter, `kit scen triggers FILE` prints the full
+  trigger summary, including per-trigger `effect_data` and `condition_data`
+  with decoded known fields.
 - `kit scen trigger-neighborhood` starts from a trigger, unit reference, or
   variable and expands nearby activate/deactivate and trigger-reference edges.
   Use this for "what else is attached to this mechanic?" investigations.
@@ -1182,11 +1188,12 @@ per-POV cache naming.
   constants/variables are declared with `extern`.
 - `kit scen xs <scenario> [--deploy-tree dir]` inventories the scenario's XS
   surface without modifying it: attached XS name/path/content bytes,
-  parser-style embedded carriers, ordinary trigger `script_call` effects and
-  called function names, embedded/deployed XS function definitions, include
-  resolution, declarations, and cross-file non-`extern` hazards. Carrier source
-  is analyzed as source and excluded from ordinary runtime calls. It reports both
-  full carrier-message hashes and extracted XS payload hashes. Without
+  inline runtime carriers, parser-style escrow carriers, ordinary trigger
+  `script_call` effects and called function names, embedded/deployed XS function
+  definitions, include resolution, declarations, and cross-file non-`extern`
+  hazards. Carrier source is analyzed as source and excluded from ordinary
+  runtime calls. It reports both full carrier-message hashes and extracted XS
+  payload hashes. Without
   `--deploy-tree`, includes that live outside the embedded scenario payload are
   reported as informational unresolved references.
 - `kit scen xs attach <in> <out> --xs file.xs` sets the executable XS scenario
@@ -1198,20 +1205,47 @@ per-POV cache naming.
   runtime copy DE actually opens. `--check` immediately runs the XS deploycheck
   after writing. The claim remains structure-verified until the editor/game loads
   it.
+- Recipes can set `xs.mode:"inline_runtime"` to make a self-contained single-file
+  XS scenario: Kit clears the external scenario XS filename/content fields and
+  inserts or replaces an enabled trigger-0 `script_call` carrier titled
+  `XS string` with the full source payload.
 - `kit scen xs embed|extract|compare` makes parser-style embedded XS carriers a
   first-class workflow. `embed` writes a source `.xs` into a disabled
-  `script_call` carrier trigger, optionally replacing a known trigger index;
-  `extract` pulls the payload back out; `compare` checks scenario-carried XS
-  against a source file and exits non-zero if normalized content differs. When a
-  scenario has executable attachment XS, `extract` and `compare` use that by
+  `script_call` escrow carrier trigger, optionally replacing a known trigger
+  index; `extract` pulls the payload back out; `compare` checks scenario-carried
+  XS against a source file and exits non-zero if normalized content differs. When
+  a scenario has executable attachment XS, `extract` and `compare` use that by
   default; pass `--carrier` or `--trigger` to inspect carrier escrow instead.
-- `kit scen blank <out> --players N --human-slots N --dummy-starters` creates a
-  clean current-DE seed from Kit's embedded blank scenario, clears the editor
-  seed triggers by default, stamps a current save timestamp unless overridden,
-  syncs the hidden Units-section player count to `N+1` including Gaia, and makes
-  P0/Gaia inactive unless `--gaia-active` is requested. Dummy starters default to
+- `kit scen blank <out> --size N --players N --human-slots N --dummy-starters` creates a
+  clean current-DE seed from Kit's embedded editor-authored blank scenario,
+  keeps it trigger-free unless later recipes add triggers, stamps a current save timestamp unless overridden,
+  resizes the terrain grid when requested, and syncs the hidden Units-section
+  player count to `N+1` including Gaia. A bare blank follows the editor-authored
+  baseline: Gaia and P1 are active/human, inactive slots remain human metadata,
+  and scenario `player_count` stays at the editor minimum of 2 unless playable
+  slots are explicitly changed. Map sizes validate against the canonical DE
+  editor presets from the shipped `MAPSIZE_*` string table: 80, 120, 144, 168,
+  200, 220, 240, 252, 276, 300, 320, 360, 400, and 480. `--width` and
+  `--height` can be used instead of square `--size`, but `kit scen blank`
+  rejects non-square sizes because the DE editor preset table is square.
+  A generated 480x480 Ludicrous scenario is engine-accepted, but large maps and
+  dense swatches can be system-RAM heavy through total tile/placement volume.
+  Do not infer a graphics/VRAM ceiling from swatch crashes without a smaller
+  control: unresolved or illegal per-unit references, such as unit/graphic ids
+  that do not resolve in the active data set or units placed on illegal terrain,
+  can null-deref the loader during scenario load even on tiny maps.
+  Dummy starters default to
   unit `598` (Outpost) so each active player has an authored non-production
   object and DE does not inject starter TC state into diagnostics.
+- Gaia remains editor-style active by default, because that matches normal
+  scenario authoring expectations and the current blank writer's verified
+  setting surface. Do not assume Gaia-inactive authoring is supported until the
+  separate Gaia active-state field is decoded and write-verified.
+- `--no-conquest` sets `conquest_required=0` for diagnostics where empty or
+  intentionally inert slots should not end the game by normal conquest rules.
+- Controlled replay probes should normally start from a fresh `kit scen blank`
+  file, add inert starters, disable conquest, then patch in explicit
+  timer-gated probes such as `scen.timer-declare-victory`.
 - `kit scen patch` refreshes the internal save timestamp unless the recipe
   explicitly sets `scenario.timestamp_of_last_save`. This keeps generated forks
   from inheriting old browser dates while preserving deterministic timestamps
@@ -1295,10 +1329,11 @@ Current DAT support:
   still-opaque codec gaps has been semantically named.
 - `kit gfx info <file.sld>` parses AoE2DE SLD sprite containers and reports
   frame canvas/hotspot/layer metadata.
-- `kit gfx export <file.sld> [--out dir] [--limit N]` exports the SLD main
-  graphics layer to PNG frames. This first slice intentionally does not compose
-  shadow, damage, or player-color layers into an in-engine final render; it is
-  a structure-verified visual teardown surface for custom graphics. The SLD
+- `kit dat sprite <file.sld> [--out dir] [--limit N]` and `kit gfx export`
+  export the SLD main graphics layer to PNG frames plus `manifest.json` and
+  `contact_sheet.png`. This first slice intentionally does not compose shadow,
+  damage, or player-color layers into an in-engine final render; it is a
+  structure-verified visual teardown surface for custom graphics. The SLD
   layout follows openage's public `doc/media/sld-files.md` notes.
 - `kit dat terrain-restrictions`, `kit dat terrains`, `kit dat terrain`,
   `kit dat unit-headers`, `kit dat unit-header`, `kit dat sounds`,
@@ -1402,8 +1437,12 @@ Current DAT support:
   pass and classifies the addressable art surface from `angle_count` and
   `frame_count`. `kit scen palette-usage --dat` joins placed scenario units
   back to that catalogue and reports which integer rotation/art indices are
-  used or unused. These classifications are structure-derived hypotheses except
-  for anchored cases such as IndianStatues multi-variant artwork and
+  used or unused. Rows include a `rotation_encoding` hint: type-10 eyecandy with
+  single-frame multi-angle graphics uses integer artwork indices in
+  editor-authored references, ordinary combat-facing units can use radians, and
+  animated units can use rotation as a phase/frame selector. These
+  classifications are structure-derived hypotheses except for anchored cases
+  such as IndianStatues multi-variant artwork, type-10 editor references, and
   author-confirmed animated fish; unknown mixed frame/facing surfaces are
   labeled ambiguous rather than guessed.
 - `kit dat refs <in.dat> <section> <id>` is the neutral reference explorer. It

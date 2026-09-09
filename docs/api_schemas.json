@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 846,
+  "type_count": 856,
   "types": {
     "aifile.DiffChange": {
       "package": "aifile",
@@ -12609,6 +12609,22 @@
           "optional": true
         },
         {
+          "name": "UnitType",
+          "json": "unit_type",
+          "go_type": "int"
+        },
+        {
+          "name": "UnitClass",
+          "json": "unit_class",
+          "go_type": "int16"
+        },
+        {
+          "name": "UnitClassName",
+          "json": "unit_class_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "StandingGraphic1",
           "json": "standing_graphic_1",
           "go_type": "int"
@@ -12671,6 +12687,12 @@
           "name": "Evidence",
           "json": "evidence",
           "go_type": "string"
+        },
+        {
+          "name": "RotationEncoding",
+          "json": "rotation_encoding",
+          "go_type": "string",
+          "optional": true
         }
       ]
     },
@@ -16897,6 +16919,18 @@
           "go_type": "int"
         },
         {
+          "name": "ManifestPath",
+          "json": "manifest_path",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ContactSheet",
+          "json": "contact_sheet",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "Exported",
           "json": "exported",
           "go_type": "[]SLDExportedFrame",
@@ -16953,6 +16987,31 @@
         {
           "name": "HotspotY",
           "json": "hotspot_y",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerOffsetX",
+          "json": "layer_offset_x",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerOffsetY",
+          "json": "layer_offset_y",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerWidth",
+          "json": "layer_width",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerHeight",
+          "json": "layer_height",
+          "go_type": "int"
+        },
+        {
+          "name": "OpaquePixels",
+          "json": "opaque_pixels",
           "go_type": "int"
         }
       ]
@@ -17114,6 +17173,105 @@
           "json": "draw_blocks",
           "go_type": "int",
           "optional": true
+        }
+      ]
+    },
+    "gfx.SLDManifest": {
+      "package": "gfx",
+      "name": "SLDManifest",
+      "fields": [
+        {
+          "name": "Version",
+          "json": "version",
+          "go_type": "string"
+        },
+        {
+          "name": "Verification",
+          "json": "verification",
+          "go_type": "aoe2.VerificationClaim",
+          "ref": "aoe2.VerificationClaim"
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string"
+        },
+        {
+          "name": "FrameCount",
+          "json": "frame_count",
+          "go_type": "int"
+        },
+        {
+          "name": "Frames",
+          "json": "frames",
+          "go_type": "[]SLDManifestFrame",
+          "ref": "gfx.SLDManifestFrame"
+        }
+      ]
+    },
+    "gfx.SLDManifestFrame": {
+      "package": "gfx",
+      "name": "SLDManifestFrame",
+      "fields": [
+        {
+          "name": "Index",
+          "json": "index",
+          "go_type": "int"
+        },
+        {
+          "name": "FrameIndex",
+          "json": "frame_index",
+          "go_type": "uint16"
+        },
+        {
+          "name": "PNG",
+          "json": "png",
+          "go_type": "string"
+        },
+        {
+          "name": "Width",
+          "json": "width",
+          "go_type": "int"
+        },
+        {
+          "name": "Height",
+          "json": "height",
+          "go_type": "int"
+        },
+        {
+          "name": "AnchorX",
+          "json": "anchor_x",
+          "go_type": "int"
+        },
+        {
+          "name": "AnchorY",
+          "json": "anchor_y",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerOffsetX",
+          "json": "layer_offset_x",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerOffsetY",
+          "json": "layer_offset_y",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerWidth",
+          "json": "layer_width",
+          "go_type": "int"
+        },
+        {
+          "name": "LayerHeight",
+          "json": "layer_height",
+          "go_type": "int"
+        },
+        {
+          "name": "OpaquePixels",
+          "json": "opaque_pixels",
+          "go_type": "int"
         }
       ]
     },
@@ -20025,10 +20183,37 @@
           "go_type": "string"
         },
         {
+          "name": "Summary",
+          "json": "summary",
+          "go_type": "ChecksumPhaseAllSummary",
+          "ref": "replay.ChecksumPhaseAllSummary"
+        },
+        {
           "name": "Words",
           "json": "words",
           "go_type": "[]*ChecksumPhaseReport",
           "ref": "replay.ChecksumPhaseReport"
+        }
+      ]
+    },
+    "replay.ChecksumPhaseAllSummary": {
+      "package": "replay",
+      "name": "ChecksumPhaseAllSummary",
+      "fields": [
+        {
+          "name": "ChecksumSamples",
+          "json": "checksum_samples",
+          "go_type": "int"
+        },
+        {
+          "name": "Players",
+          "json": "players",
+          "go_type": "int"
+        },
+        {
+          "name": "Words",
+          "json": "words",
+          "go_type": "int"
         }
       ]
     },
@@ -22990,6 +23175,12 @@
           "name": "Verdict",
           "json": "verdict",
           "go_type": "string"
+        },
+        {
+          "name": "DataSet",
+          "json": "data_set_identity",
+          "go_type": "DataSetIdentity",
+          "ref": "replay.DataSetIdentity"
         },
         {
           "name": "TemplateCheck",
@@ -36283,6 +36474,181 @@
         }
       ]
     },
+    "rpgshop.DemoOptions": {
+      "package": "rpgshop",
+      "name": "DemoOptions",
+      "fields": [
+        {
+          "name": "OutputDir",
+          "go_type": "string"
+        },
+        {
+          "name": "ScenarioName",
+          "go_type": "string"
+        },
+        {
+          "name": "Timestamp",
+          "go_type": "int"
+        }
+      ]
+    },
+    "rpgshop.DemoReport": {
+      "package": "rpgshop",
+      "name": "DemoReport",
+      "fields": [
+        {
+          "name": "OutputDir",
+          "json": "output_dir",
+          "go_type": "string"
+        },
+        {
+          "name": "ScenarioPath",
+          "json": "scenario_path",
+          "go_type": "string"
+        },
+        {
+          "name": "BaseScenarioPath",
+          "json": "base_scenario_path",
+          "go_type": "string"
+        },
+        {
+          "name": "RecipePath",
+          "json": "recipe_path",
+          "go_type": "string"
+        },
+        {
+          "name": "XSPath",
+          "json": "xs_path",
+          "go_type": "string"
+        },
+        {
+          "name": "InstructionsPath",
+          "json": "instructions_path",
+          "go_type": "string"
+        },
+        {
+          "name": "ManifestPath",
+          "json": "manifest_path",
+          "go_type": "string"
+        },
+        {
+          "name": "ScenarioSHA256",
+          "json": "scenario_sha256",
+          "go_type": "string"
+        },
+        {
+          "name": "XSSHA256",
+          "json": "xs_sha256",
+          "go_type": "string"
+        },
+        {
+          "name": "BlankReport",
+          "json": "blank_report",
+          "go_type": "scenario.BlankReport",
+          "ref": "scenario.BlankReport"
+        },
+        {
+          "name": "PatchReport",
+          "json": "patch_report",
+          "go_type": "scenario.PatchReport",
+          "ref": "scenario.PatchReport"
+        },
+        {
+          "name": "Variables",
+          "json": "variables",
+          "go_type": "[]DemoVariable",
+          "ref": "rpgshop.DemoVariable"
+        },
+        {
+          "name": "ShopItems",
+          "json": "shop_items",
+          "go_type": "[]DemoShopItem",
+          "ref": "rpgshop.DemoShopItem"
+        },
+        {
+          "name": "VerificationClaims",
+          "json": "verification_claims",
+          "go_type": "[]string"
+        },
+        {
+          "name": "KnownGaps",
+          "json": "known_gaps",
+          "go_type": "[]string"
+        },
+        {
+          "name": "Files",
+          "json": "files",
+          "go_type": "map[string]string"
+        }
+      ]
+    },
+    "rpgshop.DemoShopItem": {
+      "package": "rpgshop",
+      "name": "DemoShopItem",
+      "fields": [
+        {
+          "name": "Scope",
+          "json": "scope",
+          "go_type": "string"
+        },
+        {
+          "name": "Item",
+          "json": "item",
+          "go_type": "string"
+        },
+        {
+          "name": "Player",
+          "json": "player",
+          "go_type": "int"
+        },
+        {
+          "name": "Hero",
+          "json": "hero",
+          "go_type": "int"
+        },
+        {
+          "name": "TokenUnit",
+          "json": "token_unit",
+          "go_type": "int"
+        },
+        {
+          "name": "HeroUnit",
+          "json": "hero_unit",
+          "go_type": "int"
+        },
+        {
+          "name": "Cost",
+          "json": "cost",
+          "go_type": "int"
+        },
+        {
+          "name": "UnlockNote",
+          "json": "unlock_note",
+          "go_type": "string"
+        }
+      ]
+    },
+    "rpgshop.DemoVariable": {
+      "package": "rpgshop",
+      "name": "DemoVariable",
+      "fields": [
+        {
+          "name": "ID",
+          "json": "id",
+          "go_type": "int"
+        },
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Scope",
+          "json": "scope",
+          "go_type": "string"
+        }
+      ]
+    },
     "scenario.AIFileInfo": {
       "package": "scenario",
       "name": "AIFileInfo",
@@ -36402,6 +36768,14 @@
           "go_type": "int"
         },
         {
+          "name": "MapWidth",
+          "go_type": "int"
+        },
+        {
+          "name": "MapHeight",
+          "go_type": "int"
+        },
+        {
           "name": "Timestamp",
           "go_type": "int"
         },
@@ -36440,6 +36814,10 @@
         {
           "name": "GaiaActive",
           "go_type": "bool"
+        },
+        {
+          "name": "NoConquest",
+          "go_type": "bool"
         }
       ]
     },
@@ -36473,6 +36851,21 @@
           "go_type": "int"
         },
         {
+          "name": "MapWidth",
+          "json": "map_width",
+          "go_type": "int"
+        },
+        {
+          "name": "MapHeight",
+          "json": "map_height",
+          "go_type": "int"
+        },
+        {
+          "name": "TileCount",
+          "json": "tile_count",
+          "go_type": "int"
+        },
+        {
           "name": "ClearTriggers",
           "json": "clear_triggers",
           "go_type": "bool"
@@ -36491,6 +36884,11 @@
         {
           "name": "GaiaActive",
           "json": "gaia_active",
+          "go_type": "bool"
+        },
+        {
+          "name": "NoConquest",
+          "json": "no_conquest",
           "go_type": "bool"
         },
         {
@@ -36522,6 +36920,17 @@
           "name": "InvariantOK",
           "json": "invariant_ok",
           "go_type": "bool"
+        },
+        {
+          "name": "EditorParityOK",
+          "json": "editor_parity_ok",
+          "go_type": "bool"
+        },
+        {
+          "name": "EditorParityNote",
+          "json": "editor_parity_note",
+          "go_type": "string",
+          "optional": true
         },
         {
           "name": "Verification",
@@ -36667,6 +37076,46 @@
           "name": "Inverted",
           "json": "inverted",
           "go_type": "*int",
+          "optional": true
+        }
+      ]
+    },
+    "scenario.ConditionSummary": {
+      "package": "scenario",
+      "name": "ConditionSummary",
+      "fields": [
+        {
+          "name": "TriggerIndex",
+          "json": "trigger_index",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "TriggerName",
+          "json": "trigger_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ConditionIndex",
+          "json": "condition_index",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Type",
+          "json": "type",
+          "go_type": "int"
+        },
+        {
+          "name": "TypeName",
+          "json": "type_name",
+          "go_type": "string"
+        },
+        {
+          "name": "KnownFields",
+          "json": "known_fields",
+          "go_type": "map[string]any",
           "optional": true
         }
       ]
@@ -37594,6 +38043,12 @@
         {
           "name": "Resource3Quantity",
           "json": "resource_3_quantity",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "StringID",
+          "json": "string_id",
           "go_type": "*int",
           "optional": true
         },
@@ -38942,6 +39397,22 @@
           "go_type": "int"
         },
         {
+          "name": "UnitType",
+          "json": "unit_type",
+          "go_type": "int"
+        },
+        {
+          "name": "UnitClass",
+          "json": "unit_class",
+          "go_type": "int16"
+        },
+        {
+          "name": "UnitClassName",
+          "json": "unit_class_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "StandingGraphic1",
           "json": "standing_graphic_1",
           "go_type": "int"
@@ -38987,6 +39458,12 @@
           "name": "Confidence",
           "json": "confidence",
           "go_type": "string"
+        },
+        {
+          "name": "RotationEncoding",
+          "json": "rotation_encoding",
+          "go_type": "string",
+          "optional": true
         },
         {
           "name": "AvailableVariantCount",
@@ -40046,6 +40523,32 @@
         }
       ]
     },
+    "scenario.ScenarioMapPreset": {
+      "package": "scenario",
+      "name": "ScenarioMapPreset",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Size",
+          "json": "size",
+          "go_type": "int"
+        },
+        {
+          "name": "StringID",
+          "json": "string_id",
+          "go_type": "int"
+        },
+        {
+          "name": "StringKey",
+          "json": "string_key",
+          "go_type": "string"
+        }
+      ]
+    },
     "scenario.ScenarioRecipe": {
       "package": "scenario",
       "name": "ScenarioRecipe",
@@ -40550,6 +41053,13 @@
           "json": "variables",
           "go_type": "[]VariableEntry",
           "ref": "scenario.VariableEntry",
+          "optional": true
+        },
+        {
+          "name": "TriggerText",
+          "json": "trigger_text",
+          "go_type": "[]TriggerTextEntry",
+          "ref": "scenario.TriggerTextEntry",
           "optional": true
         },
         {
@@ -41327,6 +41837,18 @@
           "go_type": "string"
         },
         {
+          "name": "Description",
+          "json": "description",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ShortDescription",
+          "json": "short_description",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "TargetIndex",
           "json": "target_index",
           "go_type": "*int",
@@ -41365,6 +41887,42 @@
         {
           "name": "ShortDescriptionStringID",
           "json": "short_description_string_table_id",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "DisplayAsObjective",
+          "json": "display_as_objective",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "DisplayOnScreen",
+          "json": "display_on_screen",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "MakeHeader",
+          "json": "make_header",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "MuteObjectives",
+          "json": "mute_objectives",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "ExecuteOnLoad",
+          "json": "execute_on_load",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "ObjectiveDescriptionOrder",
+          "json": "objective_description_order",
           "go_type": "*int",
           "optional": true
         },
@@ -41752,6 +42310,13 @@
           "go_type": "int"
         },
         {
+          "name": "ConditionData",
+          "json": "condition_data",
+          "go_type": "[]ConditionSummary",
+          "ref": "scenario.ConditionSummary",
+          "optional": true
+        },
+        {
           "name": "RecordStart",
           "json": "record_start",
           "go_type": "int"
@@ -41763,10 +42328,47 @@
         }
       ]
     },
+    "scenario.TriggerTextEntry": {
+      "package": "scenario",
+      "name": "TriggerTextEntry",
+      "fields": [
+        {
+          "name": "TriggerIndex",
+          "json": "trigger_index",
+          "go_type": "int"
+        },
+        {
+          "name": "TriggerName",
+          "json": "trigger_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Field",
+          "json": "field",
+          "go_type": "string"
+        },
+        {
+          "name": "Text",
+          "json": "text",
+          "go_type": "string"
+        }
+      ]
+    },
     "scenario.UnitInfo": {
       "package": "scenario",
       "name": "UnitInfo",
       "fields": [
+        {
+          "name": "NumberOfUnitSections",
+          "json": "number_of_unit_sections",
+          "go_type": "int"
+        },
+        {
+          "name": "NumberOfPlayers",
+          "json": "number_of_players",
+          "go_type": "int"
+        },
         {
           "name": "Sections",
           "json": "sections",
@@ -42187,6 +42789,11 @@
       "name": "XSCensusCounts",
       "fields": [
         {
+          "name": "ScriptContentAttachments",
+          "json": "script_content_attachments",
+          "go_type": "int"
+        },
+        {
           "name": "EmbeddedCarriers",
           "json": "embedded_carriers",
           "go_type": "int"
@@ -42279,6 +42886,11 @@
           "json": "xs",
           "go_type": "XSDeployAttachment",
           "ref": "scenario.XSDeployAttachment"
+        },
+        {
+          "name": "ScriptContentEmbedded",
+          "json": "script_content_embedded",
+          "go_type": "bool"
         },
         {
           "name": "EmbeddedCarriers",

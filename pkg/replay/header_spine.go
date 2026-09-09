@@ -738,6 +738,8 @@ type initialPlayerAttributes struct {
 	CameraX           float64
 	CameraY           float64
 	PostCameraUnknown int32
+	StartX            float64
+	StartY            float64
 	SpawnX            uint16
 	SpawnY            uint16
 	StartMetaByte     byte
@@ -764,34 +766,75 @@ func parseInitialPlayerAttributes(header []byte, start int, limit int, numHeader
 	off += 4
 	attrs.PostCameraUnknown = int32(binary.LittleEndian.Uint32(header[off:]))
 	off += 4
-	attrs.SpawnX = binary.LittleEndian.Uint16(header[off:])
+	tail, err := parseInitialPlayerAttributesTail(header, off, limit)
+	if err != nil {
+		// Current DE save_version 68 human-player records insert two float32
+		// start coordinates before the legacy u16 spawn/meta/civ-key tail.
+		if off+8 <= limit {
+			startX := float64(math.Float32frombits(binary.LittleEndian.Uint32(header[off:])))
+			startY := float64(math.Float32frombits(binary.LittleEndian.Uint32(header[off+4:])))
+			if plausibleXY(startX, startY) {
+				if shifted, shiftedErr := parseInitialPlayerAttributesTail(header, off+8, limit); shiftedErr == nil {
+					attrs.StartX = startX
+					attrs.StartY = startY
+					tail = shifted
+					err = nil
+				}
+			}
+		}
+	}
+	if err != nil {
+		return attrs, err
+	}
+	attrs.SpawnX = tail.SpawnX
+	attrs.SpawnY = tail.SpawnY
+	attrs.StartMetaByte = tail.StartMetaByte
+	attrs.CivilizationKey = tail.CivilizationKey
+	attrs.End = tail.End
+	return attrs, nil
+}
+
+type initialPlayerAttributesTail struct {
+	End             int
+	SpawnX          uint16
+	SpawnY          uint16
+	StartMetaByte   byte
+	CivilizationKey string
+}
+
+func parseInitialPlayerAttributesTail(header []byte, off int, limit int) (initialPlayerAttributesTail, error) {
+	var tail initialPlayerAttributesTail
+	if off+5 > limit || off+5 > len(header) {
+		return tail, fmt.Errorf("need spawn/meta tail at %d", off)
+	}
+	tail.SpawnX = binary.LittleEndian.Uint16(header[off:])
 	off += 2
-	attrs.SpawnY = binary.LittleEndian.Uint16(header[off:])
+	tail.SpawnY = binary.LittleEndian.Uint16(header[off:])
 	off += 2
-	attrs.StartMetaByte = header[off]
+	tail.StartMetaByte = header[off]
 	off++
 	if off+4 > limit || off+4 > len(header) {
-		return attrs, fmt.Errorf("need civilization key at %d", off)
+		return tail, fmt.Errorf("need civilization key at %d", off)
 	}
 	if header[off] != 0x60 || header[off+1] != 0x0a {
-		return attrs, fmt.Errorf("bad civilization key marker at %d", off)
+		return tail, fmt.Errorf("bad civilization key marker at %d", off)
 	}
 	off += 2
 	length := int(int16(binary.LittleEndian.Uint16(header[off:])))
 	off += 2
 	if length < 0 || off+length+6 > limit || off+length+6 > len(header) {
-		return attrs, fmt.Errorf("bad civilization key length %d at %d", length, off-2)
+		return tail, fmt.Errorf("bad civilization key length %d at %d", length, off-2)
 	}
-	attrs.CivilizationKey = decodeCString(header[off : off+length])
+	tail.CivilizationKey = decodeCString(header[off : off+length])
 	off += length
 	for i := 0; i < 6; i++ {
 		if header[off+i] != 0 {
-			return attrs, fmt.Errorf("expected zero padding after civilization key at %d", off+i)
+			return tail, fmt.Errorf("expected zero padding after civilization key at %d", off+i)
 		}
 	}
 	off += 6
-	attrs.End = off
-	return attrs, nil
+	tail.End = off
+	return tail, nil
 }
 
 func parseInitialPlayerPrefix(header []byte, start int, index int, numPlayers int, triggerStart int) (InitialPlayerSpan, int, int, int, error) {

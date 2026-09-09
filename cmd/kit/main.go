@@ -33,6 +33,7 @@ import (
 	"aoe2kit/pkg/registry"
 	"aoe2kit/pkg/replay"
 	"aoe2kit/pkg/roadmap"
+	"aoe2kit/pkg/rpgshop"
 	"aoe2kit/pkg/scenario"
 	"aoe2kit/pkg/triggergraph"
 )
@@ -101,6 +102,8 @@ func main() {
 		runCampaign(os.Args[2:])
 	case "roadmap":
 		runRoadmap(os.Args[2:])
+	case "rpg":
+		runRPG(os.Args[2:])
 	case "facts":
 		runFacts(os.Args[2:])
 	case "project":
@@ -304,6 +307,90 @@ func printRoadmapDarkText(report roadmap.DarkReport) {
 		fmt.Println("\nnotes:")
 		for _, note := range report.Notes {
 			fmt.Printf("  - %s\n", note)
+		}
+	}
+}
+
+func runRPG(args []string) {
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: kit rpg <shop-demo> [--out-dir DIR] [--name TEXT] [--timestamp UNIX] [--text|--json]")
+		os.Exit(2)
+	}
+	switch args[0] {
+	case "shop-demo":
+		opts := rpgshop.DemoOptions{}
+		textOut := false
+		for i := 1; i < len(args); i++ {
+			switch args[i] {
+			case "--out-dir":
+				i++
+				if i >= len(args) {
+					die("kit rpg shop-demo", fmt.Errorf("--out-dir needs a value"))
+				}
+				opts.OutputDir = args[i]
+			case "--name":
+				i++
+				if i >= len(args) {
+					die("kit rpg shop-demo", fmt.Errorf("--name needs a value"))
+				}
+				opts.ScenarioName = args[i]
+			case "--timestamp":
+				i++
+				if i >= len(args) {
+					die("kit rpg shop-demo", fmt.Errorf("--timestamp needs a unix value"))
+				}
+				value, err := strconv.Atoi(args[i])
+				if err != nil {
+					die("kit rpg shop-demo", fmt.Errorf("--timestamp needs an integer"))
+				}
+				opts.Timestamp = value
+			case "--text":
+				textOut = true
+			case "--json":
+				textOut = false
+			default:
+				die("kit rpg shop-demo", fmt.Errorf("unknown option %q", args[i]))
+			}
+		}
+		report, err := rpgshop.BuildHeroShopDemo(opts)
+		if err != nil {
+			die("kit rpg shop-demo", err)
+		}
+		if textOut {
+			printRPGShopDemoText(report)
+			return
+		}
+		printJSON(report)
+	default:
+		die("kit rpg", fmt.Errorf("unknown rpg command %q", args[0]))
+	}
+}
+
+func printRPGShopDemoText(report *rpgshop.DemoReport) {
+	fmt.Printf("rpg shop demo: %s\n", report.ScenarioPath)
+	fmt.Printf("scenario_sha256=%s xs_sha256=%s\n", report.ScenarioSHA256, report.XSSHA256)
+	fmt.Printf("recipe=%s\nxs=%s\nmanifest=%s\n", report.RecipePath, report.XSPath, report.ManifestPath)
+	fmt.Printf("blank: triggers %d->%d units %d->%d rebuild_ok=%t invariant_ok=%t\n",
+		report.BlankReport.TriggerCountBefore,
+		report.BlankReport.TriggerCountAfter,
+		report.BlankReport.UnitCountBefore,
+		report.BlankReport.UnitCountAfter,
+		report.BlankReport.RebuildOK,
+		report.BlankReport.InvariantOK,
+	)
+	fmt.Printf("patch: triggers=%d units=%d verification=%s\n",
+		report.PatchReport.TriggerCountAfter,
+		report.PatchReport.UnitCountAfter,
+		report.PatchReport.Verification.Label,
+	)
+	fmt.Printf("variables=%d shop_items=%d\n", len(report.Variables), len(report.ShopItems))
+	for _, claim := range report.VerificationClaims {
+		fmt.Printf("- %s\n", claim)
+	}
+	if len(report.KnownGaps) > 0 {
+		fmt.Println("known gaps:")
+		for _, gap := range report.KnownGaps {
+			fmt.Printf("- %s\n", gap)
 		}
 	}
 }
@@ -2691,8 +2778,10 @@ type scenarioInfoReport struct {
 }
 
 type namedScenarioUnitInfo struct {
-	Sections []namedPlayerUnitsInfo `json:"sections"`
-	Total    int                    `json:"total"`
+	NumberOfUnitSections int                    `json:"number_of_unit_sections"`
+	NumberOfPlayers      int                    `json:"number_of_players"`
+	Sections             []namedPlayerUnitsInfo `json:"sections"`
+	Total                int                    `json:"total"`
 }
 
 type namedPlayerUnitsInfo struct {
@@ -2710,7 +2799,11 @@ func namedScenarioUnits(info *scenario.UnitInfo) *namedScenarioUnitInfo {
 	if info == nil {
 		return nil
 	}
-	out := &namedScenarioUnitInfo{Total: info.Total}
+	out := &namedScenarioUnitInfo{
+		NumberOfUnitSections: info.NumberOfUnitSections,
+		NumberOfPlayers:      info.NumberOfPlayers,
+		Total:                info.Total,
+	}
 	for _, section := range info.Sections {
 		namedSection := namedPlayerUnitsInfo{Player: section.Player, Count: section.Count}
 		for _, unit := range section.Units {
@@ -2801,6 +2894,9 @@ func printScenarioXSCensus(report scenario.XSCensusReport) {
 	fmt.Printf("status: %s\n", status)
 	fmt.Printf("verification: %s\n", report.Verification)
 	fmt.Printf("xs: script_name=%q script_file_path=%q content_bytes=%d\n", report.XS.ScriptName, report.XS.ScriptFilePath, report.XS.ScriptFileContentBytes)
+	if report.ScriptContentEmbedded {
+		fmt.Printf("script_content: embedded bytes=%d sha256=%s\n", report.XS.ScriptFileContentBytes, shortHash(report.XS.ScriptFileContentSHA256))
+	}
 	if len(report.EmbeddedCarriers) > 0 {
 		fmt.Println("embedded_carriers:")
 		for _, carrier := range report.EmbeddedCarriers {
@@ -2815,8 +2911,8 @@ func printScenarioXSCensus(report scenario.XSCensusReport) {
 	if report.XS.ResolvedPath != "" {
 		fmt.Printf("resolved_xs: %s rel=%s\n", report.XS.ResolvedPath, report.XS.ResolvedRelativePath)
 	}
-	fmt.Printf("counts: embedded_carriers=%d script_calls=%d unique_calls=%d functions=%d includes=%d resolved=%d missing=%d declarations=%d cross_file_nonextern=%d findings=%d\n",
-		report.Counts.EmbeddedCarriers, report.Counts.ScriptCalls, report.Counts.UniqueCalledFunctions, report.Counts.Functions,
+	fmt.Printf("counts: script_content=%d embedded_carriers=%d script_calls=%d unique_calls=%d functions=%d includes=%d resolved=%d missing=%d declarations=%d cross_file_nonextern=%d findings=%d\n",
+		report.Counts.ScriptContentAttachments, report.Counts.EmbeddedCarriers, report.Counts.ScriptCalls, report.Counts.UniqueCalledFunctions, report.Counts.Functions,
 		report.Counts.Includes, report.Counts.ResolvedIncludes, report.Counts.MissingIncludes,
 		report.Counts.Declarations, report.Counts.CrossFileNonExtern, report.Counts.Findings)
 	if len(report.UniqueCalledFunctions) > 0 {
@@ -3859,10 +3955,10 @@ func printScenarioEffectWhere(report scenario.EffectWhereReport) {
 
 func runScenarioBlank(args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen blank <out.aoe2scenario> [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--gaia-active] [--keep-seed-triggers] [--text]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]")
 		os.Exit(2)
 	}
-	opts := scenario.BlankOptions{PlayerCount: 2, HumanSlots: 1}
+	opts := scenario.BlankOptions{PlayerCount: 1, HumanSlots: 1}
 	textOut := false
 	for i := 1; i < len(args); i++ {
 		switch args[i] {
@@ -3876,6 +3972,37 @@ func runScenarioBlank(args []string) {
 				die("kit scen blank", fmt.Errorf("--players needs an integer"))
 			}
 			opts.PlayerCount = value
+		case "--size":
+			i++
+			if i >= len(args) {
+				die("kit scen blank", fmt.Errorf("--size needs a value"))
+			}
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				die("kit scen blank", fmt.Errorf("--size needs an integer"))
+			}
+			opts.MapWidth = value
+			opts.MapHeight = value
+		case "--width":
+			i++
+			if i >= len(args) {
+				die("kit scen blank", fmt.Errorf("--width needs a value"))
+			}
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				die("kit scen blank", fmt.Errorf("--width needs an integer"))
+			}
+			opts.MapWidth = value
+		case "--height":
+			i++
+			if i >= len(args) {
+				die("kit scen blank", fmt.Errorf("--height needs a value"))
+			}
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				die("kit scen blank", fmt.Errorf("--height needs an integer"))
+			}
+			opts.MapHeight = value
 		case "--human-slots":
 			i++
 			if i >= len(args) {
@@ -3900,6 +4027,8 @@ func runScenarioBlank(args []string) {
 			opts.DummyStarters = true
 		case "--gaia-active":
 			opts.GaiaActive = true
+		case "--no-conquest":
+			opts.NoConquest = true
 		case "--dummy-unit":
 			i++
 			if i >= len(args) {
@@ -3969,14 +4098,17 @@ func parseScenarioBlankPair(raw string) (float64, float64, error) {
 }
 
 func printScenarioBlank(report scenario.BlankReport) {
-	fmt.Printf("output=%s version=%s players=%d human_slots=%d seed_sha256=%s\n",
+	fmt.Printf("output=%s version=%s players=%d human_slots=%d map=%dx%d tiles=%d seed_sha256=%s\n",
 		report.Output,
 		report.Version,
 		report.PlayerCount,
 		report.HumanSlots,
+		report.MapWidth,
+		report.MapHeight,
+		report.TileCount,
 		report.SeedSHA256,
 	)
-	fmt.Printf("triggers=%d->%d units=%d->%d clear_triggers=%t dummy_starters=%t dummy_unit=%d gaia_active=%t\n",
+	fmt.Printf("triggers=%d->%d units=%d->%d clear_triggers=%t dummy_starters=%t dummy_unit=%d gaia_active=%t no_conquest=%t\n",
 		report.TriggerCountBefore,
 		report.TriggerCountAfter,
 		report.UnitCountBefore,
@@ -3985,8 +4117,10 @@ func printScenarioBlank(report scenario.BlankReport) {
 		report.DummyStarters,
 		report.DummyUnit,
 		report.GaiaActive,
+		report.NoConquest,
 	)
 	fmt.Printf("verification=%s rebuild_ok=%t invariant_ok=%t\n", report.Verification, report.RebuildOK, report.InvariantOK)
+	fmt.Printf("editor_parity_ok=%t note=%q\n", report.EditorParityOK, report.EditorParityNote)
 }
 
 func printScenarioTriggerSearch(report scenario.TriggerSearchReport) {
@@ -6098,7 +6232,7 @@ func fetchAllReplayPOVs(client *aoems.Client, gameID string, seedProfile string,
 	}
 	if rosterPath == "" {
 		if seedProfile == "" {
-			return nil, fmt.Errorf("--all-povs needs --profile seed or --from-roster replay")
+			return nil, fmt.Errorf("--all-povs needs a roster source: pass --profile <seedProfileId> to fetch one POV first, or --from-roster <replay.aoe2record|zip> to reuse an existing replay roster")
 		}
 		seed, err := client.FetchReplay(aoems.ReplayFetchOptions{GameID: gameID, ProfileID: seedProfile, OutDir: outDir, Force: force})
 		if err != nil {
@@ -7530,6 +7664,23 @@ func runReplay(args []string) {
 			default:
 				die("kit replay sync-log", fmt.Errorf("unknown option %q", args[i]))
 			}
+		}
+		info, inspectErr := aoe2.InspectFile(args[1])
+		if inspectErr == nil && (info.Kind == "record" || info.Kind == "zip") {
+			if opts.ReplayPath != "" {
+				die("kit replay sync-log", fmt.Errorf("--replay is only for p0-sync text logs; when the first argument is a replay, omit --replay"))
+			}
+			syncOpts := replay.SyncOptions{Limit: opts.Limit}
+			report, err := replay.BuildSyncStream(args[1], syncOpts)
+			if err != nil {
+				die("kit replay sync-log", err)
+			}
+			if textOut {
+				printReplaySync(report)
+			} else {
+				printJSON(report)
+			}
+			return
 		}
 		report, err := replay.BuildSyncLogReport(args[1], opts)
 		if err != nil {
@@ -10098,6 +10249,23 @@ func printReplayDataModCheck(report *replay.EffectiveDataModCheckReport) {
 	fmt.Printf("method: %s\n", report.Method)
 	fmt.Printf("verification: %s\n", report.Verification)
 	fmt.Printf("verdict: %s\n", report.Verdict)
+	if report.DataSet.Status != "" {
+		fmt.Printf("data_set_identity: status=%s", report.DataSet.Status)
+		if report.DataSet.ActiveDataSet != "" {
+			fmt.Printf(" active=%q", report.DataSet.ActiveDataSet)
+		}
+		if report.DataSet.Checksum != 0 {
+			fmt.Printf(" checksum=%d", report.DataSet.Checksum)
+		}
+		if report.DataSet.WorkshopID != 0 {
+			fmt.Printf(" workshop_id=%d", report.DataSet.WorkshopID)
+		}
+		fmt.Printf(" confidence=%s source=%s", report.DataSet.Confidence, report.DataSet.Source)
+		if report.DataSet.Error != "" {
+			fmt.Printf(" error=%q", report.DataSet.Error)
+		}
+		fmt.Println()
+	}
 	fmt.Printf("target_template: player=%d label=%s bytes=%d sha256=%s\n",
 		report.TargetTemplate.ReferencePlayer, report.TargetTemplate.ReferenceLabel, report.TargetTemplate.TailBytes, report.TargetTemplate.SHA256)
 	if report.BaselineTemplate != nil {
@@ -11760,11 +11928,24 @@ func scenarioInfoArg(path string) (scenarioInfoReport, error) {
 
 func runDat(args []string) {
 	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|diff|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|diff|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
 		os.Exit(2)
 	}
 	if args[0] == "semantics-readback" {
 		runDatSemanticsReadback(args)
+		return
+	}
+	if args[0] == "sprite" {
+		options, text := parseSLDExportOptions("kit dat sprite", args[2:])
+		report, err := gfx.ExportSLD(args[1], options)
+		if err != nil {
+			die("kit dat sprite", err)
+		}
+		if text {
+			printSLDExportText(report)
+		} else {
+			printJSON(report)
+		}
 		return
 	}
 	info, err := aoe2.InspectFile(args[1])
@@ -13731,7 +13912,7 @@ func runDat(args []string) {
 		}
 		printJSON(report)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
 		os.Exit(2)
 	}
 }
@@ -14116,31 +14297,7 @@ func runGFX(args []string) {
 			printJSON(file)
 		}
 	case "export":
-		options := gfx.SLDExportOptions{}
-		text := false
-		for i := 2; i < len(args); i++ {
-			switch args[i] {
-			case "--out":
-				i++
-				if i >= len(args) {
-					die("kit gfx export", fmt.Errorf("--out needs a directory"))
-				}
-				options.OutDir = args[i]
-			case "--limit":
-				value, err := parseNextInt32(args, &i, "--limit")
-				if err != nil {
-					die("kit gfx export", err)
-				}
-				if value < 0 {
-					die("kit gfx export", fmt.Errorf("--limit must be non-negative"))
-				}
-				options.Limit = int(value)
-			case "--text":
-				text = true
-			default:
-				die("kit gfx export", fmt.Errorf("unknown option %q", args[i]))
-			}
-		}
+		options, text := parseSLDExportOptions("kit gfx export", args[2:])
 		report, err := gfx.ExportSLD(args[1], options)
 		if err != nil {
 			die("kit gfx export", err)
@@ -14154,6 +14311,35 @@ func runGFX(args []string) {
 		fmt.Fprintln(os.Stderr, "usage: kit gfx <info|export> <file.sld> [--out dir] [--limit N] [--text]")
 		os.Exit(2)
 	}
+}
+
+func parseSLDExportOptions(prefix string, args []string) (gfx.SLDExportOptions, bool) {
+	options := gfx.SLDExportOptions{}
+	text := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--out":
+			i++
+			if i >= len(args) {
+				die(prefix, fmt.Errorf("--out needs a directory"))
+			}
+			options.OutDir = args[i]
+		case "--limit":
+			value, err := parseNextInt32(args, &i, "--limit")
+			if err != nil {
+				die(prefix, err)
+			}
+			if value < 0 {
+				die(prefix, fmt.Errorf("--limit must be non-negative"))
+			}
+			options.Limit = int(value)
+		case "--text":
+			text = true
+		default:
+			die(prefix, fmt.Errorf("unknown option %q", args[i]))
+		}
+	}
+	return options, text
 }
 
 func printSLDInfoText(file *gfx.SLD) {
@@ -14177,9 +14363,16 @@ func printSLDExportText(report gfx.SLDExportReport) {
 	fmt.Printf("output_dir: %s\n", report.OutputDir)
 	fmt.Printf("frames: %d exported=%d\n", report.Frames, len(report.Exported))
 	fmt.Printf("verification: %s\n", report.Verification.Label)
+	if report.ManifestPath != "" {
+		fmt.Printf("manifest: %s\n", report.ManifestPath)
+	}
+	if report.ContactSheet != "" {
+		fmt.Printf("contact_sheet: %s\n", report.ContactSheet)
+	}
 	for _, exported := range report.Exported {
-		fmt.Printf("frame %d index=%d %s %dx%d -> %s\n",
-			exported.FrameOrdinal, exported.FrameIndex, exported.Layer, exported.Width, exported.Height, exported.Path)
+		fmt.Printf("frame %d index=%d %s %dx%d anchor=%d,%d opaque=%d -> %s\n",
+			exported.FrameOrdinal, exported.FrameIndex, exported.Layer, exported.Width, exported.Height,
+			exported.HotspotX, exported.HotspotY, exported.OpaquePixels, exported.Path)
 	}
 	for _, warning := range report.Warnings {
 		fmt.Printf("warning: %s\n", warning)
@@ -19475,6 +19668,7 @@ func usage() {
   kit roadmap crud [--domain scenario|dat|replay|all] [--text|--json]
   kit roadmap rwd [--domain scenario|dat|replay|all] [--text|--json]
   kit roadmap dark [--domain scenario|dat|replay|all] [--text|--json]
+  kit rpg shop-demo [--out-dir DIR] [--name TEXT] [--timestamp UNIX] [--text|--json]
   kit identify <file.aoe2scenario|file.aoe2record> [--registry known_scenarios.json] [--ai-registry known_ais.json] [--register NAME] [--family FAMILY] [--description TEXT]
   kit collect <folder> [--registry known_scenarios.json] [--dry-run]
   kit player stats <profileId> [--match-type N] [--cache-dir DIR] [--force] [--text]
@@ -19549,7 +19743,7 @@ func usage() {
   kit xs datagen <arrays.json> [--out module.xs]
   kit xs inspect <file.xsdat> [--types string,int,...] [--text]
   kit xsdat decode <file.xsdat> [--types string,int,...] [--ledger expected.json] [--schema rtv12|rtv13|rtv14|rtv141|rtv142|rtv15|rtv16|rtv17|a2ksem2] [--text]
-  kit scen blank <out.aoe2scenario> [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--gaia-active] [--keep-seed-triggers] [--text]
+  kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]
   kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario>
   kit scen describe <file.aoe2scenario> [--section triggers|units|map|players|victory|messages|disables|ai|resources|all] [--full] [--json] [--no-path|--quiet-header]
   kit scen settings <file.aoe2scenario> [--text|--json]
@@ -19684,6 +19878,7 @@ func usage() {
   kit dat player-colour-patch <in.dat> <out.dat> <colour_id> [colour-flags]
   kit dat player-colour-delete <in.dat> <out.dat> <colour_id>
   kit dat random-maps <empires*.dat>
+  kit dat sprite <file.sld> [--out dir] [--limit N] [--text]
   kit dat patch-graphic <in.dat> <out.dat> <graphic_id> [graphic scalar flags]
   kit dat graphic-delta-delete <in.dat> <out.dat> <graphic_id> <row_index>
   kit dat graphic-angle-sound-delete <in.dat> <out.dat> <graphic_id> <row_index>

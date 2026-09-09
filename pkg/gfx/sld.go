@@ -3,9 +3,11 @@ package gfx
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/color"
+	"image/draw"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -70,6 +72,8 @@ type SLDExportReport struct {
 	Source       string                 `json:"source"`
 	OutputDir    string                 `json:"output_dir"`
 	Frames       int                    `json:"frames"`
+	ManifestPath string                 `json:"manifest_path,omitempty"`
+	ContactSheet string                 `json:"contact_sheet,omitempty"`
 	Exported     []SLDExportedFrame     `json:"exported,omitempty"`
 	Warnings     []string               `json:"warnings,omitempty"`
 }
@@ -83,6 +87,34 @@ type SLDExportedFrame struct {
 	Height       int    `json:"height"`
 	HotspotX     int    `json:"hotspot_x"`
 	HotspotY     int    `json:"hotspot_y"`
+	LayerOffsetX int    `json:"layer_offset_x"`
+	LayerOffsetY int    `json:"layer_offset_y"`
+	LayerWidth   int    `json:"layer_width"`
+	LayerHeight  int    `json:"layer_height"`
+	OpaquePixels int    `json:"opaque_pixels"`
+}
+
+type SLDManifest struct {
+	Version      string                 `json:"version"`
+	Verification aoe2.VerificationClaim `json:"verification"`
+	Source       string                 `json:"source"`
+	FrameCount   int                    `json:"frame_count"`
+	Frames       []SLDManifestFrame     `json:"frames"`
+}
+
+type SLDManifestFrame struct {
+	Index        int    `json:"index"`
+	FrameIndex   uint16 `json:"frame_index"`
+	PNG          string `json:"png"`
+	Width        int    `json:"width"`
+	Height       int    `json:"height"`
+	AnchorX      int    `json:"anchor_x"`
+	AnchorY      int    `json:"anchor_y"`
+	LayerOffsetX int    `json:"layer_offset_x"`
+	LayerOffsetY int    `json:"layer_offset_y"`
+	LayerWidth   int    `json:"layer_width"`
+	LayerHeight  int    `json:"layer_height"`
+	OpaquePixels int    `json:"opaque_pixels"`
 }
 
 func OpenSLD(path string) (*SLD, error) {
@@ -174,6 +206,13 @@ func ExportSLD(path string, options SLDExportOptions) (SLDExportReport, error) {
 	if options.Limit > 0 && options.Limit < limit {
 		limit = options.Limit
 	}
+	manifest := SLDManifest{
+		Version:      Version,
+		Verification: aoe2.StructureVerification(true),
+		Source:       path,
+		FrameCount:   len(file.Frames),
+	}
+	var contactFrames []image.Image
 	var previousMain *image.RGBA
 	for i := 0; i < limit; i++ {
 		frame := file.Frames[i]
@@ -188,11 +227,13 @@ func ExportSLD(path string, options SLDExportOptions) (SLDExportReport, error) {
 			return report, fmt.Errorf("frame %d main layer: %w", frame.Ordinal, err)
 		}
 		previousMain = img
-		name := fmt.Sprintf("%s_frame_%04d_main.png", strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), frame.Ordinal)
+		name := fmt.Sprintf("frame_%02d.png", frame.Ordinal)
 		outPath := filepath.Join(outDir, name)
 		if err := writePNG(outPath, img); err != nil {
 			return report, err
 		}
+		opaquePixels := countOpaquePixels(img)
+		contactFrames = append(contactFrames, img)
 		report.Exported = append(report.Exported, SLDExportedFrame{
 			FrameOrdinal: frame.Ordinal,
 			FrameIndex:   frame.Index,
@@ -202,10 +243,41 @@ func ExportSLD(path string, options SLDExportOptions) (SLDExportReport, error) {
 			Height:       frame.Height,
 			HotspotX:     frame.HotspotX,
 			HotspotY:     frame.HotspotY,
+			LayerOffsetX: layer.OffsetX1,
+			LayerOffsetY: layer.OffsetY1,
+			LayerWidth:   layer.Width,
+			LayerHeight:  layer.Height,
+			OpaquePixels: opaquePixels,
+		})
+		manifest.Frames = append(manifest.Frames, SLDManifestFrame{
+			Index:        frame.Ordinal,
+			FrameIndex:   frame.Index,
+			PNG:          name,
+			Width:        frame.Width,
+			Height:       frame.Height,
+			AnchorX:      frame.HotspotX,
+			AnchorY:      frame.HotspotY,
+			LayerOffsetX: layer.OffsetX1,
+			LayerOffsetY: layer.OffsetY1,
+			LayerWidth:   layer.Width,
+			LayerHeight:  layer.Height,
+			OpaquePixels: opaquePixels,
 		})
 	}
 	if limit < len(file.Frames) {
 		report.Warnings = append(report.Warnings, fmt.Sprintf("export limited to %d of %d frames", limit, len(file.Frames)))
+	}
+	manifestPath := filepath.Join(outDir, "manifest.json")
+	if err := writeJSON(manifestPath, manifest); err != nil {
+		return report, err
+	}
+	report.ManifestPath = manifestPath
+	if len(contactFrames) > 0 {
+		contactPath := filepath.Join(outDir, "contact_sheet.png")
+		if err := writePNG(contactPath, contactSheet(contactFrames)); err != nil {
+			return report, err
+		}
+		report.ContactSheet = contactPath
 	}
 	return report, nil
 }
@@ -419,6 +491,45 @@ func writePNG(path string, img image.Image) error {
 		return err
 	}
 	return os.WriteFile(path, buf.Bytes(), 0o644)
+}
+
+func writeJSON(path string, value any) error {
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return os.WriteFile(path, data, 0o644)
+}
+
+func countOpaquePixels(img *image.RGBA) int {
+	count := 0
+	for i := 3; i < len(img.Pix); i += 4 {
+		if img.Pix[i] != 0 {
+			count++
+		}
+	}
+	return count
+}
+
+func contactSheet(frames []image.Image) image.Image {
+	if len(frames) == 0 {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1))
+	}
+	cell := frames[0].Bounds().Size()
+	cols := 1
+	for cols*cols < len(frames) {
+		cols++
+	}
+	rows := divCeil(len(frames), cols)
+	sheet := image.NewRGBA(image.Rect(0, 0, cols*cell.X, rows*cell.Y))
+	for i, frame := range frames {
+		x := (i % cols) * cell.X
+		y := (i / cols) * cell.Y
+		target := image.Rect(x, y, x+cell.X, y+cell.Y)
+		draw.Draw(sheet, target, frame, frame.Bounds().Min, draw.Over)
+	}
+	return sheet
 }
 
 func divCeil(n, d int) int {

@@ -22,6 +22,7 @@ type EffectiveDataModCheckReport struct {
 	Method            string                         `json:"method"`
 	Verification      string                         `json:"verification"`
 	Verdict           string                         `json:"verdict"`
+	DataSet           DataSetIdentity                `json:"data_set_identity"`
 	TemplateCheck     EffectiveTemplateCheck         `json:"template_check"`
 	TargetTemplate    EffectiveDataTemplate          `json:"target_template"`
 	BaselineTemplate  *EffectiveDataTemplate         `json:"baseline_template,omitempty"`
@@ -122,6 +123,7 @@ func BuildEffectiveDataModCheck(path string, opts EffectiveDataModCheckOptions) 
 		DatPath:      opts.DatPath,
 		Method:       "v68_effective_gamedata_template_and_baseline_diff",
 		Verification: "structure_verified_effective_gamedata_tail_diff_not_engine_verified",
+		DataSet:      target.rec.DataSet,
 		TargetTemplate: EffectiveDataTemplate{
 			ReferencePlayer: target.ref.playerIndex,
 			ReferenceLabel:  target.ref.label,

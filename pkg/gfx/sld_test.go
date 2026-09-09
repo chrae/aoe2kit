@@ -3,6 +3,7 @@ package gfx
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"image/png"
 	"os"
 	"path/filepath"
@@ -51,6 +52,12 @@ func TestExportSLDMainLayerPNG(t *testing.T) {
 	if !report.OK || len(report.Exported) != 1 {
 		t.Fatalf("report = %+v", report)
 	}
+	if filepath.Base(report.Exported[0].Path) != "frame_00.png" {
+		t.Fatalf("exported path = %s, want frame_00.png", report.Exported[0].Path)
+	}
+	if report.Exported[0].OpaquePixels == 0 {
+		t.Fatalf("opaque pixels = 0")
+	}
 	data, err := os.ReadFile(report.Exported[0].Path)
 	if err != nil {
 		t.Fatal(err)
@@ -61,6 +68,23 @@ func TestExportSLDMainLayerPNG(t *testing.T) {
 	}
 	if img.Bounds().Dx() != 4 || img.Bounds().Dy() != 4 {
 		t.Fatalf("png bounds = %v", img.Bounds())
+	}
+	manifestData, err := os.ReadFile(filepath.Join(dir, "out", "manifest.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest SLDManifest
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		t.Fatalf("decode manifest: %v", err)
+	}
+	if manifest.FrameCount != 1 || len(manifest.Frames) != 1 {
+		t.Fatalf("manifest frames = %d/%d, want 1/1", manifest.FrameCount, len(manifest.Frames))
+	}
+	if manifest.Frames[0].PNG != "frame_00.png" || manifest.Frames[0].AnchorX != 2 || manifest.Frames[0].AnchorY != 3 {
+		t.Fatalf("manifest frame = %+v", manifest.Frames[0])
+	}
+	if _, err := os.Stat(filepath.Join(dir, "out", "contact_sheet.png")); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -78,6 +102,55 @@ func TestParseSLDAlignsOddLengthLayersForward(t *testing.T) {
 	}
 	if frame.Layers[2].Name != "playercolor" || frame.Layers[2].ContentLength != 8 {
 		t.Fatalf("playercolor layer = %+v", frame.Layers[2])
+	}
+}
+
+func TestExportRealSLDSamples(t *testing.T) {
+	samples := []string{
+		"s_medi_courtyard_wall_x1.sld",
+		"s_hedge_garden_x1.sld",
+	}
+	for _, sample := range samples {
+		t.Run(sample, func(t *testing.T) {
+			path := filepath.Join("..", "..", "testdata", "sld-samples", sample)
+			if _, err := os.Stat(path); err != nil {
+				t.Skipf("SLD sample unavailable: %v", err)
+			}
+			outDir := filepath.Join(t.TempDir(), "out")
+			report, err := ExportSLD(path, SLDExportOptions{OutDir: outDir})
+			if err != nil {
+				t.Fatalf("ExportSLD: %v", err)
+			}
+			if !report.OK || report.Frames != 10 || len(report.Exported) != 10 {
+				t.Fatalf("report = %+v", report)
+			}
+			if report.ManifestPath == "" || report.ContactSheet == "" {
+				t.Fatalf("manifest/contact paths missing: %+v", report)
+			}
+			for i := 0; i < 2; i++ {
+				frame := report.Exported[i]
+				if frame.Width != 300 || frame.Height != 300 || frame.HotspotX != 150 || frame.HotspotY != 150 {
+					t.Fatalf("frame %d geometry = %+v", i, frame)
+				}
+				if frame.OpaquePixels == 0 {
+					t.Fatalf("frame %d has no opaque pixels", i)
+				}
+				data, err := os.ReadFile(frame.Path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				img, err := png.Decode(bytes.NewReader(data))
+				if err != nil {
+					t.Fatalf("decode frame %d: %v", i, err)
+				}
+				if img.Bounds().Dx() != frame.Width || img.Bounds().Dy() != frame.Height {
+					t.Fatalf("frame %d png bounds = %v, want %dx%d", i, img.Bounds(), frame.Width, frame.Height)
+				}
+			}
+			if _, err := os.Stat(filepath.Join(outDir, "frame_09.png")); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 

@@ -1,10 +1,12 @@
 package scenario
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
 	"reflect"
+	"sort"
 
 	"aoe2kit/pkg/datfile"
 	"aoe2kit/pkg/testfixtures"
@@ -54,8 +56,8 @@ func TestBlankScenarioSeedIntegrity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BlankScenarioSeedBytes: %v", err)
 	}
-	if len(data) != 1029 {
-		t.Fatalf("blank seed length = %d, want 1029", len(data))
+	if len(data) != 763 {
+		t.Fatalf("blank seed length = %d, want 763", len(data))
 	}
 	file, err := Parse(data)
 	if err != nil {
@@ -64,9 +66,130 @@ func TestBlankScenarioSeedIntegrity(t *testing.T) {
 	if file.Version != "1.58" {
 		t.Fatalf("blank seed version = %q, want 1.58", file.Version)
 	}
-	if file.Triggers == nil || file.Triggers.Count != 3 {
-		t.Fatalf("blank seed trigger count = %#v, want 3 editor seed triggers", file.Triggers)
+	if file.Triggers == nil || file.Triggers.Count != 0 {
+		t.Fatalf("blank seed trigger count = %#v, want 0 editor blank triggers", file.Triggers)
 	}
+}
+
+func TestWriteBlankScenarioFileMatchesEditorBlankPlayerInit(t *testing.T) {
+	editorPath := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	editor, err := Open(editorPath)
+	if err != nil {
+		t.Fatalf("Open editor blank fixture: %v", err)
+	}
+	out := filepath.Join(t.TempDir(), "KitEditorParityBlank.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	kit, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open kit blank output: %v", err)
+	}
+	if kit.PlayerCount != editor.PlayerCount {
+		t.Fatalf("player_count = %d, want editor %d", kit.PlayerCount, editor.PlayerCount)
+	}
+	for i, want := range editor.Players {
+		got := kit.Players[i]
+		if got.Active != want.Active || got.Human != want.Human {
+			t.Fatalf("P%d active/human = %t/%t, want editor %t/%t", i, got.Active, got.Human, want.Active, want.Human)
+		}
+	}
+}
+
+func TestWriteBlankScenarioFileInflatedBodyMatchesEditorBlank(t *testing.T) {
+	editorPath := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	editor, err := Open(editorPath)
+	if err != nil {
+		t.Fatalf("Open editor blank fixture: %v", err)
+	}
+	out := filepath.Join(t.TempDir(), "KitEditorBodyParityBlank.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	kit, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open kit blank output: %v", err)
+	}
+	if !bytes.Equal(kit.body, editor.body) {
+		for i := 0; i < len(kit.body) && i < len(editor.body); i++ {
+			if kit.body[i] != editor.body[i] {
+				t.Fatalf("inflated body differs at offset %d: kit=0x%02x editor=0x%02x", i, kit.body[i], editor.body[i])
+			}
+		}
+		t.Fatalf("inflated body length differs: kit=%d editor=%d", len(kit.body), len(editor.body))
+	}
+}
+
+func TestEditorReferenceFixturesParseAndRebuild(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "editor-refs")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir editor refs: %v", err)
+	}
+	checked := 0
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".aoe2scenario") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		file, err := Open(path)
+		if err != nil {
+			t.Fatalf("Open %s: %v", entry.Name(), err)
+		}
+		if err := file.VerifyRebuild(); err != nil {
+			t.Fatalf("VerifyRebuild %s: %v", entry.Name(), err)
+		}
+		if file.Version != "1.58" {
+			t.Fatalf("%s version = %q, want 1.58", entry.Name(), file.Version)
+		}
+		checked++
+	}
+	if checked != 9 {
+		t.Fatalf("checked %d editor refs, want 9", checked)
+	}
+}
+
+func TestEditorReferenceObjectRotations(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "editor-refs", "I added the same object, 2 rotations.aoe2scenario")
+	file, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open object fixture: %v", err)
+	}
+	var rotations []float64
+	for _, section := range file.Units.Sections {
+		for _, unit := range section.Units {
+			if unit.UnitConst == 2411 {
+				rotations = append(rotations, unit.Rotation)
+			}
+		}
+	}
+	sort.Float64s(rotations)
+	if !reflect.DeepEqual(rotations, []float64{0, 3}) {
+		t.Fatalf("unit 2411 rotations = %v, want [0 3]", rotations)
+	}
+}
+
+func TestDiffSurfacesUnitsNumberOfPlayers(t *testing.T) {
+	path := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	before, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open before: %v", err)
+	}
+	after, err := Open(path)
+	if err != nil {
+		t.Fatalf("Open after: %v", err)
+	}
+	after.Units.NumberOfPlayers = 3
+	report := Diff(before, after)
+	if report.Same {
+		t.Fatalf("diff same=true, want number_of_players change")
+	}
+	for _, change := range report.Changes {
+		if change.Kind == "units" && change.Field == "number_of_players" && change.Before == 9 && change.After == 3 {
+			return
+		}
+	}
+	t.Fatalf("diff changes = %+v, want units.number_of_players 9 -> 3", report.Changes)
 }
 
 func TestWriteBlankScenarioFileClearsSeedAndAddsOutpostDummies(t *testing.T) {
@@ -80,14 +203,17 @@ func TestWriteBlankScenarioFileClearsSeedAndAddsOutpostDummies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteBlankScenarioFile: %v", err)
 	}
-	if report.TriggerCountBefore != 3 || report.TriggerCountAfter != 0 {
-		t.Fatalf("trigger counts = %d -> %d, want 3 -> 0", report.TriggerCountBefore, report.TriggerCountAfter)
+	if report.TriggerCountBefore != 0 || report.TriggerCountAfter != 0 {
+		t.Fatalf("trigger counts = %d -> %d, want 0 -> 0", report.TriggerCountBefore, report.TriggerCountAfter)
 	}
 	if report.UnitCountBefore != 0 || report.UnitCountAfter != 4 {
 		t.Fatalf("unit counts = %d -> %d, want 0 -> 4", report.UnitCountBefore, report.UnitCountAfter)
 	}
 	if report.DummyUnit != defaultBlankDummyUnit {
 		t.Fatalf("dummy unit = %d, want %d", report.DummyUnit, defaultBlankDummyUnit)
+	}
+	if report.EditorParityOK || !strings.Contains(report.EditorParityNote, "human=false") {
+		t.Fatalf("editor parity = %t %q, want explicit active AI slots to diverge from editor-style blank metadata", report.EditorParityOK, report.EditorParityNote)
 	}
 	file, err := Open(out)
 	if err != nil {
@@ -119,20 +245,203 @@ func TestWriteBlankScenarioFileClearsSeedAndAddsOutpostDummies(t *testing.T) {
 	if settings.Players[1].Active != true || settings.Players[1].Human != true {
 		t.Fatalf("P1 settings = %+v, want active human", settings.Players[1])
 	}
-	if settings.Players[0].Active != false || settings.Players[0].Human != false {
-		t.Fatalf("P0 settings = %+v, want inactive non-human Gaia for clean blank fixture", settings.Players[0])
+	if settings.Players[0].Active != true || settings.Players[0].Human != true {
+		t.Fatalf("P0 settings = %+v, want editor-style active human Gaia metadata", settings.Players[0])
 	}
 	if settings.Players[2].Active != true || settings.Players[2].Human != false {
-		t.Fatalf("P2 settings = %+v, want active computer", settings.Players[2])
+		t.Fatalf("P2 settings = %+v, want active computer from explicit --human-slots behavior", settings.Players[2])
 	}
 	if settings.Players[5].Active != false {
 		t.Fatalf("P5 active = true, want inactive")
 	}
-	if settings.Players[9].Active != false || settings.Players[9].Human != false {
-		t.Fatalf("P9 settings = %+v, want inactive computer", settings.Players[9])
+	if settings.Players[9].Active != false || settings.Players[9].Human != true {
+		t.Fatalf("P9 settings = %+v, want inactive human metadata", settings.Players[9])
 	}
-	checkIntField(t, file.root.section("Units"), "number_of_players", 5)
+	if file.Units.NumberOfUnitSections != 9 || file.Units.NumberOfPlayers != 9 {
+		t.Fatalf("units section counts = %d/%d, want 9/9", file.Units.NumberOfUnitSections, file.Units.NumberOfPlayers)
+	}
+	checkIntField(t, file.root.section("Units"), "number_of_players", 9)
 	checkIntField(t, file.headerRoot, "timestamp_of_last_save", 1800000000)
+}
+
+func TestWriteBlankScenarioFileSupportsDiagnosticBlankFlags(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "DiagnosticBlank.aoe2scenario")
+	report, err := WriteBlankScenarioFile(out, BlankOptions{
+		PlayerCount:   4,
+		HumanSlots:    1,
+		Timestamp:     1800000000,
+		DummyStarters: true,
+		NoConquest:    true,
+	})
+	if err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	if !report.GaiaActive {
+		t.Fatal("report GaiaActive=false, want editor-style active Gaia")
+	}
+	if !report.NoConquest {
+		t.Fatal("report NoConquest=false, want true")
+	}
+	file, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open blank output: %v", err)
+	}
+	settings := file.Settings()
+	if !settings.Players[0].Active {
+		t.Fatalf("P0 settings = %+v, want active Gaia", settings.Players[0])
+	}
+	for player := 1; player <= 4; player++ {
+		if !settings.Players[player].Active {
+			t.Fatalf("P%d inactive, want active", player)
+		}
+	}
+	if settings.Players[5].Active {
+		t.Fatalf("P5 active, want inactive")
+	}
+	if got := settings.Victory["conquest_required"]; got != 0 {
+		t.Fatalf("conquest_required = %d, want 0", got)
+	}
+	checkIntField(t, file.root.section("Units"), "number_of_players", 9)
+}
+
+func TestApplyRecipeBulkAddUnitsAssignsSequentialReferences(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "BulkUnits.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	file, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open blank output: %v", err)
+	}
+	x := 10.5
+	y := 20.5
+	explicit := 50
+	recipe := Recipe{Units: []UnitRecipe{
+		{Op: "add_unit", Player: 1, UnitConst: 83, X: &x, Y: &y},
+		{Op: "add_unit", Player: 1, UnitConst: 83, X: &x, Y: &y},
+		{Op: "add_unit", Player: 1, UnitConst: 83, X: &x, Y: &y, ReferenceID: &explicit},
+		{Op: "add_unit", Player: 1, UnitConst: 83, X: &x, Y: &y},
+	}}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	if file.Units.Total != 4 {
+		t.Fatalf("unit total = %d, want 4", file.Units.Total)
+	}
+	gotRefs := make([]int, 0, 4)
+	for _, unit := range file.Units.Sections[1].Units {
+		gotRefs = append(gotRefs, unit.ReferenceID)
+	}
+	wantRefs := []int{1, 2, 50, 51}
+	if !reflect.DeepEqual(gotRefs, wantRefs) {
+		t.Fatalf("refs = %v, want %v", gotRefs, wantRefs)
+	}
+	checkIntField(t, file.root.section("Units"), "number_of_players", 9)
+}
+
+func TestWriteBlankScenarioFileResizesMap(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "Blank220.aoe2scenario")
+	report, err := WriteBlankScenarioFile(out, BlankOptions{
+		PlayerCount:   2,
+		HumanSlots:    1,
+		MapWidth:      220,
+		MapHeight:     220,
+		Timestamp:     1800000000,
+		GaiaActive:    true,
+		DummyStarters: true,
+	})
+	if err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	if report.MapWidth != 220 || report.MapHeight != 220 || report.TileCount != 220*220 {
+		t.Fatalf("blank report map = %dx%d tiles=%d, want 220x220 tiles=%d", report.MapWidth, report.MapHeight, report.TileCount, 220*220)
+	}
+	file, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open blank output: %v", err)
+	}
+	if file.Map == nil || file.Map.Width != 220 || file.Map.Height != 220 || file.Map.TileCount != 220*220 {
+		t.Fatalf("file map = %#v, want 220x220", file.Map)
+	}
+	tiles, width, height, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	if width != 220 || height != 220 || len(tiles) != 220*220 {
+		t.Fatalf("mapTiles = %dx%d len=%d, want 220x220 len=%d", width, height, len(tiles), 220*220)
+	}
+	terrain, err := file.Terrain(TerrainOptions{})
+	if err != nil {
+		t.Fatalf("Terrain: %v", err)
+	}
+	if terrain.Width != 220 || terrain.Height != 220 || terrain.TileCount != 220*220 {
+		t.Fatalf("terrain report = %dx%d tiles=%d", terrain.Width, terrain.Height, terrain.TileCount)
+	}
+	if len(terrain.Aggregates) != 1 || terrain.Aggregates[0].Count != 220*220 {
+		t.Fatalf("terrain aggregates = %#v, want one full-map terrain", terrain.Aggregates)
+	}
+}
+
+func TestScenarioMapPresetsMatchGameDataStringIDs(t *testing.T) {
+	want := []ScenarioMapPreset{
+		{Name: "Mini", Size: 80, StringID: 25080, StringKey: "MAPSIZE_MINI"},
+		{Name: "Tiny", Size: 120, StringID: 25120, StringKey: "MAPSIZE_TINY"},
+		{Name: "Small", Size: 144, StringID: 25144, StringKey: "MAPSIZE_SMALL"},
+		{Name: "Medium", Size: 168, StringID: 25168, StringKey: "MAPSIZE_MEDIUM"},
+		{Name: "Normal", Size: 200, StringID: 25200, StringKey: "MAPSIZE_NORMAL"},
+		{Name: "Large", Size: 220, StringID: 25220, StringKey: "MAPSIZE_LARGE"},
+		{Name: "Huge", Size: 240, StringID: 25240, StringKey: "MAPSIZE_HUGE"},
+		{Name: "Giant", Size: 252, StringID: 25252, StringKey: "MAPSIZE_GIANT"},
+		{Name: "Massive", Size: 276, StringID: 25276, StringKey: "MAPSIZE_MASSIVE"},
+		{Name: "Enormous", Size: 300, StringID: 25300, StringKey: "MAPSIZE_ENORMOUS"},
+		{Name: "Colossal", Size: 320, StringID: 25320, StringKey: "MAPSIZE_COLOSSAL"},
+		{Name: "Incredible", Size: 360, StringID: 25360, StringKey: "MAPSIZE_INCREDIBLE"},
+		{Name: "Monstrous", Size: 400, StringID: 25400, StringKey: "MAPSIZE_MONSTROUS"},
+		{Name: "Ludicrous", Size: 480, StringID: 25480, StringKey: "MAPSIZE_LUDICROUS"},
+	}
+	if !reflect.DeepEqual(ScenarioMapPresets(), want) {
+		t.Fatalf("ScenarioMapPresets mismatch\ngot:  %#v\nwant: %#v", ScenarioMapPresets(), want)
+	}
+	for _, preset := range want {
+		if got, ok := ScenarioMapPresetBySize(preset.Size); !ok || got != preset {
+			t.Fatalf("preset lookup %d = %#v,%t want %#v,true", preset.Size, got, ok, preset)
+		}
+	}
+	if _, ok := ScenarioMapPresetBySize(301); ok {
+		t.Fatal("off-preset map size 301 accepted")
+	}
+}
+
+func TestWriteBlankScenarioFileRejectsBadMapSizeAndDummyPlacement(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "bad.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{MapWidth: 7, MapHeight: 7}); err == nil {
+		t.Fatal("accepted map width below canonical presets")
+	}
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{MapWidth: 481, MapHeight: 481}); err == nil {
+		t.Fatal("accepted map height above canonical presets")
+	}
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{MapWidth: 300, MapHeight: 300}); err != nil {
+		t.Fatalf("canonical map size 300 rejected: %v", err)
+	}
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{MapWidth: 301, MapHeight: 301}); err == nil {
+		t.Fatal("accepted off-preset square map size")
+	}
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{MapWidth: 220, MapHeight: 240}); err == nil {
+		t.Fatal("accepted non-square map size")
+	}
+	_, err := WriteBlankScenarioFile(out, BlankOptions{
+		PlayerCount:   2,
+		HumanSlots:    1,
+		MapWidth:      80,
+		MapHeight:     80,
+		DummyStartX:   79.5,
+		DummyStartY:   79.5,
+		DummySpacing:  6,
+		DummyStarters: true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "outside map") {
+		t.Fatalf("dummy placement err = %v, want outside map", err)
+	}
 }
 
 func TestMaxInflatedScenarioBytes(t *testing.T) {
@@ -385,6 +694,19 @@ func checkIntField(t *testing.T, node *parsedNode, name string, want int) {
 	}
 }
 
+func summaryIntField(t *testing.T, fields map[string]any, name string) int {
+	t.Helper()
+	value, ok := fields[name]
+	if !ok {
+		t.Fatalf("summary field %s missing", name)
+	}
+	intValue, ok := value.(int)
+	if !ok {
+		t.Fatalf("summary field %s = %T(%v), want int", name, value, value)
+	}
+	return intValue
+}
+
 func checkFloatField(t *testing.T, node *parsedNode, name string, want float64) {
 	t.Helper()
 	got, ok := node.floatValue(name)
@@ -408,6 +730,20 @@ func assertLengthPrefixedStringRaw(t *testing.T, raw []byte, want string) {
 		}
 	}
 	t.Fatalf("string raw = % x, want length=%d payload=%q", raw, len([]byte(wantPayload)), wantPayload)
+}
+
+func assertZeroLengthStringRaw(t *testing.T, node *parsedNode, name string, wantPrefixBytes int) {
+	t.Helper()
+	field := node.field(name)
+	if field == nil {
+		t.Fatalf("%s missing", name)
+	}
+	if len(field.Raw) != wantPrefixBytes {
+		t.Fatalf("%s raw len = %d, want %d raw=% x", name, len(field.Raw), wantPrefixBytes, field.Raw)
+	}
+	if signedInt(field.Raw) != 0 {
+		t.Fatalf("%s raw = % x, want zero-length string prefix", name, field.Raw)
+	}
 }
 
 func TestBuildGeneralTriggerWithConditionRaw(t *testing.T) {
@@ -925,6 +1261,7 @@ func TestBuildAuthoringFrontierTriggerRaw(t *testing.T) {
 	resource := 3
 	quantity := 50
 	operation := 1
+	stringID := 1234
 	unitObject := 12345
 	areaX1 := 10
 	areaY1 := 11
@@ -948,8 +1285,8 @@ func TestBuildAuthoringFrontierTriggerRaw(t *testing.T) {
 			{Op: "modify_resource", SourcePlayer: &player, Resource: &resource, Quantity: &quantity, Operation: &operation},
 			{Op: "script_call", SourcePlayer: &player, Message: "main();"},
 			{Op: "change_ownership", SourcePlayer: &player, TargetPlayer: &targetPlayer, SelectedObjectIDs: []int{unitObject}},
-			{Op: "change_object_name", SourcePlayer: &player, Message: "Renamed", SelectedObjectIDs: []int{unitObject}},
-			{Op: "change_object_description", SourcePlayer: &player, Message: "Described", SelectedObjectIDs: []int{unitObject}},
+			{Op: "change_object_name", SourcePlayer: &player, ObjectListUnitID: &unitConst, Message: "Renamed", SelectedObjectIDs: []int{unitObject}},
+			{Op: "change_object_description", SourcePlayer: &player, ObjectListUnitID: &unitConst, StringID: &stringID, Message: "Described", SelectedObjectIDs: []int{unitObject}},
 			{Op: "change_object_hp", SourcePlayer: &player, Quantity: &quantity, Operation: &operation, SelectedObjectIDs: []int{unitObject}},
 			{Op: "teleport_object", SourcePlayer: &player, LocationX: &x, LocationY: &y, SelectedObjectIDs: []int{unitObject}},
 			{Op: "remove_object", SourcePlayer: &player, SelectedObjectIDs: []int{unitObject}},
@@ -999,7 +1336,13 @@ func TestBuildAuthoringFrontierTriggerRaw(t *testing.T) {
 	checkIntField(t, effects[5], "effect_type", 18)
 	checkIntField(t, effects[5], "target_player", targetPlayer)
 	checkIntField(t, effects[6], "effect_type", 26)
+	checkIntField(t, effects[6], "object_list_unit_id", unitConst)
+	if got, _ := effects[6].stringValue("message"); got != "Renamed" {
+		t.Fatalf("effects[6].message = %q, want Renamed", got)
+	}
 	checkIntField(t, effects[7], "effect_type", 44)
+	checkIntField(t, effects[7], "object_list_unit_id", unitConst)
+	checkIntField(t, effects[7], "string_id", stringID)
 	if got, _ := effects[7].stringValue("message"); got != "Described" {
 		t.Fatalf("effects[7].message = %q, want Described", got)
 	}
@@ -1034,6 +1377,7 @@ func TestBuildExpandedAuthoringEffectsRaw(t *testing.T) {
 	operation := 1
 	unitObject := 12345
 	localTech := 1
+	stringID := 2345
 	raw, err := buildTriggerFromRecipe(spec, TriggerRecipe{
 		Op:   "add_trigger",
 		Name: "Expanded Authoring Effects",
@@ -1049,7 +1393,7 @@ func TestBuildExpandedAuthoringEffectsRaw(t *testing.T) {
 			{Op: "change_object_armor", SourcePlayer: &player, Quantity: &quantity, Operation: &operation, SelectedObjectIDs: []int{unitObject}},
 			{Op: "change_object_range", SourcePlayer: &player, Quantity: &quantity, Operation: &operation, SelectedObjectIDs: []int{unitObject}},
 			{Op: "change_object_speed", SourcePlayer: &player, Quantity: &quantity, Operation: &operation, SelectedObjectIDs: []int{unitObject}},
-			{Op: "change_object_caption", SourcePlayer: &player, Message: "Caption", SelectedObjectIDs: []int{unitObject}},
+			{Op: "change_object_caption", SourcePlayer: &player, StringID: &stringID, Message: "Caption", SelectedObjectIDs: []int{unitObject}},
 			{Op: "enable_disable_object", SourcePlayer: &player, Enabled: &enabled, SelectedObjectIDs: []int{unitObject}},
 			{Op: "enable_disable_technology", SourcePlayer: &player, Technology: &tech, Enabled: &enabled},
 			{Op: "train_unit", SourcePlayer: &player, ObjectListUnitID: &unitConst, SelectedObjectIDs: []int{unitObject}},
@@ -1087,6 +1431,7 @@ func TestBuildExpandedAuthoringEffectsRaw(t *testing.T) {
 	checkIntField(t, effects[4], "object_list_unit_id", unitConst)
 	checkIntField(t, effects[5], "quantity", quantity)
 	checkIntField(t, effects[11], "number_of_units_selected", 1)
+	checkIntField(t, effects[11], "string_id", stringID)
 	if got, _ := effects[11].stringValue("message"); got != "Caption" {
 		t.Fatalf("caption message = %q, want Caption", got)
 	}
@@ -1179,10 +1524,30 @@ func TestBuildShopTechAndControlEffectsRaw(t *testing.T) {
 	checkIntField(t, effects[3], "resource_2", gold)
 	checkIntField(t, effects[3], "resource_2_quantity", goldCost)
 	checkIntField(t, effects[4], "quantity", trainTime)
+	locationSummary := summarizeEffect(effects[2], EffectsOptions{})
+	if locationSummary.SourcePlayer != player || locationSummary.Technology != tech || locationSummary.UnitConst != buildingConst || summaryIntField(t, locationSummary.KnownFields, "button_location") != button {
+		t.Fatalf("change_technology_location summary = %+v", locationSummary)
+	}
+	costSummary := summarizeEffect(effects[3], EffectsOptions{})
+	if costSummary.SourcePlayer != player || costSummary.Technology != tech ||
+		summaryIntField(t, costSummary.KnownFields, "resource_1") != food ||
+		summaryIntField(t, costSummary.KnownFields, "resource_1_quantity") != foodCost ||
+		summaryIntField(t, costSummary.KnownFields, "resource_2") != gold ||
+		summaryIntField(t, costSummary.KnownFields, "resource_2_quantity") != goldCost {
+		t.Fatalf("change_technology_cost summary = %+v", costSummary)
+	}
+	researchTimeSummary := summarizeEffect(effects[4], EffectsOptions{})
+	if researchTimeSummary.Quantity != trainTime || summaryIntField(t, researchTimeSummary.KnownFields, "research_time") != trainTime {
+		t.Fatalf("change_technology_research_time summary = %+v", researchTimeSummary)
+	}
 	if got, _ := effects[5].stringValue("message"); got != "Tech Name" {
 		t.Fatalf("tech name message = %q, want Tech Name", got)
 	}
 	checkIntField(t, effects[7], "quantity", icon)
+	iconSummary := summarizeEffect(effects[7], EffectsOptions{})
+	if iconSummary.Quantity != icon || summaryIntField(t, iconSummary.KnownFields, "icon") != icon {
+		t.Fatalf("change_technology_icon summary = %+v", iconSummary)
+	}
 	checkIntField(t, effects[8], "hotkey", hotkey)
 	if got, _ := effects[9].stringValue("message"); got != "Player Name" {
 		t.Fatalf("player name message = %q, want Player Name", got)
@@ -1190,6 +1555,68 @@ func TestBuildShopTechAndControlEffectsRaw(t *testing.T) {
 	checkIntField(t, effects[11], "player_color", color)
 	checkIntField(t, effects[12], "number_of_units_selected", 1)
 	checkIntField(t, effects[22], "enabled", enabled)
+	enableTechSummary := summarizeEffect(effects[22], EffectsOptions{})
+	if enableTechSummary.SourcePlayer != player || enableTechSummary.Technology != tech || summaryIntField(t, enableTechSummary.KnownFields, "enabled") != enabled {
+		t.Fatalf("enable_disable_technology summary = %+v", enableTechSummary)
+	}
+}
+
+func TestBuildTriggerObjectiveFieldsRaw(t *testing.T) {
+	spec, err := LoadCurrentDESpec()
+	if err != nil {
+		t.Fatalf("LoadCurrentDESpec: %v", err)
+	}
+	enabled := true
+	displayAsObjective := true
+	displayOnScreen := true
+	makeHeader := true
+	muteObjectives := true
+	executeOnLoad := true
+	order := 17
+	descID := -1
+	shortDescID := -1
+	raw, err := buildTriggerFromRecipe(spec, TriggerRecipe{
+		Op:                        "add_trigger",
+		Name:                      "Objective HUD",
+		Description:               "Long objective description",
+		ShortDescription:          "Coins <Variable 332>",
+		Enabled:                   &enabled,
+		DisplayAsObjective:        &displayAsObjective,
+		DisplayOnScreen:           &displayOnScreen,
+		MakeHeader:                &makeHeader,
+		MuteObjectives:            &muteObjectives,
+		ExecuteOnLoad:             &executeOnLoad,
+		ObjectiveDescriptionOrder: &order,
+		DescriptionStringID:       &descID,
+		ShortDescriptionStringID:  &shortDescID,
+	})
+	if err != nil {
+		t.Fatalf("buildTriggerFromRecipe: %v", err)
+	}
+	triggerSpec, _, err := triggerEffectSpecs(spec)
+	if err != nil {
+		t.Fatalf("triggerEffectSpecs: %v", err)
+	}
+	p := parser{data: raw, sections: map[string]*parsedSection{}}
+	node, err := p.parseNode("TriggerStruct", triggerSpec, nil)
+	if err != nil {
+		t.Fatalf("parse trigger raw: %v", err)
+	}
+	checkIntField(t, node, "enabled", 1)
+	checkIntField(t, node, "execute_on_load", 1)
+	checkIntField(t, node, "display_as_objective", 1)
+	checkIntField(t, node, "display_on_screen", 1)
+	checkIntField(t, node, "make_header", 1)
+	checkIntField(t, node, "mute_objectives", 1)
+	checkIntField(t, node, "objective_description_order", order)
+	checkIntField(t, node, "description_string_table_id", descID)
+	checkIntField(t, node, "short_description_string_table_id", shortDescID)
+	if got, _ := node.stringValue("trigger_description"); got != "Long objective description" {
+		t.Fatalf("trigger_description = %q", got)
+	}
+	if got, _ := node.stringValue("short_description"); got != "Coins <Variable 332>" {
+		t.Fatalf("short_description = %q", got)
+	}
 }
 
 func TestPatchRecipeScenarioSettingsAndXS(t *testing.T) {
@@ -1315,13 +1742,16 @@ func TestPatchRecipeXSCarrierMode(t *testing.T) {
 	if got, _ := mapSection.stringValue("script_name"); got != "" {
 		t.Fatalf("script_name = %q, want empty carrier mode", got)
 	}
+	assertZeroLengthStringRaw(t, mapSection, "script_name", 2)
 	files := scen.root.section("Files")
 	if got, _ := files.stringValue("script_file_path"); got != "" {
 		t.Fatalf("script_file_path = %q, want empty carrier mode", got)
 	}
+	assertZeroLengthStringRaw(t, files, "script_file_path", 2)
 	if got, _ := files.stringValue("script_file_content"); got != "" {
 		t.Fatalf("script_file_content = %q, want empty carrier mode", got)
 	}
+	assertZeroLengthStringRaw(t, files, "script_file_content", 4)
 	report, err := scen.XSCensus(XSCensusOptions{})
 	if err != nil {
 		t.Fatalf("XSCensus: %v", err)
@@ -1340,6 +1770,166 @@ func TestPatchRecipeXSCarrierMode(t *testing.T) {
 	}
 	if len(report.ScriptCalls) != 1 || report.ScriptCalls[0].Message != "BootProbe();" {
 		t.Fatalf("script calls = %+v", report.ScriptCalls)
+	}
+}
+
+func TestPatchRecipeXSInlineRuntimeInsertsEnabledTriggerZero(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "blank.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(input, BlankOptions{
+		PlayerCount:   2,
+		HumanSlots:    1,
+		MapWidth:      80,
+		MapHeight:     80,
+		DummyStarters: true,
+		DummyUnit:     598,
+	}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	out := filepath.Join(dir, "xs_inline.aoe2scenario")
+	enabled := true
+	targetZero := 0
+	source := "const int PROBE = 22;\nvoid BootProbe() { xsChatData(\"A2K\"); }\n"
+	recipe := Recipe{
+		XS: &XSRecipe{
+			Mode:               "inline_runtime",
+			Name:               "Entry.xs",
+			CarrierTriggerName: "XS Runtime Source",
+			Content:            source,
+		},
+		Triggers: []TriggerRecipe{
+			{Op: "clear_triggers"},
+			{
+				Op:      "add_trigger",
+				Name:    "Boot Probe",
+				Enabled: &enabled,
+				Effects: []EffectRecipe{{
+					Op:      "script_call",
+					Message: "BootProbe();",
+				}},
+			},
+			{
+				Op:      "add_trigger",
+				Name:    "Activate Boot Probe",
+				Enabled: &enabled,
+				Effects: []EffectRecipe{{
+					Op:        "activate_trigger",
+					TriggerID: &targetZero,
+				}},
+			},
+		},
+	}
+	if _, err := PatchRecipeFile(input, out, recipe); err != nil {
+		t.Fatalf("PatchRecipeFile: %v", err)
+	}
+	scen, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open patched: %v", err)
+	}
+	mapSection := scen.root.section("Map")
+	if got, _ := mapSection.stringValue("script_name"); got != "" {
+		t.Fatalf("script_name = %q, want empty inline runtime mode", got)
+	}
+	assertZeroLengthStringRaw(t, mapSection, "script_name", 2)
+	files := scen.root.section("Files")
+	if got, _ := files.stringValue("script_file_path"); got != "" {
+		t.Fatalf("script_file_path = %q, want empty inline runtime mode", got)
+	}
+	assertZeroLengthStringRaw(t, files, "script_file_path", 2)
+	if got, _ := files.stringValue("script_file_content"); got != "" {
+		t.Fatalf("script_file_content = %q, want empty inline runtime mode", got)
+	}
+	assertZeroLengthStringRaw(t, files, "script_file_content", 4)
+	report, err := scen.XSCensus(XSCensusOptions{})
+	if err != nil {
+		t.Fatalf("XSCensus: %v", err)
+	}
+	if report.Counts.ScriptContentAttachments != 0 || report.Counts.EmbeddedCarriers != 1 || report.Counts.ScriptCalls != 1 || report.Counts.Functions != 1 {
+		t.Fatalf("counts = %+v", report.Counts)
+	}
+	carrier := report.EmbeddedCarriers[0]
+	if carrier.TriggerIndex != 0 || carrier.TriggerName != "XS Runtime Source" || carrier.Title != "XS string" || carrier.Content != source {
+		t.Fatalf("carrier = %+v", carrier)
+	}
+	if scen.Triggers.Triggers[0].Enabled != 1 {
+		t.Fatalf("carrier enabled = %d, want 1", scen.Triggers.Triggers[0].Enabled)
+	}
+	if report.ScriptCalls[0].TriggerIndex != 1 || report.ScriptCalls[0].Message != "BootProbe();" {
+		t.Fatalf("script calls = %+v", report.ScriptCalls)
+	}
+	triggerNodes := scen.root.section("Triggers").list("trigger_data")
+	if len(triggerNodes) != 3 {
+		t.Fatalf("trigger count = %d, want 3", len(triggerNodes))
+	}
+	activateEffects := triggerNodes[2].list("effect_data")
+	if got, _ := activateEffects[0].intValue("trigger_id"); got != 1 {
+		t.Fatalf("shifted activate trigger_id = %d, want 1", got)
+	}
+}
+
+func TestPatchRecipeXSAttachmentAndCarrierSurvivesClearTriggers(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "blank.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(input, BlankOptions{
+		PlayerCount:   2,
+		HumanSlots:    1,
+		MapWidth:      80,
+		MapHeight:     80,
+		DummyStarters: true,
+		DummyUnit:     598,
+	}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	out := filepath.Join(dir, "xs_both.aoe2scenario")
+	enabled := true
+	source := "const int PROBE = 22;\nvoid BootProbe() { xsChatData(\"A2K\"); }\n"
+	recipe := Recipe{
+		XS: &XSRecipe{
+			Mode:               "attachment_and_carrier",
+			Name:               "Entry.xs",
+			CarrierTitle:       "Entry.xs",
+			CarrierTriggerName: "XS Source Carrier",
+			Content:            source,
+		},
+		Triggers: []TriggerRecipe{
+			{Op: "clear_triggers"},
+			{
+				Op:      "add_trigger",
+				Name:    "Boot Probe",
+				Enabled: &enabled,
+				Effects: []EffectRecipe{{
+					Op:      "script_call",
+					Message: "BootProbe();",
+				}},
+			},
+		},
+	}
+	if _, err := PatchRecipeFile(input, out, recipe); err != nil {
+		t.Fatalf("PatchRecipeFile: %v", err)
+	}
+	scen, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open patched: %v", err)
+	}
+	report, err := scen.XSCensus(XSCensusOptions{})
+	if err != nil {
+		t.Fatalf("XSCensus: %v", err)
+	}
+	if !report.ScriptContentEmbedded || report.Counts.ScriptContentAttachments != 1 {
+		t.Fatalf("script content embedded = %t counts=%+v", report.ScriptContentEmbedded, report.Counts)
+	}
+	if len(report.EmbeddedCarriers) != 1 {
+		t.Fatalf("embedded carriers = %+v", report.EmbeddedCarriers)
+	}
+	carrier := report.EmbeddedCarriers[0]
+	if carrier.TriggerName != "XS Source Carrier" || carrier.Title != "Entry.xs" || carrier.Content != source {
+		t.Fatalf("carrier = %+v", carrier)
+	}
+	if report.Counts.ScriptCalls != 1 || len(report.ScriptCalls) != 1 || report.ScriptCalls[0].Message != "BootProbe();" {
+		t.Fatalf("script calls = %+v counts=%+v", report.ScriptCalls, report.Counts)
+	}
+	if scen.Triggers == nil || scen.Triggers.Count != 2 {
+		t.Fatalf("trigger count = %#v, want boot + carrier", scen.Triggers)
 	}
 }
 
@@ -1477,6 +2067,54 @@ func TestPaletteUsageReportsUnusedAddressableIndices(t *testing.T) {
 	}
 	if len(report.Summary.BiggestUntapped) != 1 || report.Summary.BiggestUntapped[0].UnusedVariantCount != 13 {
 		t.Fatalf("biggest untapped = %+v, want one row with 13 unused", report.Summary.BiggestUntapped)
+	}
+}
+
+func TestPaletteUsageCarriesRotationEncoding(t *testing.T) {
+	file := &File{
+		Units: &UnitInfo{
+			Sections: []PlayerUnitsInfo{
+				{
+					Player: 0,
+					Units: []UnitSummary{
+						{UnitConst: 2411, Rotation: 0},
+						{UnitConst: 2411, Rotation: 3},
+					},
+				},
+			},
+		},
+	}
+	variantCount := 4
+	report := file.PaletteUsage(datfile.PaletteReport{Rows: []datfile.PaletteRow{
+		{
+			UnitID:           2411,
+			UnitName:         "Rock Limestone Hover",
+			UnitType:         10,
+			UnitClass:        14,
+			UnitClassName:    "Eye Candy",
+			StandingGraphic1: 15798,
+			GraphicName:      "Rock Limestone Hover",
+			AngleCount:       4,
+			FrameCount:       1,
+			SequenceType:     6,
+			VariantCount:     &variantCount,
+			Classification:   "multi_variant",
+			Confidence:       "editor_fixture",
+			RotationEncoding: "integer_artwork_index",
+		},
+	}})
+	if len(report.Rows) != 1 {
+		t.Fatalf("rows = %d, want 1", len(report.Rows))
+	}
+	row := report.Rows[0]
+	if row.UnitType != 10 || row.UnitClass != 14 || row.UnitClassName != "Eye Candy" {
+		t.Fatalf("unit type/class = %d/%d/%q, want 10/14/Eye Candy", row.UnitType, row.UnitClass, row.UnitClassName)
+	}
+	if row.RotationEncoding != "integer_artwork_index" {
+		t.Fatalf("rotation_encoding = %q, want integer_artwork_index", row.RotationEncoding)
+	}
+	if got, want := row.UsedIndices, []int{0, 3}; !sameInts(got, want) {
+		t.Fatalf("used indices = %v, want %v", got, want)
 	}
 }
 

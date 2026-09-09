@@ -47,6 +47,26 @@ func TestPackSkipsGitAndOutput(t *testing.T) {
 	}
 }
 
+func TestPackSkipsGitWorktreeFile(t *testing.T) {
+	root := t.TempDir()
+	mustWrite(t, filepath.Join(root, ".git"), "gitdir: /tmp/aoe2kit/.git/worktrees/public\n")
+	mustWrite(t, filepath.Join(root, "README.md"), "readme")
+
+	files, err := packFileList(root, filepath.Join(root, "out.zip"), nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		rel, err := filepath.Rel(root, file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filepath.ToSlash(rel) == ".git" {
+			t.Fatalf("worktree .git pointer file should not be packed: %v", files)
+		}
+	}
+}
+
 func TestPackCreatesZip(t *testing.T) {
 	root := t.TempDir()
 	mustWrite(t, filepath.Join(root, "README.md"), "readme")

@@ -939,7 +939,7 @@ func seekDEPlayerMarker(c *cursor, slot int) (int, error) {
 		limit = len(c.data) - 16
 	}
 	for off := c.off + 8; off <= limit; off++ {
-		if c.data[off] != 0xff || c.data[off+1] != 0x01 || c.data[off+2] > 0x01 {
+		if c.data[off] != 0xff || !plausibleDETeamByte(c.data[off+1]) || !plausibleDETeamByte(c.data[off+2]) {
 			continue
 		}
 		dlcID := binary.LittleEndian.Uint32(c.data[off-8:])
@@ -951,6 +951,13 @@ func seekDEPlayerMarker(c *cursor, slot int) (int, error) {
 	}
 	c.err = fmt.Errorf("player %d marker not found near header offset %d", slot+1, c.off)
 	return 0, c.err
+}
+
+func plausibleDETeamByte(value byte) bool {
+	// The bytes after the ff player marker are the selected and resolved team
+	// ids. Older fixtures only exercised no-team/small values, but current DE
+	// team games store lobby team ids here (for example 2, 3, 6).
+	return value <= 16
 }
 
 func normalizedLobbyTeam(resolvedTeam int) int {

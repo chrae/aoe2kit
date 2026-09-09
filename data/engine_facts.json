@@ -68,6 +68,58 @@
       }
     },
     {
+      "id": "scenario.map_size_editor_presets_are_discrete",
+      "statement": "AoE2DE exposes discrete square editor map-size presets rather than arbitrary scenario dimensions. The shipped non-localized string table lists MAPSIZE_MINI/TINY/SMALL/MEDIUM/NORMAL/LARGE/HUGE/GIANT/MASSIVE/ENORMOUS/COLOSSAL/INCREDIBLE/MONSTROUS/LUDICROUS at IDs 25080, 25120, 25144, 25168, 25200, 25220, 25240, 25252, 25276, 25300, 25320, 25360, 25400, and 25480; the suffix gives the canonical map edge size.",
+      "tier": "source_verified",
+      "verified_date": "2026-09-06",
+      "fixture_ref": "reference_aoe2_dump/strings/key-value/non-localized-key-value-strings-utf8.txt lines 233-246",
+      "domains": ["scenario", "map", "authoring"],
+      "lint_rule": {
+        "target": "scenario_map_size",
+        "predicate": "width != height || width not in {80,120,144,168,200,220,240,252,276,300,320,360,400,480}",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "scenario.blank_480_ludicrous_loads_in_de",
+      "statement": "A Kit-authored 480x480 Ludicrous blank/swatch scenario is accepted by AoE2DE without rejection or repair. Large maps and dense swatches can exceed practical system-memory comfort through total tile/placement volume.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-06",
+      "fixture_ref": "2026-09-06 480 swatch engine load check: process Responding=True, actively rendering, no repair prompt; observed about 7.7GB process memory on a 12GB test machine",
+      "domains": ["scenario", "map", "authoring", "performance"],
+      "lint_rule": {
+        "target": "scenario_map_size",
+        "predicate": "width == 480 && dense_generated_artwork_or_swatch",
+        "severity": "info"
+      }
+    },
+    {
+      "id": "scenario.editor_blank_player_init",
+      "statement": "A minimal AoE2DE editor-authored blank scenario initializes player metadata with Gaia active/human, P1 active/human, P2-P15 inactive/human, and scenario player_count 2. Kit blank authoring should preserve this editor-equivalent baseline unless a recipe explicitly changes slots.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-06",
+      "fixture_ref": "testdata/editor-refs/Create scenario, do nothing, click save.aoe2scenario; editor-authored and load-confirmed in-game",
+      "domains": ["scenario", "authoring", "player_slots"],
+      "lint_rule": {
+        "target": "blank_scenario_player_init",
+        "predicate": "generated_blank_diverges_from_editor_player_active_human_flags",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "scenario.type10_eyecandy_rotation_integer_index",
+      "statement": "AoE2DE type-10 eyecandy units with single-frame multi-angle graphics store scenario rotation as a small integer artwork/angle index, not radians. Editor-authored references show Grass Green using 0..7 and Rock Limestone Hover using 0 and 3.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-06",
+      "fixture_ref": "testdata/editor-refs/I added the same object, 2 rotations.aoe2scenario; editor-authored and load-confirmed in-game",
+      "domains": ["scenario", "dat", "graphics", "authoring"],
+      "lint_rule": {
+        "target": "scenario_unit_rotation",
+        "predicate": "unit_type == 10 && frame_count == 1 && angle_count > 1 && rotation_not_integer_index",
+        "severity": "warning"
+      }
+    },
+    {
       "id": "scenario.unit_rotation_type_dependent_slot",
       "statement": "Scenario unit rotation is a type-dependent per-object slot, not always a geometric angle. Confirmed examples: INDIANSTATUES uses integer rotation values as artwork indices across sixteen single-frame angle variants, while Gaia fish units use rotation as an animation-frame/phase selector; ordinary mobile units still use radian facing angles. Authoring consequence: variant-selecting types reward deliberate artwork diversity, while animation-frame types reward deliberate phase choices and tooling must not treat shared phase as under-use.",
       "tier": "engine_verified",

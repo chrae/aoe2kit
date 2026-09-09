@@ -23,6 +23,7 @@ type XSCensusReport struct {
 	Verification          string                   `json:"verification"`
 	OK                    bool                     `json:"ok"`
 	XS                    XSDeployAttachment       `json:"xs"`
+	ScriptContentEmbedded bool                     `json:"script_content_embedded"`
 	EmbeddedCarriers      []XSEmbeddedCarrier      `json:"embedded_carriers,omitempty"`
 	DeployTree            string                   `json:"deploy_tree,omitempty"`
 	ScriptCalls           []XSScriptCall           `json:"script_calls,omitempty"`
@@ -55,16 +56,17 @@ type XSEmbeddedCarrier struct {
 }
 
 type XSCensusCounts struct {
-	EmbeddedCarriers      int `json:"embedded_carriers"`
-	ScriptCalls           int `json:"script_calls"`
-	UniqueCalledFunctions int `json:"unique_called_functions"`
-	Functions             int `json:"functions"`
-	Includes              int `json:"includes"`
-	ResolvedIncludes      int `json:"resolved_includes"`
-	MissingIncludes       int `json:"missing_includes"`
-	Declarations          int `json:"declarations"`
-	CrossFileNonExtern    int `json:"cross_file_nonextern"`
-	Findings              int `json:"findings"`
+	ScriptContentAttachments int `json:"script_content_attachments"`
+	EmbeddedCarriers         int `json:"embedded_carriers"`
+	ScriptCalls              int `json:"script_calls"`
+	UniqueCalledFunctions    int `json:"unique_called_functions"`
+	Functions                int `json:"functions"`
+	Includes                 int `json:"includes"`
+	ResolvedIncludes         int `json:"resolved_includes"`
+	MissingIncludes          int `json:"missing_includes"`
+	Declarations             int `json:"declarations"`
+	CrossFileNonExtern       int `json:"cross_file_nonextern"`
+	Findings                 int `json:"findings"`
 }
 
 type XSDeployOptions struct {
@@ -537,6 +539,10 @@ func xsFunctionsFromAnalysis(analysis xsauthor.AnalysisReport, sources []xsautho
 }
 
 func (r *XSCensusReport) finishXSCensusCounts() {
+	if r.XS.ScriptFileContentBytes > 0 {
+		r.ScriptContentEmbedded = true
+		r.Counts.ScriptContentAttachments = 1
+	}
 	r.Counts.EmbeddedCarriers = len(r.EmbeddedCarriers)
 	r.Counts.ScriptCalls = len(r.ScriptCalls)
 	r.Counts.UniqueCalledFunctions = len(r.UniqueCalledFunctions)

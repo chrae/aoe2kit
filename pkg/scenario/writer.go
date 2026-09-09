@@ -36,6 +36,37 @@ type ScenarioRecipe struct {
 	TimestampOfLastSave *int `json:"timestamp_of_last_save,omitempty"`
 }
 
+const (
+	MinScenarioMapSize = 80
+	MaxScenarioMapSize = 480
+)
+
+type ScenarioMapPreset struct {
+	Name      string `json:"name"`
+	Size      int    `json:"size"`
+	StringID  int    `json:"string_id"`
+	StringKey string `json:"string_key"`
+}
+
+// scenarioMapPresets is grounded in the shipped DE string table keys
+// MAPSIZE_* at 25080..25480. The low three digits encode the editor map edge.
+var scenarioMapPresets = []ScenarioMapPreset{
+	{Name: "Mini", Size: 80, StringID: 25080, StringKey: "MAPSIZE_MINI"},
+	{Name: "Tiny", Size: 120, StringID: 25120, StringKey: "MAPSIZE_TINY"},
+	{Name: "Small", Size: 144, StringID: 25144, StringKey: "MAPSIZE_SMALL"},
+	{Name: "Medium", Size: 168, StringID: 25168, StringKey: "MAPSIZE_MEDIUM"},
+	{Name: "Normal", Size: 200, StringID: 25200, StringKey: "MAPSIZE_NORMAL"},
+	{Name: "Large", Size: 220, StringID: 25220, StringKey: "MAPSIZE_LARGE"},
+	{Name: "Huge", Size: 240, StringID: 25240, StringKey: "MAPSIZE_HUGE"},
+	{Name: "Giant", Size: 252, StringID: 25252, StringKey: "MAPSIZE_GIANT"},
+	{Name: "Massive", Size: 276, StringID: 25276, StringKey: "MAPSIZE_MASSIVE"},
+	{Name: "Enormous", Size: 300, StringID: 25300, StringKey: "MAPSIZE_ENORMOUS"},
+	{Name: "Colossal", Size: 320, StringID: 25320, StringKey: "MAPSIZE_COLOSSAL"},
+	{Name: "Incredible", Size: 360, StringID: 25360, StringKey: "MAPSIZE_INCREDIBLE"},
+	{Name: "Monstrous", Size: 400, StringID: 25400, StringKey: "MAPSIZE_MONSTROUS"},
+	{Name: "Ludicrous", Size: 480, StringID: 25480, StringKey: "MAPSIZE_LUDICROUS"},
+}
+
 type XSRecipe struct {
 	Name                string `json:"name,omitempty"`
 	Content             string `json:"content,omitempty"`
@@ -166,37 +197,45 @@ type UnitRecipe struct {
 }
 
 type TriggerRecipe struct {
-	Op                       string            `json:"op"`
-	Name                     string            `json:"name"`
-	Message                  string            `json:"message"`
-	TargetIndex              *int              `json:"target_index,omitempty"`
-	TargetIndexes            []int             `json:"target_indexes,omitempty"`
-	TargetName               string            `json:"target_name,omitempty"`
-	TargetPrefix             string            `json:"target_prefix,omitempty"`
-	SetName                  *string           `json:"set_name,omitempty"`
-	DescriptionStringID      *int              `json:"description_string_table_id,omitempty"`
-	ShortDescriptionStringID *int              `json:"short_description_string_table_id,omitempty"`
-	Enabled                  *bool             `json:"enabled,omitempty"`
-	Looping                  *bool             `json:"looping,omitempty"`
-	RemoveEffects            []int             `json:"remove_effects,omitempty"`
-	RemoveConditions         []int             `json:"remove_conditions,omitempty"`
-	ClearEffects             *bool             `json:"clear_effects,omitempty"`
-	ClearConditions          *bool             `json:"clear_conditions,omitempty"`
-	ReplaceEffects           []EffectRecipe    `json:"replace_effects,omitempty"`
-	ReplaceConditions        []ConditionRecipe `json:"replace_conditions,omitempty"`
-	Effects                  []EffectRecipe    `json:"effects,omitempty"`
-	Conditions               []ConditionRecipe `json:"conditions,omitempty"`
-	DisplayTime              *int              `json:"display_time,omitempty"`
-	InstructionPanelPosition *int              `json:"instruction_panel_position,omitempty"`
-	SourcePlayer             *int              `json:"source_player,omitempty"`
-	PlaySound                *int              `json:"play_sound,omitempty"`
-	UseTagColorForIcon       *int              `json:"use_tag_color_for_icon,omitempty"`
-	ObjectListUnitID         *int              `json:"object_list_unit_id,omitempty"`
-	LocationX                *int              `json:"location_x,omitempty"`
-	LocationY                *int              `json:"location_y,omitempty"`
-	ItemID                   *int              `json:"item_id,omitempty"`
-	Facet                    *int              `json:"facet,omitempty"`
-	DisableSound             *int              `json:"disable_sound,omitempty"`
+	Op                        string            `json:"op"`
+	Name                      string            `json:"name"`
+	Message                   string            `json:"message"`
+	Description               string            `json:"description,omitempty"`
+	ShortDescription          string            `json:"short_description,omitempty"`
+	TargetIndex               *int              `json:"target_index,omitempty"`
+	TargetIndexes             []int             `json:"target_indexes,omitempty"`
+	TargetName                string            `json:"target_name,omitempty"`
+	TargetPrefix              string            `json:"target_prefix,omitempty"`
+	SetName                   *string           `json:"set_name,omitempty"`
+	DescriptionStringID       *int              `json:"description_string_table_id,omitempty"`
+	ShortDescriptionStringID  *int              `json:"short_description_string_table_id,omitempty"`
+	DisplayAsObjective        *bool             `json:"display_as_objective,omitempty"`
+	DisplayOnScreen           *bool             `json:"display_on_screen,omitempty"`
+	MakeHeader                *bool             `json:"make_header,omitempty"`
+	MuteObjectives            *bool             `json:"mute_objectives,omitempty"`
+	ExecuteOnLoad             *bool             `json:"execute_on_load,omitempty"`
+	ObjectiveDescriptionOrder *int              `json:"objective_description_order,omitempty"`
+	Enabled                   *bool             `json:"enabled,omitempty"`
+	Looping                   *bool             `json:"looping,omitempty"`
+	RemoveEffects             []int             `json:"remove_effects,omitempty"`
+	RemoveConditions          []int             `json:"remove_conditions,omitempty"`
+	ClearEffects              *bool             `json:"clear_effects,omitempty"`
+	ClearConditions           *bool             `json:"clear_conditions,omitempty"`
+	ReplaceEffects            []EffectRecipe    `json:"replace_effects,omitempty"`
+	ReplaceConditions         []ConditionRecipe `json:"replace_conditions,omitempty"`
+	Effects                   []EffectRecipe    `json:"effects,omitempty"`
+	Conditions                []ConditionRecipe `json:"conditions,omitempty"`
+	DisplayTime               *int              `json:"display_time,omitempty"`
+	InstructionPanelPosition  *int              `json:"instruction_panel_position,omitempty"`
+	SourcePlayer              *int              `json:"source_player,omitempty"`
+	PlaySound                 *int              `json:"play_sound,omitempty"`
+	UseTagColorForIcon        *int              `json:"use_tag_color_for_icon,omitempty"`
+	ObjectListUnitID          *int              `json:"object_list_unit_id,omitempty"`
+	LocationX                 *int              `json:"location_x,omitempty"`
+	LocationY                 *int              `json:"location_y,omitempty"`
+	ItemID                    *int              `json:"item_id,omitempty"`
+	Facet                     *int              `json:"facet,omitempty"`
+	DisableSound              *int              `json:"disable_sound,omitempty"`
 }
 
 type EffectRecipe struct {
@@ -241,6 +280,7 @@ type EffectRecipe struct {
 	Resource2Quantity          *int     `json:"resource_2_quantity,omitempty"`
 	Resource3                  *int     `json:"resource_3,omitempty"`
 	Resource3Quantity          *int     `json:"resource_3_quantity,omitempty"`
+	StringID                   *int     `json:"string_id,omitempty"`
 	ForceResearchTechnology    *int     `json:"force_research_technology,omitempty"`
 	VisibilityState            *int     `json:"visibility_state,omitempty"`
 	Scroll                     *int     `json:"scroll,omitempty"`
@@ -828,11 +868,6 @@ func (f *File) ApplyRecipe(recipe Recipe) error {
 			return err
 		}
 	}
-	if recipe.XS != nil {
-		if err := f.SetXS(*recipe.XS); err != nil {
-			return err
-		}
-	}
 	if recipe.Victory != nil {
 		if err := f.SetGlobalVictory(*recipe.Victory); err != nil {
 			return err
@@ -948,43 +983,81 @@ func (f *File) ApplyRecipe(recipe Recipe) error {
 			return fmt.Errorf("unsupported trigger op %q", trigger.Op)
 		}
 	}
+	if recipe.XS != nil {
+		if err := f.SetXS(*recipe.XS); err != nil {
+			return err
+		}
+	}
+	var pendingAddUnits []UnitRecipe
+	flushAddUnits := func() error {
+		if len(pendingAddUnits) == 0 {
+			return nil
+		}
+		if err := f.AddUnits(pendingAddUnits); err != nil {
+			return err
+		}
+		pendingAddUnits = nil
+		return nil
+	}
 	for _, unit := range recipe.Units {
 		switch unit.Op {
 		case "add_unit":
-			if err := f.AddUnit(unit); err != nil {
+			pendingAddUnits = append(pendingAddUnits, unit)
+		case "edit_unit":
+			if err := flushAddUnits(); err != nil {
 				return err
 			}
-		case "edit_unit":
 			if err := f.EditUnit(unit); err != nil {
 				return err
 			}
 		case "remove_unit":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if err := f.RemoveUnit(unit); err != nil {
 				return err
 			}
 		case "remove_units_in_area":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if _, err := f.RemoveUnitsInArea(unit); err != nil {
 				return err
 			}
 		case "remove_units_for_player":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if _, err := f.RemoveUnitsForPlayer(unit); err != nil {
 				return err
 			}
 		case "copy_units_in_area":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if _, err := f.CopyUnitsInArea(unit); err != nil {
 				return err
 			}
 		case "move_units_in_area":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if _, err := f.MoveUnitsInArea(unit); err != nil {
 				return err
 			}
 		case "edit_units_in_area":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
 			if _, err := f.EditUnitsInArea(unit); err != nil {
 				return err
 			}
 		default:
 			return fmt.Errorf("unsupported unit op %q", unit.Op)
 		}
+	}
+	if err := flushAddUnits(); err != nil {
+		return err
 	}
 	for _, mapPatch := range recipe.Map {
 		switch mapPatch.Op {
@@ -1032,7 +1105,7 @@ func (f *File) SetScenario(recipe ScenarioRecipe) error {
 			return err
 		}
 		if units := f.root.section("Units"); units != nil {
-			if err := setIntField(units, "number_of_players", "u32", playerCount+1); err != nil {
+			if err := setIntField(units, "number_of_players", "u32", len(units.list("players_units"))); err != nil {
 				return err
 			}
 		}
@@ -1138,6 +1211,11 @@ func (f *File) SetXS(recipe XSRecipe) error {
 			}
 		}
 		return f.SetXSCarrier(recipe, content)
+	case "inline_runtime":
+		if content == "" {
+			return fmt.Errorf("xs inline_runtime mode requires content or content_file")
+		}
+		return f.SetXSInlineRuntime(recipe, content)
 	case "attachment_and_carrier":
 		if recipe.Name == "" {
 			return fmt.Errorf("xs attachment_and_carrier mode requires name")
@@ -1174,6 +1252,8 @@ func normalizeXSMode(mode string) string {
 		return "attachment"
 	case "carrier", "embedded_carrier", "parser_carrier", "parser-style", "parser_style":
 		return "carrier"
+	case "inline", "inline_runtime", "runtime_inline", "runtime_carrier", "spiral", "spiral_style":
+		return "inline_runtime"
 	case "both", "attachment_and_carrier", "file_and_carrier", "files_and_carrier":
 		return "attachment_and_carrier"
 	default:
@@ -1210,17 +1290,17 @@ func (f *File) clearXSAttachment() error {
 	if mapSection == nil {
 		return fmt.Errorf("missing Map section")
 	}
-	if err := setStringField(mapSection, "script_name", "str16", ""); err != nil {
+	if err := setZeroLengthStringField(mapSection, "script_name", "str16"); err != nil {
 		return err
 	}
 	files := f.root.section("Files")
 	if files == nil {
 		return fmt.Errorf("missing Files section")
 	}
-	if err := setStringField(files, "script_file_path", "str16", ""); err != nil {
+	if err := setZeroLengthStringField(files, "script_file_path", "str16"); err != nil {
 		return err
 	}
-	if err := setStringField(files, "script_file_content", "str32", ""); err != nil {
+	if err := setZeroLengthStringField(files, "script_file_content", "str32"); err != nil {
 		return err
 	}
 	f.body = f.root.raw()
@@ -1229,6 +1309,27 @@ func (f *File) clearXSAttachment() error {
 }
 
 func (f *File) SetXSCarrier(recipe XSRecipe, content string) error {
+	return f.setXSCarrier(recipe, content, false, false)
+}
+
+func (f *File) SetXSInlineRuntime(recipe XSRecipe, content string) error {
+	if err := f.clearXSAttachment(); err != nil {
+		return err
+	}
+	if strings.TrimSpace(recipe.CarrierTitle) == "" {
+		recipe.CarrierTitle = "XS string"
+	}
+	if strings.TrimSpace(recipe.CarrierTriggerName) == "" {
+		recipe.CarrierTriggerName = "XS SCRIPT"
+	}
+	if recipe.CarrierTriggerIndex == nil {
+		index := 0
+		recipe.CarrierTriggerIndex = &index
+	}
+	return f.setXSCarrier(recipe, content, true, true)
+}
+
+func (f *File) setXSCarrier(recipe XSRecipe, content string, enabled bool, preferInsert bool) error {
 	replace := true
 	if recipe.ReplaceCarrier != nil {
 		replace = *recipe.ReplaceCarrier
@@ -1248,17 +1349,42 @@ func (f *File) SetXSCarrier(recipe XSRecipe, content string) error {
 		}
 	}
 	message := xsCarrierMessage(title, content)
-	disabled := false
+	triggerEnabled := enabled
 	notLooping := false
 	sourcePlayer := 1
 	effect := EffectRecipe{Op: "script_call", SourcePlayer: &sourcePlayer, Message: message}
 	if recipe.CarrierTriggerIndex != nil {
+		index := *recipe.CarrierTriggerIndex
+		if preferInsert {
+			triggers := f.root.section("Triggers")
+			if triggers == nil {
+				return fmt.Errorf("missing Triggers section")
+			}
+			triggerNodes := triggers.list("trigger_data")
+			if index < 0 || index > len(triggerNodes) {
+				return fmt.Errorf("carrier_trigger_index %d out of insert range 0..%d", index, len(triggerNodes))
+			}
+			if index == len(triggerNodes) || !triggerHasXSCarrier(triggerNodes[index]) {
+				insert := TriggerRecipe{
+					Op:      "add_trigger",
+					Name:    triggerName,
+					Enabled: &triggerEnabled,
+					Looping: &notLooping,
+					Effects: []EffectRecipe{effect},
+				}
+				raw, err := f.buildTriggerRaw(insert)
+				if err != nil {
+					return err
+				}
+				return f.insertRawTrigger(index, raw)
+			}
+		}
 		clearConditions := true
 		edit := TriggerRecipe{
 			Op:              "edit_trigger",
 			TargetIndex:     recipe.CarrierTriggerIndex,
 			SetName:         &triggerName,
-			Enabled:         &disabled,
+			Enabled:         &triggerEnabled,
 			Looping:         &notLooping,
 			ReplaceEffects:  []EffectRecipe{effect},
 			ClearConditions: &clearConditions,
@@ -1273,7 +1399,7 @@ func (f *File) SetXSCarrier(recipe XSRecipe, content string) error {
 				Op:                "edit_trigger",
 				TargetIndex:       &carriers[0].TriggerIndex,
 				SetName:           &triggerName,
-				Enabled:           &disabled,
+				Enabled:           &triggerEnabled,
 				Looping:           &notLooping,
 				ReplaceEffects:    []EffectRecipe{effect},
 				ClearConditions:   &clearConditions,
@@ -1286,7 +1412,7 @@ func (f *File) SetXSCarrier(recipe XSRecipe, content string) error {
 	return f.AddTrigger(TriggerRecipe{
 		Op:      "add_trigger",
 		Name:    triggerName,
-		Enabled: &disabled,
+		Enabled: &triggerEnabled,
 		Looping: &notLooping,
 		Effects: []EffectRecipe{effect},
 	})
@@ -1870,15 +1996,63 @@ func (f *File) RemoveVariable(recipe VariableRecipe) error {
 }
 
 func (f *File) AddUnit(recipe UnitRecipe) error {
+	return f.AddUnits([]UnitRecipe{recipe})
+}
+
+func (f *File) AddUnits(recipes []UnitRecipe) error {
+	if len(recipes) == 0 {
+		return nil
+	}
+	unitsSection := f.root.section("Units")
+	if unitsSection == nil {
+		return fmt.Errorf("missing Units section")
+	}
+	playerSections := unitsSection.list("players_units")
 	spec, err := f.writeSpec()
 	if err != nil {
 		return err
 	}
-	raw, err := buildUnitFromRecipe(spec, recipe, f.nextUnitReferenceID())
+	unitSpec, err := unitStructSpec(spec)
 	if err != nil {
 		return err
 	}
-	return f.addRawUnit(raw, recipe.Player)
+	nextReferenceID := f.nextUnitReferenceID()
+	for _, recipe := range recipes {
+		if recipe.Op != "add_unit" {
+			return fmt.Errorf("unsupported unit op %q", recipe.Op)
+		}
+		if recipe.Player < 0 || recipe.Player >= len(playerSections) {
+			return fmt.Errorf("unit player %d out of range 0..%d", recipe.Player, len(playerSections)-1)
+		}
+		fallbackReferenceID := nextReferenceID
+		if recipe.ReferenceID != nil && *recipe.ReferenceID >= nextReferenceID {
+			nextReferenceID = *recipe.ReferenceID + 1
+		} else {
+			nextReferenceID++
+		}
+		raw, err := buildUnitFromRecipe(spec, recipe, fallbackReferenceID)
+		if err != nil {
+			return err
+		}
+		parser := parser{data: raw, sections: map[string]*parsedSection{}}
+		unitNode, err := parser.parseNode("UnitStruct", unitSpec, nil)
+		if err != nil {
+			return err
+		}
+		if parser.off != len(raw) {
+			return fmt.Errorf("new unit parse stopped at %d of %d", parser.off, len(raw))
+		}
+		playerSection := playerSections[recipe.Player]
+		unitField := playerSection.field("units")
+		if unitField == nil {
+			return fmt.Errorf("missing units field for player %d", recipe.Player)
+		}
+		unitField.Elements = append(unitField.Elements, unitNode)
+		if err := setIntField(playerSection, "unit_count", "u32", len(unitField.Elements)); err != nil {
+			return err
+		}
+	}
+	return f.refreshUnits()
 }
 
 func (f *File) EditUnit(recipe UnitRecipe) error {
@@ -2139,6 +2313,86 @@ func (f *File) SetTerrainRect(recipe MapRecipe) error {
 	return f.SetTerrain(recipe)
 }
 
+func ValidateScenarioMapSize(width, height int) error {
+	if width != height {
+		return fmt.Errorf("scenario map size %dx%d is non-square; kit scen blank only emits canonical square DE map-size presets", width, height)
+	}
+	if _, ok := ScenarioMapPresetBySize(width); !ok {
+		return fmt.Errorf("scenario map size %d is not a canonical DE preset; valid sizes: %s", width, ScenarioMapPresetSizesString())
+	}
+	return nil
+}
+
+func ScenarioMapPresets() []ScenarioMapPreset {
+	return append([]ScenarioMapPreset(nil), scenarioMapPresets...)
+}
+
+func ScenarioMapPresetBySize(size int) (ScenarioMapPreset, bool) {
+	for _, preset := range scenarioMapPresets {
+		if preset.Size == size {
+			return preset, true
+		}
+	}
+	return ScenarioMapPreset{}, false
+}
+
+func ScenarioMapPresetSizesString() string {
+	parts := make([]string, 0, len(scenarioMapPresets))
+	for _, preset := range scenarioMapPresets {
+		parts = append(parts, fmt.Sprintf("%d=%s", preset.Size, preset.Name))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (f *File) ResizeMap(width, height int) error {
+	if err := ValidateScenarioMapSize(width, height); err != nil {
+		return err
+	}
+	mapSection := f.root.section("Map")
+	if mapSection == nil {
+		return fmt.Errorf("missing Map section")
+	}
+	oldTiles, oldWidth, oldHeight, err := f.mapTiles()
+	if err != nil {
+		return err
+	}
+	if len(oldTiles) == 0 {
+		return fmt.Errorf("cannot resize map with no terrain tile template")
+	}
+	terrainField := mapSection.field("terrain_data")
+	if terrainField == nil {
+		return fmt.Errorf("missing terrain_data")
+	}
+	baseTile := oldTiles[0]
+	newTiles := make([]*parsedNode, 0, width*height)
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			src := baseTile
+			if x < oldWidth && y < oldHeight {
+				src = oldTiles[y*oldWidth+x]
+			}
+			newTiles = append(newTiles, cloneParsedNode(src))
+		}
+	}
+	if err := setIntField(mapSection, "map_width", "s32", width); err != nil {
+		return err
+	}
+	if err := setIntField(mapSection, "map_height", "s32", height); err != nil {
+		return err
+	}
+	terrainField.Raw = nil
+	terrainField.Elements = newTiles
+	terrainField.Value = terrainField.Elements
+	f.body = f.root.raw()
+	f.InflatedBytes = len(f.body)
+	if mapInfo, err := f.root.mapInfo(); err == nil {
+		f.Map = mapInfo
+	} else {
+		return err
+	}
+	return nil
+}
+
 func (f *File) SetTerrain(recipe MapRecipe) error {
 	tiles, width, height, err := f.mapTiles()
 	if err != nil {
@@ -2232,15 +2486,23 @@ func (f *File) CopyTerrainArea(recipe MapRecipe) error {
 }
 
 func (f *File) AddTrigger(recipe TriggerRecipe) error {
-	spec, err := f.writeSpec()
-	if err != nil {
-		return err
-	}
-	raw, err := buildTriggerFromRecipe(spec, recipe)
+	raw, err := f.buildTriggerRaw(recipe)
 	if err != nil {
 		return err
 	}
 	return f.addRawTrigger(raw)
+}
+
+func (f *File) buildTriggerRaw(recipe TriggerRecipe) ([]byte, error) {
+	spec, err := f.writeSpec()
+	if err != nil {
+		return nil, err
+	}
+	raw, err := buildTriggerFromRecipe(spec, recipe)
+	if err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 func (f *File) CopyTrigger(recipe TriggerRecipe) error {
@@ -2403,6 +2665,14 @@ func (f *File) addRawTrigger(raw []byte) error {
 	if triggers == nil {
 		return fmt.Errorf("missing Triggers section")
 	}
+	return f.insertRawTrigger(len(triggers.list("trigger_data")), raw)
+}
+
+func (f *File) insertRawTrigger(index int, raw []byte) error {
+	triggers := f.root.section("Triggers")
+	if triggers == nil {
+		return fmt.Errorf("missing Triggers section")
+	}
 	spec, err := f.writeSpec()
 	if err != nil {
 		return err
@@ -2424,24 +2694,33 @@ func (f *File) addRawTrigger(raw []byte) error {
 	if triggerData == nil {
 		return fmt.Errorf("missing trigger_data")
 	}
-	triggerNode.Start = triggerData.End
-	triggerNode.End = triggerData.End + len(raw)
-	triggerData.Elements = append(triggerData.Elements, triggerNode)
-	if err := setIntField(triggers, "number_of_triggers", "s32", count+1); err != nil {
+	if index < 0 || index > len(triggerData.Elements) {
+		return fmt.Errorf("trigger insert index %d out of range 0..%d", index, len(triggerData.Elements))
+	}
+	if index < len(triggerData.Elements) {
+		if err := rewriteTriggerReferencesAfterInsert(triggerData.Elements, index); err != nil {
+			return err
+		}
+	}
+	triggerData.Elements = append(triggerData.Elements, nil)
+	copy(triggerData.Elements[index+1:], triggerData.Elements[index:])
+	triggerNode.Start = triggerData.Start
+	triggerNode.End = triggerData.Start + len(raw)
+	triggerData.Elements[index] = triggerNode
+	count = len(triggerData.Elements)
+	if err := setIntField(triggers, "number_of_triggers", "s32", count); err != nil {
 		return err
 	}
-	display := triggers.uint32List("trigger_display_order_array")
-	display = append(display, uint32(count))
-	if err := setUint32ListField(triggers, "trigger_display_order_array", display); err != nil {
+	if err := setUint32ListField(triggers, "trigger_display_order_array", indexUint32List(count)); err != nil {
 		return err
 	}
 	if options := f.root.section("Options"); options != nil {
-		if err := setIntField(options, "number_of_triggers", "u32", count+1); err != nil {
+		if err := setIntField(options, "number_of_triggers", "u32", count); err != nil {
 			return err
 		}
 	}
 	if f.headerRoot != nil {
-		if err := setIntField(f.headerRoot, "trigger_count", "u32", count+1); err != nil {
+		if err := setIntField(f.headerRoot, "trigger_count", "u32", count); err != nil {
 			return err
 		}
 		f.header = f.headerRoot.raw()
@@ -2720,6 +2999,30 @@ func rewriteTriggerReferencesAfterRemove(triggerNodes []*parsedNode, removedInde
 	return nil
 }
 
+func rewriteTriggerReferencesAfterInsert(triggerNodes []*parsedNode, insertedIndex int) error {
+	for triggerIndex, trigger := range triggerNodes {
+		for effectIndex, effect := range trigger.list("effect_data") {
+			ref, ok := effect.intValue("trigger_id")
+			if !ok || ref < insertedIndex {
+				continue
+			}
+			if err := setIntField(effect, "trigger_id", "s32", ref+1); err != nil {
+				return fmt.Errorf("rewrite trigger %d effect %d trigger_id after insert: %w", triggerIndex, effectIndex, err)
+			}
+		}
+		for conditionIndex, condition := range trigger.list("condition_data") {
+			ref, ok := condition.intValue("trigger_id")
+			if !ok || ref < insertedIndex {
+				continue
+			}
+			if err := setIntField(condition, "trigger_id", "s32", ref+1); err != nil {
+				return fmt.Errorf("rewrite trigger %d condition %d trigger_id after insert: %w", triggerIndex, conditionIndex, err)
+			}
+		}
+	}
+	return nil
+}
+
 func rewriteTriggerReferencesAfterBatchRemove(triggerNodes []*parsedNode, removedIndexes []int) error {
 	indexes, err := normalizeTriggerIndexes(removedIndexes, len(triggerNodes))
 	if err != nil {
@@ -2748,6 +3051,23 @@ func rewriteTriggerReferencesAfterBatchRemove(triggerNodes []*parsedNode, remove
 		}
 	}
 	return nil
+}
+
+func triggerHasXSCarrier(trigger *parsedNode) bool {
+	if trigger == nil {
+		return false
+	}
+	for _, effect := range trigger.list("effect_data") {
+		effectType, _ := effect.intValue("effect_type")
+		if effectType != effectTypeID("script_call") {
+			continue
+		}
+		message, _ := effect.stringValue("message")
+		if isXSCarrierMessage(message) {
+			return true
+		}
+	}
+	return false
 }
 
 func ensureNoExternalTriggerReferencesToRemoved(triggerNodes []*parsedNode, removedIndexes []int) error {
@@ -3539,6 +3859,33 @@ func applyTerrainTileSnapshot(dst *parsedNode, snapshot terrainTileSnapshot) err
 	return nil
 }
 
+func cloneParsedNode(src *parsedNode) *parsedNode {
+	if src == nil {
+		return nil
+	}
+	dst := &parsedNode{
+		Name:  src.Name,
+		Start: src.Start,
+		End:   src.End,
+		Raw:   append([]byte(nil), src.Raw...),
+		Value: src.Value,
+	}
+	if len(src.Fields) > 0 {
+		dst.Fields = make([]*parsedNode, 0, len(src.Fields))
+		for _, field := range src.Fields {
+			dst.Fields = append(dst.Fields, cloneParsedNode(field))
+		}
+	}
+	if len(src.Elements) > 0 {
+		dst.Elements = make([]*parsedNode, 0, len(src.Elements))
+		for _, elem := range src.Elements {
+			dst.Elements = append(dst.Elements, cloneParsedNode(elem))
+		}
+		dst.Value = dst.Elements
+	}
+	return dst
+}
+
 func (f *File) countMapTiles(recipe MapRecipe) (int, error) {
 	_, width, height, err := f.mapTiles()
 	if err != nil {
@@ -4242,6 +4589,26 @@ func buildTriggerRaw(spec *Spec, recipe TriggerRecipe, effectOverrides []map[str
 	if recipe.Looping != nil && *recipe.Looping {
 		looping = 1
 	}
+	executeOnLoad := 0
+	if recipe.ExecuteOnLoad != nil && *recipe.ExecuteOnLoad {
+		executeOnLoad = 1
+	}
+	displayAsObjective := 0
+	if recipe.DisplayAsObjective != nil && *recipe.DisplayAsObjective {
+		displayAsObjective = 1
+	}
+	displayOnScreen := 0
+	if recipe.DisplayOnScreen != nil && *recipe.DisplayOnScreen {
+		displayOnScreen = 1
+	}
+	makeHeader := 0
+	if recipe.MakeHeader != nil && *recipe.MakeHeader {
+		makeHeader = 1
+	}
+	muteObjectives := 0
+	if recipe.MuteObjectives != nil && *recipe.MuteObjectives {
+		muteObjectives = 1
+	}
 	name := recipe.Name
 	if name == "" {
 		name = "AoE2Kit Trigger"
@@ -4263,15 +4630,25 @@ func buildTriggerRaw(spec *Spec, recipe TriggerRecipe, effectOverrides []map[str
 		conditions = append(conditions, condition)
 	}
 	return buildStructRaw(triggerSpec, map[string]any{
-		"enabled":                       enabled,
-		"looping":                       looping,
-		"trigger_name":                  name,
-		"number_of_effects":             len(effects),
-		"effect_data":                   effects,
-		"effect_display_order_array":    indexAnyList(len(effects)),
-		"number_of_conditions":          len(conditions),
-		"condition_data":                conditions,
-		"condition_display_order_array": indexAnyList(len(conditions)),
+		"enabled":                           enabled,
+		"looping":                           looping,
+		"execute_on_load":                   executeOnLoad,
+		"description_string_table_id":       intValue(recipe.DescriptionStringID, 0),
+		"display_as_objective":              displayAsObjective,
+		"objective_description_order":       intValue(recipe.ObjectiveDescriptionOrder, 0),
+		"make_header":                       makeHeader,
+		"short_description_string_table_id": intValue(recipe.ShortDescriptionStringID, 0),
+		"display_on_screen":                 displayOnScreen,
+		"mute_objectives":                   muteObjectives,
+		"trigger_description":               recipe.Description,
+		"trigger_name":                      name,
+		"short_description":                 recipe.ShortDescription,
+		"number_of_effects":                 len(effects),
+		"effect_data":                       effects,
+		"effect_display_order_array":        indexAnyList(len(effects)),
+		"number_of_conditions":              len(conditions),
+		"condition_data":                    conditions,
+		"condition_display_order_array":     indexAnyList(len(conditions)),
 	})
 }
 
@@ -4552,7 +4929,7 @@ func effectOverrides(effect EffectRecipe) (map[string]any, error) {
 			"effect_type":              effectTypeID("change_object_name"),
 			"object_list_unit_id":      intValue(effect.ObjectListUnitID, -1),
 			"source_player":            intValue(effect.SourcePlayer, 1),
-			"string_id":                -1,
+			"string_id":                intValue(effect.StringID, -1),
 			"area_x1":                  intValue(effect.AreaX1, -1),
 			"area_y1":                  intValue(effect.AreaY1, -1),
 			"area_x2":                  intValue(effect.AreaX2, -1),
@@ -4568,7 +4945,7 @@ func effectOverrides(effect EffectRecipe) (map[string]any, error) {
 			"effect_type":              effectTypeID("change_object_description"),
 			"object_list_unit_id":      intValue(effect.ObjectListUnitID, -1),
 			"source_player":            intValue(effect.SourcePlayer, 1),
-			"string_id":                -1,
+			"string_id":                intValue(effect.StringID, -1),
 			"area_x1":                  intValue(effect.AreaX1, -1),
 			"area_y1":                  intValue(effect.AreaY1, -1),
 			"area_x2":                  intValue(effect.AreaX2, -1),
@@ -4603,6 +4980,7 @@ func effectOverrides(effect EffectRecipe) (map[string]any, error) {
 			"quantity":                 intValue(effect.Quantity, 0),
 			"object_list_unit_id":      intValue(effect.ObjectListUnitID, -1),
 			"source_player":            intValue(effect.SourcePlayer, 1),
+			"string_id":                intValue(effect.StringID, -1),
 			"area_x1":                  intValue(effect.AreaX1, -1),
 			"area_y1":                  intValue(effect.AreaY1, -1),
 			"area_x2":                  intValue(effect.AreaX2, -1),
@@ -4780,6 +5158,25 @@ func effectOverrides(effect EffectRecipe) (map[string]any, error) {
 			"source_player":            intValue(effect.SourcePlayer, 1),
 			"item_id":                  intValue(effect.ItemID, -1),
 			"operation":                intValue(effect.Operation, 1),
+			"number_of_units_selected": -1,
+			"selected_object_ids":      []any{},
+			"message":                  "",
+			"sound_name":               "",
+		}, nil
+	case "change_object_cost":
+		if effect.ObjectListUnitID == nil {
+			return nil, fmt.Errorf("change_object_cost requires object_list_unit_id")
+		}
+		return map[string]any{
+			"effect_type":              effectTypeID("change_object_cost"),
+			"source_player":            intValue(effect.SourcePlayer, 1),
+			"object_list_unit_id":      *effect.ObjectListUnitID,
+			"resource_1":               intValue(effect.Resource1, -1),
+			"resource_1_quantity":      intValue(effect.Resource1Quantity, -1),
+			"resource_2":               intValue(effect.Resource2, -1),
+			"resource_2_quantity":      intValue(effect.Resource2Quantity, -1),
+			"resource_3":               intValue(effect.Resource3, -1),
+			"resource_3_quantity":      intValue(effect.Resource3Quantity, -1),
 			"number_of_units_selected": -1,
 			"selected_object_ids":      []any{},
 			"message":                  "",
@@ -5299,6 +5696,23 @@ func setStringField(node *parsedNode, name, kind, value string) error {
 	}
 	field.Raw = raw
 	field.Value = value
+	return nil
+}
+
+func setZeroLengthStringField(node *parsedNode, name, kind string) error {
+	field := node.field(name)
+	if field == nil {
+		return fmt.Errorf("missing %s", name)
+	}
+	typ, size, err := primitiveType(kind)
+	if err != nil {
+		return err
+	}
+	if typ != "str" {
+		return fmt.Errorf("%s is %s, want length-prefixed string", name, kind)
+	}
+	field.Raw = make([]byte, size)
+	field.Value = ""
 	return nil
 }
 

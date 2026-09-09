@@ -11,10 +11,17 @@ type ChecksumPhaseOptions struct {
 }
 
 type ChecksumPhaseAllReport struct {
-	Path         string                 `json:"path,omitempty"`
-	Method       string                 `json:"method"`
-	Verification string                 `json:"verification"`
-	Words        []*ChecksumPhaseReport `json:"words"`
+	Path         string                  `json:"path,omitempty"`
+	Method       string                  `json:"method"`
+	Verification string                  `json:"verification"`
+	Summary      ChecksumPhaseAllSummary `json:"summary"`
+	Words        []*ChecksumPhaseReport  `json:"words"`
+}
+
+type ChecksumPhaseAllSummary struct {
+	ChecksumSamples int `json:"checksum_samples"`
+	Players         int `json:"players"`
+	Words           int `json:"words"`
 }
 
 type ChecksumPhaseReport struct {
@@ -132,8 +139,13 @@ func BuildChecksumPhaseAll(path string, opts ChecksumPhaseOptions) (*ChecksumPha
 		if err != nil {
 			return nil, err
 		}
+		if word == 0 {
+			report.Summary.ChecksumSamples = wordReport.Summary.Samples
+			report.Summary.Players = wordReport.Summary.Players
+		}
 		report.Words = append(report.Words, wordReport)
 	}
+	report.Summary.Words = len(report.Words)
 	return report, nil
 }
 

@@ -9,7 +9,10 @@ import (
 	"strings"
 )
 
-const EngineVerified = "engine_verified"
+const (
+	EngineVerified = "engine_verified"
+	SourceVerified = "source_verified"
+)
 
 type Ledger struct {
 	SchemaVersion int    `json:"schema_version"`
@@ -121,7 +124,7 @@ func (l Ledger) Filter(includeProvisional bool, domain string) []Fact {
 	domain = strings.TrimSpace(strings.ToLower(domain))
 	var out []Fact
 	for _, fact := range l.Facts {
-		if !includeProvisional && fact.Tier != EngineVerified {
+		if !includeProvisional && !trustedByDefault(fact.Tier) {
 			continue
 		}
 		if domain != "" && !factHasDomain(fact, domain) {
@@ -141,7 +144,7 @@ func CitationFor(id string, includeProvisional bool) Citation {
 	if !ok {
 		return Citation{FactID: id}
 	}
-	if fact.Tier != EngineVerified && !includeProvisional {
+	if !includeProvisional && !trustedByDefault(fact.Tier) {
 		return Citation{}
 	}
 	return Citation{
@@ -194,7 +197,16 @@ func factHasDomain(fact Fact, domain string) bool {
 
 func validTier(tier string) bool {
 	switch tier {
-	case EngineVerified, "structure_verified", "strong_hypothesis", "heuristic":
+	case EngineVerified, SourceVerified, "structure_verified", "strong_hypothesis", "heuristic":
+		return true
+	default:
+		return false
+	}
+}
+
+func trustedByDefault(tier string) bool {
+	switch tier {
+	case EngineVerified, SourceVerified:
 		return true
 	default:
 		return false
@@ -205,12 +217,14 @@ func tierRank(tier string) int {
 	switch tier {
 	case EngineVerified:
 		return 0
-	case "structure_verified":
+	case SourceVerified:
 		return 1
-	case "strong_hypothesis":
+	case "structure_verified":
 		return 2
-	case "heuristic":
+	case "strong_hypothesis":
 		return 3
+	case "heuristic":
+		return 4
 	default:
 		return 9
 	}

@@ -523,10 +523,11 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 		if len(summary.Location) > 0 {
 			summary.KnownFields["location"] = summary.Location
 		}
-	case 14, 15, 18, 24, 26, 27, 28, 29, 31, 32, 33, 34, 42, 43, 49, 58, 59, 60, 61, 62, 70, 71, 73, 74, 77, 78, 88, 98, 99, 105, 106, 107:
+	case 14, 15, 18, 24, 26, 27, 28, 29, 31, 32, 33, 34, 42, 43, 44, 49, 58, 59, 60, 61, 62, 70, 71, 73, 74, 77, 78, 88, 98, 99, 105, 106, 107:
 		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.TargetPlayer = putInt("target_player", "target_player")
+		summary.StringID = putInt("string_id", "string_id")
 		summary.ObjectAttribute = putInt("object_attribute", "object_attributes")
 		summary.Operation = putInt("operation", "operation")
 		summary.Quantity = putInt("quantity", "quantity")
@@ -539,6 +540,30 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 		if len(summary.SelectedObjectIDs) > 0 {
 			summary.KnownFields["selected_object_ids"] = summary.SelectedObjectIDs
 		}
+	case 38:
+		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
+		summary.SourcePlayer = putInt("source_player", "source_player")
+		putInt("enabled", "enabled")
+		summary.Area = area()
+		if len(summary.Area) > 0 {
+			summary.KnownFields["area"] = summary.Area
+		}
+		putInt("object_group", "object_group")
+		putInt("object_type", "object_type")
+		putInt("max_units_affected", "max_units_affected")
+		summary.SelectedObjectIDs = selectedObjects()
+		if len(summary.SelectedObjectIDs) > 0 {
+			summary.KnownFields["selected_object_ids"] = summary.SelectedObjectIDs
+		}
+	case 40:
+		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
+		summary.SourcePlayer = putInt("source_player", "source_player")
+		putInt("resource_1", "resource_1")
+		putInt("resource_1_quantity", "resource_1_quantity")
+		putInt("resource_2", "resource_2")
+		putInt("resource_2_quantity", "resource_2_quantity")
+		putInt("resource_3", "resource_3")
+		putInt("resource_3_quantity", "resource_3_quantity")
 	case 20:
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.StringID = putInt("string_id", "string_id")
@@ -584,13 +609,34 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 		summary.Text = putText("text", "message")
 	case 57:
 		summary.TimerID = putInt("timer_id", "timer")
+	case 39:
+		summary.SourcePlayer = putInt("source_player", "source_player")
+		summary.Technology = putInt("technology", "technology")
+		putInt("enabled", "enabled")
+	case 47:
+		summary.SourcePlayer = putInt("source_player", "source_player")
+		summary.Technology = putInt("technology", "technology")
+		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
+		putInt("button_location", "button_location")
 	case 63:
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.Technology = putInt("technology", "technology")
+		putInt("resource_1", "resource_1")
+		putInt("resource_1_quantity", "resource_1_quantity")
+		putInt("resource_2", "resource_2")
+		putInt("resource_2_quantity", "resource_2_quantity")
+		putInt("resource_3", "resource_3")
+		putInt("resource_3_quantity", "resource_3_quantity")
 	case 64, 65, 66, 67, 68, 84, 85:
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.Technology = putInt("technology", "technology")
 		summary.Quantity = putInt("quantity", "quantity")
+		if effectType == 64 {
+			putInt("research_time", "quantity")
+		}
+		if effectType == 84 {
+			putInt("icon", "quantity")
+		}
 		summary.Text = putText("text", "message")
 	case 75, 108:
 		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
@@ -610,6 +656,17 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 	case 76, 103:
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.Technology = putInt("technology", "technology")
+		summary.SelectedObjectIDs = selectedObjects()
+		if len(summary.SelectedObjectIDs) > 0 {
+			summary.KnownFields["selected_object_ids"] = summary.SelectedObjectIDs
+		}
+	case 102:
+		summary.UnitConst = putInt("unit_const", "object_list_unit_id")
+		summary.SourcePlayer = putInt("source_player", "source_player")
+		putInt("train_location_unit_const", "object_list_unit_id_2")
+		putInt("button_location", "button_location")
+		putInt("hotkey", "hotkey")
+		putInt("train_time", "train_time")
 		summary.SelectedObjectIDs = selectedObjects()
 		if len(summary.SelectedObjectIDs) > 0 {
 			summary.KnownFields["selected_object_ids"] = summary.SelectedObjectIDs
@@ -790,6 +847,7 @@ var effectTypesByRecipeOp = map[string]int{
 	"reveal_map":                      41,
 	"enable_disable_object":           38,
 	"enable_disable_technology":       39,
+	"change_object_cost":              40,
 	"modify_attribute":                51,
 	"modify_resource":                 52,
 	"change_player_name":              45,

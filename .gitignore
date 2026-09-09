@@ -15,10 +15,12 @@ tmp/
 /kit
 /cba
 /bin/
-/build/go/
-/build/diagnostics/
-/build/kit-*
+/build/
 
 # Local handoff archive produced by `./kit pack AoE2Kit.zip`.
 /AoE2Kit.zip
 /AoE2Kit.zip.sha256
+
+# Third-party reference scenarios studied locally (e.g. SpiRaL's CB Front Towers).
+# Study technique only — never track/redistribute (author license forbids it).
+*REFERENCE.aoe2scenario

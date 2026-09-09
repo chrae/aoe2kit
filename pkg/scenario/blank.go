@@ -9,12 +9,14 @@ import (
 	"time"
 )
 
-const blankScenarioSeedSHA256 = "8399e4aa78eb0c34caa225d0d2b15ac507350e8b8eaf1c38ee94b104830dbd9d"
+const blankScenarioSeedSHA256 = "ffc08c5d34d194e3a20fe1baf5f87a7d0e2cbea484f4a6e29db23ca5e1b091c5"
 const defaultBlankDummyUnit = 598
 
 type BlankOptions struct {
 	PlayerCount       int
 	HumanSlots        int
+	MapWidth          int
+	MapHeight         int
 	Timestamp         int
 	ClearTriggers     bool
 	KeepSeedTriggers  bool
@@ -25,6 +27,7 @@ type BlankOptions struct {
 	DummySpacing      float64
 	InactiveRestHuman bool
 	GaiaActive        bool
+	NoConquest        bool
 }
 
 type BlankReport struct {
@@ -33,16 +36,22 @@ type BlankReport struct {
 	Version            string `json:"version"`
 	PlayerCount        int    `json:"player_count"`
 	HumanSlots         int    `json:"human_slots"`
+	MapWidth           int    `json:"map_width"`
+	MapHeight          int    `json:"map_height"`
+	TileCount          int    `json:"tile_count"`
 	ClearTriggers      bool   `json:"clear_triggers"`
 	DummyStarters      bool   `json:"dummy_starters"`
 	DummyUnit          int    `json:"dummy_unit,omitempty"`
 	GaiaActive         bool   `json:"gaia_active"`
+	NoConquest         bool   `json:"no_conquest"`
 	TriggerCountBefore int    `json:"trigger_count_before"`
 	TriggerCountAfter  int    `json:"trigger_count_after"`
 	UnitCountBefore    int    `json:"unit_count_before"`
 	UnitCountAfter     int    `json:"unit_count_after"`
 	RebuildOK          bool   `json:"rebuild_ok"`
 	InvariantOK        bool   `json:"invariant_ok"`
+	EditorParityOK     bool   `json:"editor_parity_ok"`
+	EditorParityNote   string `json:"editor_parity_note,omitempty"`
 	Verification       string `json:"verification"`
 }
 
@@ -66,6 +75,12 @@ func WriteBlankScenarioFile(output string, opts BlankOptions) (BlankReport, erro
 	if opts.HumanSlots < 0 || opts.HumanSlots > opts.PlayerCount {
 		return BlankReport{}, fmt.Errorf("blank scenario human slots %d out of range 0..player_count", opts.HumanSlots)
 	}
+	if err := ValidateScenarioMapSize(opts.MapWidth, opts.MapHeight); err != nil {
+		return BlankReport{}, err
+	}
+	if err := validateBlankDummyPositions(opts); err != nil {
+		return BlankReport{}, err
+	}
 	seed, err := BlankScenarioSeedBytes()
 	if err != nil {
 		return BlankReport{}, err
@@ -84,6 +99,9 @@ func WriteBlankScenarioFile(output string, opts BlankOptions) (BlankReport, erro
 	}
 	recipe := blankScenarioRecipe(opts)
 	if err := file.ApplyRecipe(recipe); err != nil {
+		return BlankReport{}, err
+	}
+	if err := file.ResizeMap(opts.MapWidth, opts.MapHeight); err != nil {
 		return BlankReport{}, err
 	}
 	if dir := filepath.Dir(output); dir != "." && dir != "" {
@@ -111,35 +129,54 @@ func WriteBlankScenarioFile(output string, opts BlankOptions) (BlankReport, erro
 	if verified.Units != nil {
 		afterUnits = verified.Units.Total
 	}
+	mapWidth, mapHeight, tileCount := 0, 0, 0
+	if verified.Map != nil {
+		mapWidth = verified.Map.Width
+		mapHeight = verified.Map.Height
+		tileCount = verified.Map.TileCount
+	}
 	if !invariantOK {
 		return BlankReport{}, fmt.Errorf("blank scenario trigger invariants failed: %s", verified.Triggers.InvariantNote)
 	}
+	editorParityOK, editorParityNote := editorParityPlayerInit(verified, opts.PlayerCount)
 	return BlankReport{
 		Output:             output,
 		SeedSHA256:         blankScenarioSeedSHA256,
 		Version:            verified.Version,
 		PlayerCount:        opts.PlayerCount,
 		HumanSlots:         opts.HumanSlots,
+		MapWidth:           mapWidth,
+		MapHeight:          mapHeight,
+		TileCount:          tileCount,
 		ClearTriggers:      opts.ClearTriggers,
 		DummyStarters:      opts.DummyStarters,
 		DummyUnit:          opts.DummyUnit,
 		GaiaActive:         opts.GaiaActive,
+		NoConquest:         opts.NoConquest,
 		TriggerCountBefore: beforeTriggers,
 		TriggerCountAfter:  afterTriggers,
 		UnitCountBefore:    beforeUnits,
 		UnitCountAfter:     afterUnits,
 		RebuildOK:          true,
 		InvariantOK:        invariantOK,
+		EditorParityOK:     editorParityOK,
+		EditorParityNote:   editorParityNote,
 		Verification:       scenarioWriteVerification().Label,
 	}, nil
 }
 
 func normalizeBlankOptions(opts BlankOptions) BlankOptions {
 	if opts.PlayerCount == 0 {
-		opts.PlayerCount = 2
+		opts.PlayerCount = 1
 	}
 	if opts.HumanSlots == 0 {
 		opts.HumanSlots = 1
+	}
+	if opts.MapWidth == 0 {
+		opts.MapWidth = 120
+	}
+	if opts.MapHeight == 0 {
+		opts.MapHeight = 120
 	}
 	if opts.Timestamp == 0 {
 		opts.Timestamp = int(time.Now().Unix())
@@ -156,8 +193,42 @@ func normalizeBlankOptions(opts BlankOptions) BlankOptions {
 	if opts.DummySpacing == 0 {
 		opts.DummySpacing = 6
 	}
+	opts.GaiaActive = true
 	opts.ClearTriggers = !opts.KeepSeedTriggers
 	return opts
+}
+
+func editorParityPlayerInit(file *File, playableSlots int) (bool, string) {
+	if file == nil {
+		return false, "missing scenario"
+	}
+	if len(file.Players) < 16 {
+		return false, fmt.Sprintf("parsed %d player records; expected 16", len(file.Players))
+	}
+	for _, player := range file.Players {
+		wantActive := player.Player == 0 || (player.Player > 0 && player.Player <= playableSlots)
+		if player.Active != wantActive {
+			return false, fmt.Sprintf("P%d active=%t want %t for editor-style blank player init", player.Player, player.Active, wantActive)
+		}
+		if !player.Human {
+			return false, fmt.Sprintf("P%d human=false; editor-authored blank keeps all player records human metadata unless explicitly changed", player.Player)
+		}
+	}
+	return true, "player active/human metadata matches editor-style blank baseline"
+}
+
+func validateBlankDummyPositions(opts BlankOptions) error {
+	if !opts.DummyStarters {
+		return nil
+	}
+	for player := 1; player <= opts.PlayerCount; player++ {
+		x := opts.DummyStartX + float64(player-1)*opts.DummySpacing
+		y := opts.DummyStartY
+		if x < 0 || y < 0 || x >= float64(opts.MapWidth) || y >= float64(opts.MapHeight) {
+			return fmt.Errorf("blank dummy starter P%d at %.2f,%.2f is outside map %dx%d; adjust --dummy-origin/--dummy-spacing or use a larger map", player, x, y, opts.MapWidth, opts.MapHeight)
+		}
+	}
+	return nil
 }
 
 func blankScenarioRecipe(opts BlankOptions) Recipe {
@@ -167,6 +238,9 @@ func blankScenarioRecipe(opts BlankOptions) Recipe {
 	computer := false
 	timestamp := opts.Timestamp
 	playerCount := opts.PlayerCount
+	if playerCount < 2 {
+		playerCount = 2
+	}
 	recipe := Recipe{
 		Scenario: &ScenarioRecipe{
 			PlayerCount:         &playerCount,
@@ -178,14 +252,14 @@ func blankScenarioRecipe(opts BlankOptions) Recipe {
 	}
 	for player := 0; player <= 15; player++ {
 		playerActive := &inactive
-		if player == 0 && opts.GaiaActive {
+		if player == 0 {
 			playerActive = &active
 		} else if player > 0 && player <= opts.PlayerCount {
 			playerActive = &active
 		}
-		playerHuman := &computer
-		if player > 0 && (player <= opts.HumanSlots || (!*playerActive && opts.InactiveRestHuman)) {
-			playerHuman = &human
+		playerHuman := &human
+		if player > 0 && *playerActive && player > opts.HumanSlots {
+			playerHuman = &computer
 		}
 		recipe.Players = append(recipe.Players, PlayerRecipe{
 			Player: player,
@@ -214,16 +288,12 @@ func blankScenarioRecipe(opts BlankOptions) Recipe {
 			})
 		}
 	}
+	if opts.NoConquest {
+		conquest := 0
+		recipe.Victory = &VictoryRecipe{ConquestRequired: &conquest}
+	}
 	return recipe
 }
 
 const blankScenarioSeedHex = "" +
-	"312e3538000000000600000051f85e6a010000000002000000e8030000010000001100000002000000030000000400000005000000060000000700000008000000090000000a0000000c0000000d0000000e0000000f000000100000001100000012000000130000000600000063687261650003000000ecdbcb6e1b551cc0e1" +
-	"71d3264d4a010989cb6e508560d15a2aeb229a4b059128ad48056297a9336e863ae3321e0bb24442acd982d447e01d102bc443f00c3c0166ced811cec553da58aa52be9f74f4d53e93f3b7c7092b1c557dfdc11f1fbe5a79313c9024499224492f7c7f8f46a3d3ac56754658db2b2bd167ab9f6edcb97d6d7df3f3c38fce4fae" +
-	"f92fd7855ce7baa7b9ee79165e63dd1bd15a2fc91fc6f7d241d94efae9fb834e9a2745d69ff59773d2690b279dac19b58ef478c65d7de2390d7be71af6a63fada335fd6e5e68d85b6cd85b6ad8bbd8b0b7dcb0b7d2b077a961efa586bdcb0d7b2f37ecbd52adf0193ee937fffbeac6bf77657cff2dcbfa7f2e49922449922449" +
-	"9224499224499224493a2b3debf75d0ed56afcaaca992b7c5fe7342bdcd3831e9f707ef8ffceb7ab2fcd6caf2c451b693719f6caf0308aa67eeeb914fd5ebd88d3acd0e5bf7ef9b3fec6d3b793357963000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000" +
-	"00000000000000000000000000000000000000000000000000000000000000000000000000301a010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000080d108000000000000000000000000c09961b972761fafbf087be13dbe196d75d23c29b27e7c6b272bfb" +
-	"457c7737c9cbfe5ef4eb8fdfadfef0dbf2da8de846142d470bd1c2b8f0b3ad6a9d6f58a16e77f1e6b1a1e1d6ce1e19458fd6c23a18793033fc6438b6696cd89bc7c8c9cc83914d63cfcd6be478e6f4c85963c345f31959cf3c3a72d6d8398d0c334f1a7974ec85398eac66ce1a393d76719e23eb898d7f2061ec52d3c8634f9e" +
-	"d0cf3f855ebb59bfc370e28cdeaad666f9ee20fe6a9875f6e3224d7abdfdf1837674a9dafc2229d3622fedf5f3fa45dd4b0665b5335dab153e9356d86d855b359ed67ae7e0e424ee16c3ac8ccbdda48c77d241a7c8eea7e1e94ebfd72fdaf5b1778a247f90d6fffc72b8b73735a1e1b55ff977c2fd61ded96dc79b6575e85e75" +
-	"78968f9f4a07edfae3fba8481ea5f5fbb99d3c4ce36fb23c6dd74787dbb355ad705f6715ae6bdad7e156abfb75abdb4d3be1b3f9241b9457e3ad34df89d7c32f40b7fa58caac9f5f8d07fd61d149e3bbbd643f2de2ebd5136591e50fe2cd8df8daf5e39f7b78e2f56abd3d59a77985e1bce0cae4ec6739e3d00b0c0fc27ff225" +
-	"e969fb6700"
+	"312e35380000000006000000a3329d6a010000000002000000e8030000010000001100000002000000030000000400000005000000060000000700000008000000090000000a0000000c0000000d0000000e0000000f000000100000001100000012000000130000000600000063687261650000000000ecdbcd4e13511cc0d15bcab7a2266e5c4ee2c605ba202c310a68a20b3fa2896b9a52a4513b5a1ae303f8129af808ae7c09e243f00c26eec5b9a54d4ae95c509a10f4fc929b93726fe7df0eb09c50f4eef6f73b570a67e30b4992244992f4cff76b7f7fff34ab525c23ae8df9f9f06cf5f1bd278f6eae3f7c71f8d564efcc49cec59c73ee4fce9d65f133765b0eebed46add3c876ea8d56adddcc17b3cd3c6be59ded66ebe562567fddacbfca766aef1bb76a7963a97fa8ecdf6ad4a8eaa8b12aa932d49792bb7aec75127b1389bdc1dfd670a93fdca9c4de74626f26b1379bd89b4beccd27f62e24f62e26f616127b97127b978b157f87c7fde57f2c6efc8deb07f7dfb2acff7349922449922449922449922449922449d279e96f9f77395425f9a8cab92b3eaf739a15ef69bfb2191bc54333fd15c2c01bcea4b05b7c88d3acd8c28faf7bdd479d3ef456ef8b010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070ae982b2cefc1fabfb017bfe3b5f0bcde68d5dacd3cbbbfd9ece4edece976add5c9df84dda56f6b7bcb3f5757c24a0873a11aaa07c5f7568a359958b1adade9bb4786c65b5b3e3284b76b71f547f667c677c6cba6c6c6bd718ceccdec8f4c8d9d18d7c883998323cbc6c643e319d99d393cb26cec9846c699a3460e8f9d1ae3c86266d9c8c1b1d3e31cd99d98fc0789636752238ffc70449f3fc5ae1ebd80249da4df0300"

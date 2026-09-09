@@ -99,6 +99,12 @@ func Diff(before, after *File) DiffReport {
 		diffTriggerSummaries(before.Triggers.Triggers, after.Triggers.Triggers, addChange)
 	}
 	if before.Units != nil && after.Units != nil {
+		if before.Units.NumberOfUnitSections != after.Units.NumberOfUnitSections {
+			addChange("units", "number_of_unit_sections", before.Units.NumberOfUnitSections, after.Units.NumberOfUnitSections, "")
+		}
+		if before.Units.NumberOfPlayers != after.Units.NumberOfPlayers {
+			addChange("units", "number_of_players", before.Units.NumberOfPlayers, after.Units.NumberOfPlayers, "")
+		}
 		if before.Units.Total != after.Units.Total {
 			addChange("units", "total", before.Units.Total, after.Units.Total, "")
 		}
@@ -178,11 +184,20 @@ func (f *File) LintWithOptions(opts LintOptions) LintReport {
 		if f.Map.Width*f.Map.Height != f.Map.TileCount {
 			report.addIssue("error", "map_tile_count", fmt.Sprintf("map dimensions %dx%d imply %d tiles but parsed %d", f.Map.Width, f.Map.Height, f.Map.Width*f.Map.Height, f.Map.TileCount))
 		}
+		if err := ValidateScenarioMapSize(f.Map.Width, f.Map.Height); err != nil {
+			report.addIssueFact("error", "map_size_preset", err.Error(), "scenario.map_size_editor_presets_are_discrete", opts)
+		}
 	} else {
 		report.addIssue("error", "missing_map", "scenario has no parsed map section")
 	}
 	if f.Units != nil {
 		report.Summary.Units = f.Units.Total
+		if f.Units.NumberOfUnitSections != len(f.Units.Sections) {
+			report.addIssue("error", "unit_section_count_mismatch", fmt.Sprintf("Units number_of_unit_sections=%d but parsed %d player unit sections", f.Units.NumberOfUnitSections, len(f.Units.Sections)))
+		}
+		if f.Units.NumberOfPlayers != len(f.Units.Sections) {
+			report.addIssue("error", "unit_owner_count_mismatch", fmt.Sprintf("Units number_of_players=%d but parsed %d player unit sections; current DE editor-authored scenarios use all Gaia+8 unit-owner sections", f.Units.NumberOfPlayers, len(f.Units.Sections)))
+		}
 		seenRefs := map[int]string{}
 		unitCountsByPlayer := map[int]int{}
 		for _, player := range f.Units.Sections {

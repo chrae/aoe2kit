@@ -45,6 +45,31 @@ func TestScenarioStringsFrontTowersGolden(t *testing.T) {
 	}
 }
 
+func TestScenarioMarkupDoesNotCountVariableDeclarations(t *testing.T) {
+	report := StringReport{
+		Variables: []VariableEntry{
+			{ID: 332, Name: "A2K HERO P1 H1 COINS"},
+			{ID: 150, Name: "<Variable DECLARED ONLY>"},
+		},
+		EffectText: []EffectTextEntry{
+			{Text: "Coins <Variable 332> and kills <KillCountP1>"},
+		},
+	}
+	report.MarkupSummary = summarizeScenarioMarkup(report.allText())
+	if !containsString(report.MarkupSummary.VariableRefs, "Variable 332") {
+		t.Fatalf("missing numeric variable ref: %#v", report.MarkupSummary.VariableRefs)
+	}
+	if !containsString(report.MarkupSummary.VariableRefs, "KillCountP1") {
+		t.Fatalf("missing killcount ref: %#v", report.MarkupSummary.VariableRefs)
+	}
+	if containsString(report.MarkupSummary.VariableRefs, "A2K HERO P1 H1 COINS") {
+		t.Fatalf("plain variable name was misclassified as markup: %#v", report.MarkupSummary.VariableRefs)
+	}
+	if containsString(report.MarkupSummary.VariableRefs, "Variable DECLARED ONLY") {
+		t.Fatalf("variable declaration text was misclassified as markup: %#v", report.MarkupSummary.VariableRefs)
+	}
+}
+
 func containsString(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {

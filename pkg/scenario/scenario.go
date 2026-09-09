@@ -64,20 +64,23 @@ type TriggerInfo struct {
 }
 
 type TriggerSummary struct {
-	Index       int             `json:"index"`
-	Name        string          `json:"name"`
-	Enabled     uint32          `json:"enabled"`
-	Looping     int8            `json:"looping"`
-	Effects     int             `json:"effects"`
-	EffectData  []EffectSummary `json:"effect_data,omitempty"`
-	Conditions  int             `json:"conditions"`
-	RecordStart int             `json:"record_start"`
-	RecordEnd   int             `json:"record_end"`
+	Index         int                `json:"index"`
+	Name          string             `json:"name"`
+	Enabled       uint32             `json:"enabled"`
+	Looping       int8               `json:"looping"`
+	Effects       int                `json:"effects"`
+	EffectData    []EffectSummary    `json:"effect_data,omitempty"`
+	Conditions    int                `json:"conditions"`
+	ConditionData []ConditionSummary `json:"condition_data,omitempty"`
+	RecordStart   int                `json:"record_start"`
+	RecordEnd     int                `json:"record_end"`
 }
 
 type UnitInfo struct {
-	Sections []PlayerUnitsInfo `json:"sections"`
-	Total    int               `json:"total"`
+	NumberOfUnitSections int               `json:"number_of_unit_sections"`
+	NumberOfPlayers      int               `json:"number_of_players"`
+	Sections             []PlayerUnitsInfo `json:"sections"`
+	Total                int               `json:"total"`
 }
 
 type PlayerUnitsInfo struct {
@@ -465,16 +468,25 @@ func (r *parsedRoot) triggerInfo() (*TriggerInfo, error) {
 			summary.EffectIndex = j
 			effectData = append(effectData, summary)
 		}
+		conditionData := make([]ConditionSummary, 0, len(conditions))
+		for j, condition := range conditions {
+			summary := summarizeConditionData(condition)
+			summary.TriggerIndex = i
+			summary.TriggerName = name
+			summary.ConditionIndex = j
+			conditionData = append(conditionData, summary)
+		}
 		info.Triggers = append(info.Triggers, TriggerSummary{
-			Index:       i,
-			Name:        name,
-			Enabled:     enabled,
-			Looping:     looping,
-			Effects:     len(effects),
-			EffectData:  effectData,
-			Conditions:  len(conditions),
-			RecordStart: trigger.Start,
-			RecordEnd:   trigger.End,
+			Index:         i,
+			Name:          name,
+			Enabled:       enabled,
+			Looping:       looping,
+			Effects:       len(effects),
+			EffectData:    effectData,
+			Conditions:    len(conditions),
+			ConditionData: conditionData,
+			RecordStart:   trigger.Start,
+			RecordEnd:     trigger.End,
 		})
 	}
 	info.InvariantOK, info.InvariantNote = validateTriggerInfo(info, triggerNodes)
@@ -625,8 +637,13 @@ func (r *parsedRoot) unitInfo() (*UnitInfo, error) {
 	if section == nil {
 		return nil, errors.New("missing Units section")
 	}
+	numberOfUnitSections, _ := section.intValue("number_of_unit_sections")
+	numberOfPlayers, _ := section.intValue("number_of_players")
 	playerSections := section.list("players_units")
-	info := &UnitInfo{}
+	info := &UnitInfo{
+		NumberOfUnitSections: numberOfUnitSections,
+		NumberOfPlayers:      numberOfPlayers,
+	}
 	for i, playerSection := range playerSections {
 		count, _ := playerSection.intValue("unit_count")
 		unitNodes := playerSection.list("units")

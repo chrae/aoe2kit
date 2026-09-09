@@ -197,11 +197,16 @@ slots. AoE2Kit also syncs the Units-section `number_of_players` field to
 `player_count + 1` including Gaia when writing the scenario count. Player-slot
 indexes elsewhere remain `0` for Gaia and `1..8` for normal player slots.
 
-`kit scen blank` writes P0/Gaia inactive by default instead of inheriting the
-seed scenario's Gaia state. Use `--gaia-active` only for fixtures that
-deliberately need Gaia marked active. `--dummy-starters` creates one authored
-Outpost per active normal player so DE does not fill empty active slots with
-starter TC state.
+`kit scen blank` keeps P0/Gaia active by default, matching the editor-authored
+blank baseline and normal scenario authoring expectations. Do not assume
+Gaia-inactive authoring is supported until the separate Gaia active-state field
+is decoded and write-verified. `--dummy-starters` creates one authored Outpost
+per active normal player so DE does not fill empty active slots with starter TC
+state. `--no-conquest` sets `conquest_required=0` for diagnostics where empty or
+intentionally inert slots should not end the game by normal conquest rules.
+For controlled replay probes, start from a fresh blank scenario, add inert
+starters, disable conquest, then patch in explicit timer-gated probe triggers
+such as `scen.timer-declare-victory`.
 
 `kit scen patch` refreshes FileHeader `timestamp_of_last_save` to the current
 Unix time by default so generated scenario forks do not keep an inherited stale
@@ -214,11 +219,15 @@ scenario/editor values until a tighter portable enum table is added.
 
 Supported effect ops include `display_instructions`, `display_timer`,
 `send_chat`, `create_object`, `kill_object`, `remove_object`, `task_object`,
-`change_ownership`, `change_object_name`, `change_object_hp`,
-`teleport_object`, `change_object_stance`, `set_player_visibility` /
-`reveal_map`, `research_technology`, `modify_attribute`, `modify_resource`,
-`script_call`, `activate_trigger`, `deactivate_trigger`, and
-`declare_victory`.
+`change_ownership`, `change_object_name`, `change_object_description`,
+`change_object_caption`, `change_object_hp`, `teleport_object`,
+`change_object_stance`, `set_player_visibility` / `reveal_map`,
+`research_technology`, `enable_disable_technology`,
+`change_technology_name`, `change_technology_description`,
+`change_technology_cost`, `change_technology_icon`,
+`change_technology_location`, `change_technology_research_time`,
+`modify_attribute`, `modify_resource`, `script_call`, `activate_trigger`,
+`deactivate_trigger`, and `declare_victory`.
 Supported condition ops include `timer`, `object_selected`, `object_in_area` /
 `objects_in_area`, `own_objects`, `own_fewer_objects`,
 `accumulate_attribute`, `object_visible`, and `variable_value`.
@@ -268,14 +277,15 @@ set/clear/tombstone operations, and both delete forms refuse to run while
 scenario trigger effects still reference the slot by `string_id`. AoE2Kit does
 not compact string ids because that would renumber later slots.
 
-XS support follows the current AoE2DE UGC Guide model plus the parser-style
-embedded carrier pattern; see `docs/XS_AUTHORING.md`. The preferred generated
-recipe uses `xs.mode:"carrier"` to store full XS source in a disabled trigger's
-`script_call` message, avoiding scenario/file drift. `xs.mode:"attachment"` keeps
-the older `Map.script_name` + `Files.script_file_*` path for deliberate external
-module deployment, and `xs.mode:"attachment_and_carrier"` writes both. Ordinary
-trigger `script_call` effects invoke parameterless XS functions through the
-effect `message` field.
+XS support follows the current AoE2DE UGC Guide model plus the engine-verified
+inline source pattern; see `docs/XS_AUTHORING.md`. The preferred generated recipe
+uses `xs.mode:"inline_runtime"` to clear external XS filename fields and place
+full XS source in an enabled trigger-0 `script_call` message titled `XS string`.
+`xs.mode:"carrier"` is disabled source escrow for extraction/inspection.
+`xs.mode:"attachment"` keeps the older `Map.script_name` + `Files.script_file_*`
+path for deliberate external module deployment, and
+`xs.mode:"attachment_and_carrier"` writes both. Ordinary trigger `script_call`
+effects invoke parameterless XS functions through the effect `message` field.
 
 `add_unit` appends one `UnitStruct` to an existing player unit section and
 updates that section's `unit_count`. `edit_unit` and `remove_unit` target
