@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
-  "command_count": 220,
+  "command_count": 222,
   "probed_count": 41,
   "commands": [
     {
@@ -1000,7 +1000,7 @@
       ],
       "name": "dat command-matrix",
       "group": "dat",
-      "usage": "kit dat command-matrix \u003cempires*.dat\u003e [--limit examples_per_type|--all] [--command-type N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--unknown-only|--candidate-only] [--text|--json]",
+      "usage": "kit dat command-matrix \u003cempires*.dat\u003e [--limit examples_per_type|--all] [--command-type N] [--operand N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--typed|--unknown-only|--unknown|--candidate-only|--candidate] [--text|--json]",
       "flags": [
         {
           "name": "--limit",
@@ -1008,6 +1008,10 @@
         },
         {
           "name": "--command-type",
+          "value_hint": "N"
+        },
+        {
+          "name": "--operand",
           "value_hint": "N"
         },
         {
@@ -1021,7 +1025,7 @@
       ],
       "positional": [
         "\u003cempires*.dat\u003e",
-        "--typed-only|--unknown-only|--candidate-only",
+        "--typed-only|--typed|--unknown-only|--unknown|--candidate-only|--candidate",
         "--text|--json"
       ],
       "mutates": false,
@@ -1506,6 +1510,25 @@
     {
       "path": [
         "dat",
+        "graphic-delete"
+      ],
+      "name": "dat graphic-delete",
+      "group": "dat",
+      "usage": "kit dat graphic-delete \u003cin.dat\u003e \u003cout.dat\u003e \u003cgraphic_id\u003e",
+      "positional": [
+        "\u003cin.dat\u003e",
+        "\u003cout.dat\u003e",
+        "\u003cgraphic_id\u003e"
+      ],
+      "mutates": true,
+      "network": false,
+      "trait": "writes",
+      "input": "dat",
+      "probe_status": "skipped_mutating"
+    },
+    {
+      "path": [
+        "dat",
         "graphic-delta-delete"
       ],
       "name": "dat graphic-delta-delete",
@@ -1852,7 +1875,7 @@
       ],
       "name": "dat refs",
       "group": "dat",
-      "usage": "kit dat refs \u003cin.dat\u003e \u003csection\u003e \u003cid\u003e [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N] [--text|--json]",
+      "usage": "kit dat refs \u003cin.dat\u003e \u003csection\u003e \u003cid\u003e [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N|--all] [--text|--json]",
       "flags": [
         {
           "name": "--class",
@@ -1868,7 +1891,7 @@
         },
         {
           "name": "--limit",
-          "value_hint": "N"
+          "value_hint": "N|--all"
         }
       ],
       "positional": [
@@ -1906,11 +1929,11 @@
       ],
       "name": "dat semantics-pack",
       "group": "dat",
-      "usage": "kit dat semantics-pack \u003cin.dat\u003e \u003cout-dir\u003e [--feature full|local-building-effects]",
+      "usage": "kit dat semantics-pack \u003cin.dat\u003e \u003cout-dir\u003e [--feature full|local-building-effects|class-scope-effects]",
       "flags": [
         {
           "name": "--feature",
-          "value_hint": "full|local-building-effects"
+          "value_hint": "full|local-building-effects|class-scope-effects"
         }
       ],
       "positional": [
@@ -2104,11 +2127,14 @@
       ],
       "name": "dat sounds",
       "group": "dat",
-      "usage": "kit dat sounds \u003cempires*.dat\u003e [--limit N|--all]",
+      "usage": "kit dat sounds \u003cempires*.dat\u003e [--limit N|--all] [--json]",
       "flags": [
         {
           "name": "--limit",
           "value_hint": "N|--all"
+        },
+        {
+          "name": "--json"
         }
       ],
       "positional": [
@@ -2466,7 +2492,12 @@
       ],
       "name": "dat terrain",
       "group": "dat",
-      "usage": "kit dat terrain \u003cempires*.dat\u003e \u003cterrain_id\u003e",
+      "usage": "kit dat terrain \u003cempires*.dat\u003e \u003cterrain_id\u003e [--json]",
+      "flags": [
+        {
+          "name": "--json"
+        }
+      ],
       "positional": [
         "\u003cempires*.dat\u003e",
         "\u003cterrain_id\u003e"
@@ -2557,11 +2588,14 @@
       ],
       "name": "dat terrain-restrictions",
       "group": "dat",
-      "usage": "kit dat terrain-restrictions \u003cempires*.dat\u003e [--limit N|--all]",
+      "usage": "kit dat terrain-restrictions \u003cempires*.dat\u003e [--limit N|--all] [--json]",
       "flags": [
         {
           "name": "--limit",
           "value_hint": "N|--all"
+        },
+        {
+          "name": "--json"
         }
       ],
       "positional": [
@@ -2593,11 +2627,14 @@
       ],
       "name": "dat terrains",
       "group": "dat",
-      "usage": "kit dat terrains \u003cempires*.dat\u003e [--limit N|--all]",
+      "usage": "kit dat terrains \u003cempires*.dat\u003e [--limit N|--all] [--json]",
       "flags": [
         {
           "name": "--limit",
           "value_hint": "N|--all"
+        },
+        {
+          "name": "--json"
         }
       ],
       "positional": [
@@ -2803,11 +2840,14 @@
       ],
       "name": "dat unit-headers",
       "group": "dat",
-      "usage": "kit dat unit-headers \u003cempires*.dat\u003e [--limit N|--all]",
+      "usage": "kit dat unit-headers \u003cempires*.dat\u003e [--limit N|--all] [--json]",
       "flags": [
         {
           "name": "--limit",
           "value_hint": "N|--all"
+        },
+        {
+          "name": "--json"
         }
       ],
       "positional": [
@@ -5408,7 +5448,7 @@
         "scen"
       ],
       "name": "scen",
-      "usage": "kit scen \u003cblank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe\u003e \u003cfile.aoe2scenario\u003e",
+      "usage": "kit scen \u003cblank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe\u003e \u003cfile.aoe2scenario\u003e",
       "positional": [
         "\u003cfile.aoe2scenario\u003e"
       ],
@@ -5442,6 +5482,7 @@
         "write-check",
         "plan",
         "patch",
+        "shop-catalog",
         "smoke",
         "smoke-recipe"
       ],
@@ -5501,7 +5542,7 @@
       ],
       "name": "scen blank",
       "group": "scen",
-      "usage": "kit scen blank \u003cout.aoe2scenario\u003e [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]",
+      "usage": "kit scen blank \u003cout.aoe2scenario\u003e [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--closeout-seconds N] [--closeout-player N] [--keep-seed-triggers] [--text]",
       "flags": [
         {
           "name": "--size",
@@ -5544,6 +5585,14 @@
         },
         {
           "name": "--no-conquest"
+        },
+        {
+          "name": "--closeout-seconds",
+          "value_hint": "N"
+        },
+        {
+          "name": "--closeout-player",
+          "value_hint": "N"
         },
         {
           "name": "--keep-seed-triggers"
@@ -5856,13 +5905,16 @@
       ],
       "name": "scen lint",
       "group": "scen",
-      "usage": "kit scen lint \u003cfile.aoe2scenario\u003e [--text] [--include-provisional]",
+      "usage": "kit scen lint \u003cfile.aoe2scenario\u003e [--text] [--include-provisional] [--load-safety]",
       "flags": [
         {
           "name": "--text"
         },
         {
           "name": "--include-provisional"
+        },
+        {
+          "name": "--load-safety"
         }
       ],
       "positional": [
@@ -6027,6 +6079,31 @@
       "trait": "read_only",
       "input": "scenario",
       "probe_status": "skipped_no_fixture"
+    },
+    {
+      "path": [
+        "scen",
+        "shop-catalog"
+      ],
+      "name": "scen shop-catalog",
+      "group": "scen",
+      "usage": "kit scen shop-catalog \u003ccatalog.json\u003e --out recipe.json [--text|--json]",
+      "flags": [
+        {
+          "name": "--out",
+          "value_hint": "recipe.json",
+          "required": true
+        }
+      ],
+      "positional": [
+        "\u003ccatalog.json\u003e",
+        "--text|--json"
+      ],
+      "mutates": true,
+      "network": false,
+      "trait": "writes",
+      "input": "other",
+      "probe_status": "skipped_mutating"
     },
     {
       "path": [

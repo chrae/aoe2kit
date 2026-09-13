@@ -50,7 +50,7 @@ go run ./cmd/apiref --kit ./kit \
 Flags marked **required** in the tables below appear unbracketed in the tool's own
 usage line and must be supplied.
 
-Tool version `0.1.0` — 220 commands, 41 probed.
+Tool version `0.1.0` — 222 commands, 41 probed.
 
 ## Command index
 
@@ -59,7 +59,7 @@ Tool version `0.1.0` — 220 commands, 41 probed.
 - **campaign** — `campaign generate`
 - **cba** — `cba archive`, `cba axes`, `cba balance`, `cba export`, `cba ingest`, `cba phase-facts`, `cba registry`, `cba replay`, `cba sidechannels`, `cba trigger-razes`, `cba trigger-spawns`
 - **ci** — `ci check`, `ci init`
-- **dat** — `dat abilities`, `dat ability`, `dat ability-create`, `dat ability-delete`, `dat ability-disable`, `dat ability-patch`, `dat availability`, `dat availability-set`, `dat civ-patch`, `dat civs`, `dat codec-patch`, `dat codec-plan`, `dat command-matrix`, `dat delete`, `dat delete-plan`, `dat diff`, `dat disconnect`, `dat effect`, `dat effect-command-delete`, `dat effect-create`, `dat effect-delete`, `dat effect-disable`, `dat effect-explain`, `dat effect-patch`, `dat effects`, `dat graphic`, `dat graphic-angle-sound-delete`, `dat graphic-create`, `dat graphic-delta-delete`, `dat graphic-patch`, `dat graphics`, `dat palette`, `dat patch`, `dat patch-graphic`, `dat patch-unit`, `dat plan`, `dat player-colour-create`, `dat player-colour-delete`, `dat player-colour-patch`, `dat player-colours`, `dat random-maps`, `dat refs`, `dat semantics-pack`, `dat semantics-readback`, `dat sound`, `dat sound-create`, `dat sound-delete`, `dat sound-item-delete`, `dat sound-patch`, `dat sounds`, `dat spans`, `dat sprite`, `dat tech`, `dat tech-create`, `dat tech-delete`, `dat tech-explain`, `dat tech-patch`, `dat tech-tree`, `dat tech-tree-connection-create`, `dat tech-tree-connection-delete`, `dat tech-tree-connection-patch`, `dat techs`, `dat terrain`, `dat terrain-patch`, `dat terrain-restriction-patch`, `dat terrain-restrictions`, `dat terrains`, `dat unit`, `dat unit-child-delete`, `dat unit-create`, `dat unit-delete`, `dat unit-header`, `dat unit-header-task-delete`, `dat unit-headers`, `dat units`
+- **dat** — `dat abilities`, `dat ability`, `dat ability-create`, `dat ability-delete`, `dat ability-disable`, `dat ability-patch`, `dat availability`, `dat availability-set`, `dat civ-patch`, `dat civs`, `dat codec-patch`, `dat codec-plan`, `dat command-matrix`, `dat delete`, `dat delete-plan`, `dat diff`, `dat disconnect`, `dat effect`, `dat effect-command-delete`, `dat effect-create`, `dat effect-delete`, `dat effect-disable`, `dat effect-explain`, `dat effect-patch`, `dat effects`, `dat graphic`, `dat graphic-angle-sound-delete`, `dat graphic-create`, `dat graphic-delete`, `dat graphic-delta-delete`, `dat graphic-patch`, `dat graphics`, `dat palette`, `dat patch`, `dat patch-graphic`, `dat patch-unit`, `dat plan`, `dat player-colour-create`, `dat player-colour-delete`, `dat player-colour-patch`, `dat player-colours`, `dat random-maps`, `dat refs`, `dat semantics-pack`, `dat semantics-readback`, `dat sound`, `dat sound-create`, `dat sound-delete`, `dat sound-item-delete`, `dat sound-patch`, `dat sounds`, `dat spans`, `dat sprite`, `dat tech`, `dat tech-create`, `dat tech-delete`, `dat tech-explain`, `dat tech-patch`, `dat tech-tree`, `dat tech-tree-connection-create`, `dat tech-tree-connection-delete`, `dat tech-tree-connection-patch`, `dat techs`, `dat terrain`, `dat terrain-patch`, `dat terrain-restriction-patch`, `dat terrain-restrictions`, `dat terrains`, `dat unit`, `dat unit-child-delete`, `dat unit-create`, `dat unit-delete`, `dat unit-header`, `dat unit-header-task-delete`, `dat unit-headers`, `dat units`
 - **docs** — `docs lint`
 - **fx** — `fx bind`, `fx lint`, `fx new`
 - **gfx** — `gfx export`, `gfx info`
@@ -69,7 +69,7 @@ Tool version `0.1.0` — 220 commands, 41 probed.
 - **replay** — `replay actions`, `replay ai-manifest`, `replay carrier`, `replay chat`, `replay checksum-phase`, `replay checksum-probe`, `replay combat`, `replay corpus`, `replay coverage`, `replay datamod-check`, `replay deaths`, `replay diff-state`, `replay diff-triggers`, `replay effective-data`, `replay effective-units`, `replay events`, `replay feedback`, `replay fetch`, `replay frontier`, `replay header-anchors`, `replay inbox`, `replay info`, `replay issues`, `replay lifecycle`, `replay object-shapes`, `replay object-state`, `replay objects`, `replay opaque-clusters`, `replay opaque-spans`, `replay player-events`, `replay player-profile`, `replay player-series`, `replay playtest`, `replay postgame`, `replay scan-value`, `replay sidecar-sync`, `replay spawns`, `replay story`, `replay sync`, `replay sync-log`, `replay telemetry`, `replay trigger-neighborhood`, `replay triggers`, `replay unknowns`, `replay xs-telemetry`
 - **roadmap** — `roadmap crud`, `roadmap dark`, `roadmap rwd`
 - **rpg** — `rpg shop-demo`
-- **scen** — `scen analyze`, `scen audit-player-coverage`, `scen blank`, `scen delete`, `scen delete-plan`, `scen deploycheck`, `scen describe`, `scen diff`, `scen diff-triggers`, `scen disconnect`, `scen effects`, `scen glossary`, `scen idioms`, `scen lint`, `scen mechanic`, `scen palette-usage`, `scen patch`, `scen plan`, `scen refs`, `scen settings`, `scen smoke`, `scen smoke-recipe`, `scen strings`, `scen terrain`, `scen trigger-flow`, `scen trigger-neighborhood`, `scen triggers`, `scen units`, `scen write-check`, `scen xs`, `scen xs attach`, `scen xs compare`, `scen xs deploy`, `scen xs embed`, `scen xs extract`
+- **scen** — `scen analyze`, `scen audit-player-coverage`, `scen blank`, `scen delete`, `scen delete-plan`, `scen deploycheck`, `scen describe`, `scen diff`, `scen diff-triggers`, `scen disconnect`, `scen effects`, `scen glossary`, `scen idioms`, `scen lint`, `scen mechanic`, `scen palette-usage`, `scen patch`, `scen plan`, `scen refs`, `scen settings`, `scen shop-catalog`, `scen smoke`, `scen smoke-recipe`, `scen strings`, `scen terrain`, `scen trigger-flow`, `scen trigger-neighborhood`, `scen triggers`, `scen units`, `scen write-check`, `scen xs`, `scen xs attach`, `scen xs compare`, `scen xs deploy`, `scen xs embed`, `scen xs extract`
 - **swatch** — `swatch patterns`
 - **xs** — `xs bridge`, `xs datagen`, `xs inspect`, `xs shims`
 - **xsdat** — `xsdat decode`
@@ -306,10 +306,10 @@ Subcommands: `crud`, `rwd`, `dark`
 ### `scen`
 
 ```
-kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario>
+kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe> <file.aoe2scenario>
 ```
 
-Subcommands: `blank`, `info`, `check`, `describe`, `settings`, `strings`, `refs`, `delete-plan`, `delete`, `disconnect`, `effects`, `glossary`, `idioms`, `analyze`, `triggers`, `units`, `map`, `terrain`, `palette-usage`, `regions`, `verify`, `lint`, `xs`, `deploycheck`, `diff`, `diff-triggers`, `write-check`, `plan`, `patch`, `smoke`, `smoke-recipe`
+Subcommands: `blank`, `info`, `check`, `describe`, `settings`, `strings`, `refs`, `delete-plan`, `delete`, `disconnect`, `effects`, `glossary`, `idioms`, `analyze`, `triggers`, `units`, `map`, `terrain`, `palette-usage`, `regions`, `verify`, `lint`, `xs`, `deploycheck`, `diff`, `diff-triggers`, `write-check`, `plan`, `patch`, `shop-catalog`, `smoke`, `smoke-recipe`
 
 - probe: `group_entry`
 
@@ -783,13 +783,14 @@ kit dat codec-plan <in.dat> --recipe recipe.json
 ### `dat command-matrix`
 
 ```
-kit dat command-matrix <empires*.dat> [--limit examples_per_type|--all] [--command-type N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--unknown-only|--candidate-only] [--text|--json]
+kit dat command-matrix <empires*.dat> [--limit examples_per_type|--all] [--command-type N] [--operand N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--typed|--unknown-only|--unknown|--candidate-only|--candidate] [--text|--json]
 ```
 
 | flag | value |
 | --- | --- |
 | `--limit` | `examples_per_type|--all` |
 | `--command-type` | `N` |
+| `--operand` | `N` |
 | `--reference-kind` | `unit|tech` |
 | `--reference-field` | `FIELD` |
 
@@ -986,6 +987,16 @@ kit dat graphic-create <in.dat> <out.dat> --from N [graphic scalar flags]
 
 - probe: `skipped_mutating`
 
+### `dat graphic-delete`
+
+```
+kit dat graphic-delete <in.dat> <out.dat> <graphic_id>
+```
+
+**writes output files**
+
+- probe: `skipped_mutating`
+
 ### `dat graphic-delta-delete`
 
 ```
@@ -1143,7 +1154,7 @@ kit dat random-maps <empires*.dat>
 ### `dat refs`
 
 ```
-kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N] [--text|--json]
+kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N|--all] [--text|--json]
 ```
 
 | flag | value |
@@ -1151,7 +1162,7 @@ kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--sour
 | `--class` | `CLASS` |
 | `--confidence` | `NAME` |
 | `--source-section` | `SECTION` |
-| `--limit` | `N` |
+| `--limit` | `N|--all` |
 
 - probe: `ok`
 - verification: `structure_verified_not_engine_verified`
@@ -1161,12 +1172,12 @@ kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--sour
 ### `dat semantics-pack`
 
 ```
-kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects]
+kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects|class-scope-effects]
 ```
 
 | flag | value |
 | --- | --- |
-| `--feature` | `full|local-building-effects` |
+| `--feature` | `full|local-building-effects|class-scope-effects` |
 
 **writes output files**
 
@@ -1253,12 +1264,13 @@ kit dat sound-patch <in.dat> <out.dat> <sound_id> [sound-flags] [--item INDEX,fi
 ### `dat sounds`
 
 ```
-kit dat sounds <empires*.dat> [--limit N|--all]
+kit dat sounds <empires*.dat> [--limit N|--all] [--json]
 ```
 
 | flag | value |
 | --- | --- |
 | `--limit` | `N|--all` |
+| `--json` | _(boolean)_ |
 
 - probe: `ok`
 - JSON top-level keys: `item_count`, `returned_count`, `sound_count`, `sounds`, `truncated`, `version`
@@ -1400,8 +1412,12 @@ kit dat techs <empires*.dat> [--limit N|--all] [--name-contains TEXT]
 ### `dat terrain`
 
 ```
-kit dat terrain <empires*.dat> <terrain_id>
+kit dat terrain <empires*.dat> <terrain_id> [--json]
 ```
+
+| flag | value |
+| --- | --- |
+| `--json` | _(boolean)_ |
 
 - probe: `ok`
 - JSON top-level keys: `index`, `name`, `name_2`, `overlay_mask_name`, `span`
@@ -1440,12 +1456,13 @@ kit dat terrain-restriction-patch <in.dat> <out.dat> <restriction_id> --terrain 
 ### `dat terrain-restrictions`
 
 ```
-kit dat terrain-restrictions <empires*.dat> [--limit N|--all]
+kit dat terrain-restrictions <empires*.dat> [--limit N|--all] [--json]
 ```
 
 | flag | value |
 | --- | --- |
 | `--limit` | `N|--all` |
+| `--json` | _(boolean)_ |
 
 - probe: `ok`
 - JSON top-level keys: `restriction_count`, `returned_count`, `terrain_restrictions`, `terrain_row_count`, `truncated`, `version`
@@ -1453,12 +1470,13 @@ kit dat terrain-restrictions <empires*.dat> [--limit N|--all]
 ### `dat terrains`
 
 ```
-kit dat terrains <empires*.dat> [--limit N|--all]
+kit dat terrains <empires*.dat> [--limit N|--all] [--json]
 ```
 
 | flag | value |
 | --- | --- |
 | `--limit` | `N|--all` |
+| `--json` | _(boolean)_ |
 
 - probe: `ok`
 - JSON top-level keys: `returned_count`, `terrain_count`, `terrains`, `truncated`, `version`
@@ -1530,12 +1548,13 @@ kit dat unit-header-task-delete <in.dat> <out.dat> <unit_header_id> <task_index>
 ### `dat unit-headers`
 
 ```
-kit dat unit-headers <empires*.dat> [--limit N|--all]
+kit dat unit-headers <empires*.dat> [--limit N|--all] [--json]
 ```
 
 | flag | value |
 | --- | --- |
 | `--limit` | `N|--all` |
+| `--json` | _(boolean)_ |
 
 - probe: `ok`
 - JSON top-level keys: `header_count`, `present_count`, `returned_count`, `task_count`, `truncated`, `unit_headers`, `version`
@@ -2540,7 +2559,7 @@ kit scen audit-player-coverage <file.aoe2scenario> [--players 1,2,3,4] [--text]
 ### `scen blank`
 
 ```
-kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]
+kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--closeout-seconds N] [--closeout-player N] [--keep-seed-triggers] [--text]
 ```
 
 | flag | value |
@@ -2556,6 +2575,8 @@ kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players
 | `--dummy-origin` | `X,Y` |
 | `--dummy-spacing` | `N` |
 | `--no-conquest` | _(boolean)_ |
+| `--closeout-seconds` | `N` |
+| `--closeout-player` | `N` |
 | `--keep-seed-triggers` | _(boolean)_ |
 | `--text` | _(boolean)_ |
 
@@ -2701,13 +2722,14 @@ kit scen idioms <file.aoe2scenario> [--text]
 ### `scen lint`
 
 ```
-kit scen lint <file.aoe2scenario> [--text] [--include-provisional]
+kit scen lint <file.aoe2scenario> [--text] [--include-provisional] [--load-safety]
 ```
 
 | flag | value |
 | --- | --- |
 | `--text` | _(boolean)_ |
 | `--include-provisional` | _(boolean)_ |
+| `--load-safety` | _(boolean)_ |
 
 - probe: `skipped_no_fixture`
 
@@ -2787,6 +2809,20 @@ kit scen settings <file.aoe2scenario> [--text|--json]
 ```
 
 - probe: `skipped_no_fixture`
+
+### `scen shop-catalog`
+
+```
+kit scen shop-catalog <catalog.json> --out recipe.json [--text|--json]
+```
+
+| flag | value |
+| --- | --- |
+| `--out` | `recipe.json` **(required)** |
+
+**writes output files**
+
+- probe: `skipped_mutating`
 
 ### `scen smoke`
 

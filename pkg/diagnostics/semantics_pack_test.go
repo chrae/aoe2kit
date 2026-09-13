@@ -90,6 +90,36 @@ func TestWriteDATCommandSemanticsLocalBuildingFeaturePackFixture(t *testing.T) {
 	}
 }
 
+func TestWriteDATCommandSemanticsClassScopeFeaturePackFixture(t *testing.T) {
+	datPath := fixtureDAT(t)
+	out := t.TempDir()
+	_, files, err := WriteDATCommandSemanticsPackWithOptions(datPath, out, SemanticsPackOptions{Feature: "class-scope-effects"})
+	if err != nil {
+		t.Fatalf("WriteDATCommandSemanticsPackWithOptions: %v", err)
+	}
+	if len(files) != 5 {
+		t.Fatalf("written files = %d, want base pack plus class/scope files: %+v", len(files), files)
+	}
+	var report ClassScopeEffectsReport
+	readJSON(t, filepath.Join(out, "CLASS_SCOPE_EFFECTS.json"), &report)
+	if report.Feature != "class-scope-effects" || len(report.Rows) == 0 {
+		t.Fatalf("class/scope report = %+v", report)
+	}
+	foundClassTarget := false
+	for _, row := range report.Rows {
+		if row.UnitID < 0 && row.UnitClassID >= 0 {
+			foundClassTarget = true
+			break
+		}
+	}
+	if !foundClassTarget {
+		t.Fatalf("class/scope report did not include a class-targeted row: %+v", report.Rows[:min(3, len(report.Rows))])
+	}
+	if _, err := os.Stat(filepath.Join(out, "CLASS_SCOPE_EFFECTS.md")); err != nil {
+		t.Fatalf("class/scope markdown missing: %v", err)
+	}
+}
+
 func fixtureDAT(t *testing.T) string {
 	t.Helper()
 	root := os.Getenv("AOE2KIT_FIXTURE_ROOT")

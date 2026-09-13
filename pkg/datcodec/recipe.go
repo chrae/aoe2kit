@@ -30,6 +30,7 @@ type Recipe struct {
 	DeleteEffects       []int                           `json:"delete_effects,omitempty"`
 	CreateGraphic       *datfile.GraphicCreateRecipe    `json:"create_graphic,omitempty"`
 	CreateGraphics      []datfile.GraphicCreateRecipe   `json:"create_graphics,omitempty"`
+	DeleteGraphics      []int                           `json:"delete_graphics,omitempty"`
 	Graphics            []datfile.GraphicRecipePatch    `json:"graphics,omitempty"`
 	UnitHeaders         []UnitHeaderPatchRecipe         `json:"unit_headers,omitempty"`
 	CreateUnit          *datfile.UnitCreateRecipe       `json:"create_unit,omitempty"`
@@ -65,7 +66,8 @@ func (recipe Recipe) Empty() bool {
 		recipe.DeleteAbility == nil && len(recipe.DeleteAbilities) == 0 &&
 		recipe.CreateEffect == nil && len(recipe.CreateEffects) == 0 &&
 		recipe.DisableEffect == nil && len(recipe.DisableEffects) == 0 && len(recipe.Effects) == 0 &&
-		len(recipe.DeleteEffects) == 0 && recipe.CreateGraphic == nil && len(recipe.CreateGraphics) == 0 && len(recipe.Graphics) == 0 &&
+		len(recipe.DeleteEffects) == 0 && recipe.CreateGraphic == nil && len(recipe.CreateGraphics) == 0 &&
+		len(recipe.DeleteGraphics) == 0 && len(recipe.Graphics) == 0 &&
 		len(recipe.UnitHeaders) == 0 && recipe.CreateUnit == nil && len(recipe.CreateUnits) == 0 && len(recipe.Units) == 0 &&
 		len(recipe.Civs) == 0 && len(recipe.TerrainRestrictions) == 0 &&
 		len(recipe.Terrains) == 0 && recipe.CreateSound == nil && len(recipe.CreateSounds) == 0 &&
@@ -444,6 +446,7 @@ type PatchReport struct {
 	DisabledEffects                    []int                         `json:"disabled_effects,omitempty"`
 	GraphicReports                     []datfile.PatchReport         `json:"graphic_reports,omitempty"`
 	CreatedGraphics                    []datfile.GraphicCreateReport `json:"created_graphics,omitempty"`
+	DeletedGraphics                    []datfile.GraphicDeleteReport `json:"deleted_graphics,omitempty"`
 	CreatedUnits                       []datfile.UnitCreateReport    `json:"created_units,omitempty"`
 	UnitReports                        []datfile.UnitPatchReport     `json:"unit_reports,omitempty"`
 	CreatedTechs                       []int                         `json:"created_techs,omitempty"`
@@ -862,6 +865,14 @@ func PatchRecipe(compressed []byte, recipe Recipe) ([]byte, PatchReport, error) 
 		InputCompressedBytes: len(compressed),
 		InputInflatedBytes:   len(originalPayload),
 		BeforeGraphicCount:   originalIdx.GraphicsSize,
+	}
+	for i, id := range recipe.DeleteGraphics {
+		output, deleteReport, err := datfile.DeleteGraphic(currentCompressed, id)
+		if err != nil {
+			return nil, PatchReport{}, fmt.Errorf("delete_graphics[%d] id=%d: %w", i, id, err)
+		}
+		currentCompressed = output
+		report.DeletedGraphics = append(report.DeletedGraphics, deleteReport)
 	}
 	for i, item := range recipe.Graphics {
 		output, graphicReport, err := datfile.PatchGraphic(currentCompressed, item.ID, datfile.GraphicPatch{

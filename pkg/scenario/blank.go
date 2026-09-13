@@ -28,6 +28,8 @@ type BlankOptions struct {
 	InactiveRestHuman bool
 	GaiaActive        bool
 	NoConquest        bool
+	CloseoutSeconds   int
+	CloseoutPlayer    int
 }
 
 type BlankReport struct {
@@ -44,6 +46,8 @@ type BlankReport struct {
 	DummyUnit          int    `json:"dummy_unit,omitempty"`
 	GaiaActive         bool   `json:"gaia_active"`
 	NoConquest         bool   `json:"no_conquest"`
+	CloseoutSeconds    int    `json:"closeout_seconds,omitempty"`
+	CloseoutPlayer     int    `json:"closeout_player,omitempty"`
 	TriggerCountBefore int    `json:"trigger_count_before"`
 	TriggerCountAfter  int    `json:"trigger_count_after"`
 	UnitCountBefore    int    `json:"unit_count_before"`
@@ -79,6 +83,9 @@ func WriteBlankScenarioFile(output string, opts BlankOptions) (BlankReport, erro
 		return BlankReport{}, err
 	}
 	if err := validateBlankDummyPositions(opts); err != nil {
+		return BlankReport{}, err
+	}
+	if err := validateBlankCloseout(opts); err != nil {
 		return BlankReport{}, err
 	}
 	seed, err := BlankScenarioSeedBytes()
@@ -153,6 +160,8 @@ func WriteBlankScenarioFile(output string, opts BlankOptions) (BlankReport, erro
 		DummyUnit:          opts.DummyUnit,
 		GaiaActive:         opts.GaiaActive,
 		NoConquest:         opts.NoConquest,
+		CloseoutSeconds:    opts.CloseoutSeconds,
+		CloseoutPlayer:     opts.CloseoutPlayer,
 		TriggerCountBefore: beforeTriggers,
 		TriggerCountAfter:  afterTriggers,
 		UnitCountBefore:    beforeUnits,
@@ -195,6 +204,9 @@ func normalizeBlankOptions(opts BlankOptions) BlankOptions {
 	}
 	opts.GaiaActive = true
 	opts.ClearTriggers = !opts.KeepSeedTriggers
+	if opts.CloseoutSeconds > 0 && opts.CloseoutPlayer == 0 {
+		opts.CloseoutPlayer = 1
+	}
 	return opts
 }
 
@@ -227,6 +239,19 @@ func validateBlankDummyPositions(opts BlankOptions) error {
 		if x < 0 || y < 0 || x >= float64(opts.MapWidth) || y >= float64(opts.MapHeight) {
 			return fmt.Errorf("blank dummy starter P%d at %.2f,%.2f is outside map %dx%d; adjust --dummy-origin/--dummy-spacing or use a larger map", player, x, y, opts.MapWidth, opts.MapHeight)
 		}
+	}
+	return nil
+}
+
+func validateBlankCloseout(opts BlankOptions) error {
+	if opts.CloseoutSeconds < 0 {
+		return fmt.Errorf("blank closeout seconds %d must be >= 0", opts.CloseoutSeconds)
+	}
+	if opts.CloseoutSeconds == 0 {
+		return nil
+	}
+	if opts.CloseoutPlayer < 1 || opts.CloseoutPlayer > opts.PlayerCount {
+		return fmt.Errorf("blank closeout player %d out of range 1..player_count", opts.CloseoutPlayer)
 	}
 	return nil
 }
@@ -291,6 +316,22 @@ func blankScenarioRecipe(opts BlankOptions) Recipe {
 	if opts.NoConquest {
 		conquest := 0
 		recipe.Victory = &VictoryRecipe{ConquestRequired: &conquest}
+	}
+	if opts.CloseoutSeconds > 0 {
+		timer := opts.CloseoutSeconds
+		closeoutPlayer := opts.CloseoutPlayer
+		recipe.Triggers = append(recipe.Triggers, TriggerRecipe{
+			Op:      "add_trigger",
+			Name:    "A2K Blank Closeout - declare victory",
+			Enabled: &active,
+			Looping: &inactive,
+			Conditions: []ConditionRecipe{
+				{Op: "timer", Timer: &timer},
+			},
+			Effects: []EffectRecipe{
+				{Op: "declare_victory", SourcePlayer: &closeoutPlayer},
+			},
+		})
 	}
 	return recipe
 }

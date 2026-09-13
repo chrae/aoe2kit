@@ -96,6 +96,12 @@ Portable bundle:
 ./kit dat semantics-readback DAT_COMMAND_SEMANTICS_EXPECTED.json --dat empires2_x2_p1.dat --scenario file.aoe2scenario --replay run.aoe2record --xsdat run.xsdat --out DAT_COMMAND_SEMANTICS_READBACK.md --text
 ```
 
+Replay identity warning: do not infer what was played from the scenario
+folder's newest modified file. DE can auto-recreate built-in editor/scenario
+state such as "The Siege", making it look fresh even when it was not the played
+scenario. Use replay-derived identity instead: `kit identify`,
+`kit replay info`, `kit replay summary`, and trigger/map fingerprints.
+
 `kit verify` checks source buildability with `go build ./...`, required docs,
 manifest drift, inventory, local mod folders, and bundled `.dat` files by
 parsing them through AoE2Kit's current-DE DAT inspector. `kit portable-check`
@@ -126,7 +132,7 @@ Scenario:
 ```sh
 ./kit scen info  path/to/file.aoe2scenario
 ./kit scen check path/to/file.aoe2scenario
-./kit scen blank build/BlankRoot.aoe2scenario --players 4 --dummy-starters --text
+./kit scen blank build/BlankRoot.aoe2scenario --players 4 --dummy-starters --no-conquest --closeout-seconds 120 --text
 ./kit scen triggers path/to/file.aoe2scenario
 ./kit scen units path/to/file.aoe2scenario
 ./kit scen units path/to/file.aoe2scenario --named
@@ -154,6 +160,7 @@ Scenario:
 ./kit scen describe path/to/file.aoe2scenario --section triggers --full --json
 ./kit scen verify path/to/file.aoe2scenario
 ./kit scen lint path/to/file.aoe2scenario --text
+./kit scen lint path/to/file.aoe2scenario --load-safety --text
 ./kit scen xs path/to/file.aoe2scenario --deploy-tree path/to/mod-or-profile-root --text
 ./kit scen xs attach path/to/file.aoe2scenario out.aoe2scenario --xs path/to/script.xs --name Entry.xs --text
 ./kit scen xs deploy out.aoe2scenario path/to/mod-or-profile-root --force --check --text
@@ -372,6 +379,7 @@ Data file:
 ./kit dat patch-graphic in.dat out.dat 3396 --frame-count 31
 ./kit dat semantics-pack path/to/empires2_x2_p1.dat docs
 ./kit dat semantics-pack path/to/empires2_x2_p1.dat docs --feature local-building-effects
+./kit dat semantics-pack path/to/empires2_x2_p1.dat docs --feature class-scope-effects
 ./kit dat semantics-readback DAT_COMMAND_SEMANTICS_EXPECTED.json --dat empires2_x2_p1.dat --scenario file.aoe2scenario --replay run.aoe2record --xsdat run.xsdat --out DAT_COMMAND_SEMANTICS_READBACK.md --text
 ./kit dat plan in.dat --recipe docs/DAT_RECIPE_EXAMPLE.json
 ./kit dat patch in.dat out.dat --recipe docs/DAT_RECIPE_EXAMPLE.json
@@ -1179,7 +1187,11 @@ per-POV cache naming.
   tick after a timer condition elapses, map tile-count mismatches, unit
   count/reference issues, player-slot warnings, embedded AI file issues, and
   corrupt user-facing strings with invalid UTF-8, control bytes, or embedded
-  NUL bytes before a length-prefixed string's declared end.
+  NUL bytes before a length-prefixed string's declared end. Add `--load-safety`
+  before deploy to catch engine-verified DE load/launch breakers that can pass
+  structural verification: player-count/active-slot mismatches, too many active
+  players, locked human civ slots that can block MP launch, and train-button
+  command-card collisions/overflow from `add_train_location`.
 - `kit scen deploycheck <scenario> <deploy-tree>` statically preflights
   scenario XS runtime deployment before an engine run. It checks that
   `Map.script_name` and `Files.script_file_path` match literally, resolve to an
@@ -1244,8 +1256,10 @@ per-POV cache naming.
 - `--no-conquest` sets `conquest_required=0` for diagnostics where empty or
   intentionally inert slots should not end the game by normal conquest rules.
 - Controlled replay probes should normally start from a fresh `kit scen blank`
-  file, add inert starters, disable conquest, then patch in explicit
-  timer-gated probes such as `scen.timer-declare-victory`.
+  file, add inert starters, disable conquest, and use `--closeout-seconds N`
+  when the probe should end itself through a timer-gated declare-victory
+  trigger. Use the `scen.timer-declare-victory` recipe for the same closeout
+  shape when patching an existing scenario instead of creating a blank.
 - `kit scen patch` refreshes the internal save timestamp unless the recipe
   explicitly sets `scenario.timestamp_of_last_save`. This keeps generated forks
   from inheriting old browser dates while preserving deterministic timestamps
@@ -1368,6 +1382,11 @@ Current DAT support:
 - `kit dat graphic-patch <in.dat> <out.dat> <graphic_id> [graphic scalar flags]`
   is an alias for `patch-graphic`, provided so the CRUD command family has a
   consistent noun-verb spelling.
+- `kit dat graphic-delete <in.dat> <out.dat> <graphic_id>` is the direct
+  guarded delete alias for unreferenced graphics. It preserves stable graphic
+  IDs by zeroing the pointer slot and removing only that graphic record; any
+  decoded DAT references keep the delete blocked until the references are
+  patched or removed.
 - `kit dat effect-create <in.dat> <out.dat> --name TEXT [--from-effect N]`
   creates a new effect row, either empty or cloned from an existing effect, and
   accepts `--command`, `--append-command`, and `--remove-command` for counted
@@ -1448,10 +1467,12 @@ Current DAT support:
 - `kit dat refs <in.dat> <section> <id>` is the neutral reference explorer. It
   returns the same structural reference rows used by delete planning, classified
   as `rewrite_supported`, `known_readonly`, `possible_operand`, or
-  `unsupported`, with summary counts. Use `--text` for compact inspection and
-  `--class`, `--confidence`, `--source-section`, and `--limit` to isolate
-  specific blockers such as typed effect-command references before designing a
-  mutation.
+  `unsupported`, with summary counts. Candidate effect-command operands are a
+  narrower `possible_operand` subset and can be isolated with
+  `--class candidate_operand`. Use `--text` for compact inspection and
+  `--class`, `--confidence`, `--source-section`, `--limit`, or `--all` to
+  isolate specific blockers such as typed effect-command references before
+  designing a mutation.
 - `kit scen refs <file.aoe2scenario>` is the scenario-side reference explorer.
   It reports direct trigger-control, placed-unit, variable, and string-table
   reference fields, with `--kind` and `--id` filters for delete/edit planning.
@@ -1601,6 +1622,14 @@ Current DAT support:
   to carry the exact `raw_tail` bytes from a decoded source row. Random-map
   records are currently framed and counted, but not writable without a non-empty
   current-DE fixture.
+- `kit dat semantics-pack <in.dat> <out-dir> [--feature ...]` emits a packed
+  DAT+scenario+sidecar probe bundle for command-semantics readback. The default
+  pack covers the broad scripted fixture; `--feature local-building-effects`
+  writes a focused report for types `200`/`201`/`202`/`204`, and
+  `--feature class-scope-effects` writes a focused report for class-targeted
+  and team/enemy/neutral/gaia-scoped effect rows. These reports are
+  structure-generated evidence maps; they do not promote runtime semantics
+  without an engine replay/sidecar run.
 - `kit dat delete-plan <in.dat> <section|effect-command|sound-item|graphic-row-kind|unit-header-task|unit-row-kind> <target> [--civ N|--all-civs] [--text]` answers
   what "delete" safely means before an AI mutates a DAT. Supported today:
   individual Effect command rows can be removed by `effect-command 12:3`,
@@ -1628,7 +1657,11 @@ Current DAT support:
   expose `cleanup_command` / `cleanup_recipe` as an optional staged
   `disconnect_units` pass; unlike blocked Tech cleanup, the semantic unit delete
   recipe itself remains directly actionable. Sounds can be semantically deleted by setting total/item probabilities
-  to `0`. Unit, Tech, Civ, Terrain, Graphic,
+  to `0`. Unreferenced Graphics can be deleted as stable-ID absent slots: Kit
+  zeroes the graphic pointer and removes the record bytes while preserving
+  `graphics_size` and downstream graphic IDs; referenced graphics remain
+  blocked until their decoded DAT references are patched or deleted first.
+  Unit, Tech, Civ, Terrain, Graphic,
   PlayerColour, and Sound plans include a structural reference ledger where the
   codec knows DAT rows that point at the requested ID. Unit and Tech plans also
   include an effect-command ledger. Known command types are reported as
@@ -1664,7 +1697,7 @@ Current DAT support:
   a progression relationship row only, not the Unit/Tech/Civ records it names,
   and later connection rows shift down. Unreferenced tail PlayerColour rows can
   be physically removed; non-tail palette-slot compaction stays blocked because
-  it would renumber stable colour IDs. Graphics, Civs, Terrains,
+  it would renumber stable colour IDs. Civs, Terrains,
   TerrainRestrictions, non-tail/referenced PlayerColours, and RandomMaps return
   explicit unsupported reasons instead of pretending physical ID removal is
   safe.
@@ -1929,9 +1962,11 @@ recipes for unusual fields, shared-effect migrations, or multi-object edits.
   typed references. `kit dat effects` can filter by `--command-type` and/or
   `--operand`; operand matching checks A/B/C and exact-integer D values and
   returns compact `matching_commands` snippets. `kit dat command-matrix`
-  summarizes every effect-command type, operand distribution, promoted typed
+  supports the same `--command-type` and `--operand` filters, then summarizes
+  every matching effect-command type, operand distribution, promoted typed
   reference family, attribute/resource/operation/tech-attribute sighting, and
-  bounded examples; this is the
+  bounded examples. Reference-frontier filters include `--typed-only`/`--typed`,
+  `--unknown-only`/`--unknown`, and `--candidate-only`/`--candidate`; this is the
   dark-frontier map for adding future helpers without guessing.
   `kit dat effect-explain` and `kit dat tech-explain` give the same decoded
   rows back as authoring prose. Known local-building rows are surfaced as

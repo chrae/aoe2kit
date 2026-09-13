@@ -23,6 +23,7 @@ type EffectCommandMatrixReport struct {
 type EffectCommandMatrixOptions struct {
 	ExampleLimit   int
 	CommandType    *int
+	Operand        *int
 	ReferenceKind  string
 	ReferenceField string
 	UnknownOnly    bool
@@ -32,6 +33,7 @@ type EffectCommandMatrixOptions struct {
 
 type EffectCommandMatrixFilters struct {
 	CommandType    *int   `json:"command_type,omitempty"`
+	Operand        *int   `json:"operand,omitempty"`
 	ReferenceKind  string `json:"reference_kind,omitempty"`
 	ReferenceField string `json:"reference_field,omitempty"`
 	UnknownOnly    bool   `json:"unknown_only,omitempty"`
@@ -257,6 +259,7 @@ func EffectCommandMatrixWithOptions(idx *datfile.Index, opts EffectCommandMatrix
 		Verification: claim,
 		Filters: EffectCommandMatrixFilters{
 			CommandType:    opts.CommandType,
+			Operand:        opts.Operand,
 			ReferenceKind:  opts.ReferenceKind,
 			ReferenceField: opts.ReferenceField,
 			UnknownOnly:    opts.UnknownOnly,
@@ -291,6 +294,9 @@ func includeEffectCommandInMatrix(command datfile.EffectCommand, refs []datfile.
 	if opts.CommandType != nil && int(command.Type) != *opts.CommandType {
 		return false
 	}
+	if opts.Operand != nil && !effectCommandMatrixOperandEquals(command, *opts.Operand) {
+		return false
+	}
 	typeName := datfile.EffectCommandTypeName(command.Type)
 	if opts.UnknownOnly && typeName != "unknown" {
 		return false
@@ -318,6 +324,14 @@ func includeEffectCommandInMatrix(command datfile.EffectCommand, refs []datfile.
 		return true
 	}
 	return false
+}
+
+func effectCommandMatrixOperandEquals(command datfile.EffectCommand, value int) bool {
+	if int(command.A) == value || int(command.B) == value || int(command.C) == value {
+		return true
+	}
+	d := int(command.D)
+	return command.D == float32(d) && d == value
 }
 
 func (acc *operandAccumulator) addInt(value int) {

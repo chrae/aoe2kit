@@ -9,7 +9,7 @@ import (
 	"aoe2kit/pkg/enginefacts"
 )
 
-const Version = "2026-09-04"
+const Version = "2026-09-12"
 
 type MatrixReport struct {
 	Version      string                 `json:"version"`
@@ -474,12 +474,12 @@ func allRWDRows() []RWDRow {
 			Domain:       "scenario",
 			Section:      "players, diplomacy, resources, victory",
 			Read:         "full: settings inspector surfaces player slots, AI names/types, diplomacy matrix, allied victory flags, resources, and global victory fields",
-			Write:        "partial: recipe support exists for player slots, pairwise diplomacy, diplomacy options/allied victory, resources, global victory, blank-scenario player-count setup, explicit Gaia active-state control, and Units-section player-count synchronization",
+			Write:        "partial: recipe support exists for player slots, pairwise diplomacy, diplomacy options/allied victory, resources, global victory, blank-scenario player-count setup, Gaia-active blank baseline, and Units-section player-count synchronization",
 			Create:       "n/a: players are fixed scenario slots",
 			Delete:       "n/a: player slots are disabled/configured, not deleted",
 			Verification: "structure_verified_not_engine_verified",
 			Evidence:     "kit scen settings/describe/patch and v8-v15 diagnostics",
-			Next:         "add less-common player/lobby fields only when an authoring case needs them",
+			Next:         "add less-common player/lobby fields only when an authoring case needs them; do not advertise Gaia-inactive authoring until a separate active-state field is decoded and write-verified",
 		},
 		{
 			Domain:       "scenario",
@@ -542,9 +542,9 @@ func allRWDRows() []RWDRow {
 			Read:         "full: graphics, deltas, angle sounds, sound items, particle-relevant fields",
 			Write:        "partial: direct graphic/sound scalar fields, deltas, angle sounds, particle binds, sound mutes, and graphic/sound child-row removal",
 			Create:       "full: direct create graphics and sounds; FX descriptors bind assets to DAT rows",
-			Delete:       "partial: plan-gated direct semantic sound mute plus graphic-delta, guarded graphic-angle-sound, and sound-item row deletes are supported; physical graphic/sound ID deletes stay guarded",
+			Delete:       "partial: plan-gated direct semantic sound mute, unreferenced stable-ID graphic delete, graphic-delta, guarded graphic-angle-sound, and sound-item row deletes are supported; referenced graphic deletes stay ledger-blocked",
 			Verification: "structure_verified_not_engine_verified",
-			Evidence:     "kit dat graphics/graphic/graphic-create/graphic-patch/graphic-delta-delete/graphic-angle-sound-delete/sounds/sound/sound-create/sound-patch/sound-delete/sound-item-delete/delete-plan/delete, kit fx new/bind/lint; plan-gated graphic-delta/graphic-angle-sound/sound-item row delete readbacks",
+			Evidence:     "kit dat graphics/graphic/graphic-create/graphic-patch/graphic-delete/graphic-delta-delete/graphic-angle-sound-delete/sounds/sound/sound-create/sound-patch/sound-delete/sound-item-delete/delete-plan/delete, kit fx new/bind/lint; plan-gated graphic stable-slot delete plus graphic-delta/graphic-angle-sound/sound-item row delete readbacks",
 			Next:         "complete asset-to-engine authoring loops with stronger readback and editor smoke checks",
 		},
 		{
@@ -688,6 +688,16 @@ func allDarkFrontiers() []DarkFrontier {
 	return []DarkFrontier{
 		{
 			Domain:       "replay",
+			Region:       "VER 9.4 trigger-graph locator hardening",
+			Priority:     2,
+			Known:        "current VER 9.4/save_version 68 trigger graphs parse on ordinary multiplayer layouts and the known consolidated few-trigger/large-effect-list fixture; the consolidated fixture yields trigger_count=3, effect_count=1873, named effects, and a stable graph_sha256",
+			Unknown:      "whether future large consolidated trigger layouts can still defeat the primary string/dense-region locator and rely on fallback candidate ranking",
+			Tools:        "kit replay triggers, kit identify, trigger graph extractor, optional private consolidated fixture plus a parsing VER 9.4 control replay",
+			Next:         "harden primary trigger start location for large consolidated layouts while preserving the current fallback scan and known VER 9.4 controls",
+			Verification: "private_fixture_regression_optional",
+		},
+		{
+			Domain:       "replay",
 			Region:       "sync matrix words",
 			Priority:     1,
 			Known:        syncKnown,
@@ -740,8 +750,8 @@ func allDarkFrontiers() []DarkFrontier {
 			Domain:       "dat",
 			Region:       "effect command semantic matrix",
 			Priority:     1,
-			Known:        "disable_tech, enable_unit, spawn_unit, modify_tech, resource modifiers, tech cost/time modifiers, rename-unit string IDs, upgrade_unit source/destination refs, unit-class names, and unit-attribute modifiers have typed promotion; command-shape candidates are split from arbitrary numeric possible operands",
-			Unknown:      "class-targeted engine behavior still needs scenario/replay semantics-readback; unsupported command types remain raw",
+			Known:        "disable_tech, enable_unit, spawn_unit, modify_tech, resource modifiers, tech cost/time modifiers, rename-unit string IDs, upgrade_unit source/destination refs, unit-class names, and unit-attribute modifiers have typed promotion; command-shape candidates are split from arbitrary numeric possible operands; the current reference DAT has zero command rows under command-matrix --unknown",
+			Unknown:      "class-targeted and scope-targeted runtime behavior still needs scenario/replay semantics-readback; future data versions may still introduce raw unsupported command types",
 			Tools:        "kit dat effects/effect/command-matrix with typed/unknown/reference filters; kit dat refs with class/confidence/source filters; codec-plan/semantics-pack/semantics-readback",
 			Next:         "build packed DAT semantics fixtures and add helpers only after readback proves field behavior",
 			Verification: "structure_verified_not_engine_verified until fixture replay says otherwise",
@@ -750,11 +760,21 @@ func allDarkFrontiers() []DarkFrontier {
 			Domain:       "dat",
 			Region:       "physical delete frontier",
 			Priority:     1,
-			Known:        "stable-ID preserving semantic delete is safe for units/sounds; unreferenced effects and tail techs can be physically removed; unreferenced non-tail techs can be removed by guarded tail-swap when tail references are rewrite-covered",
+			Known:        "stable-ID preserving semantic delete is safe for units/sounds; unreferenced graphics can become absent stable-ID slots; unreferenced effects and tail techs can be physically removed; unreferenced non-tail techs can be removed by guarded tail-swap when tail references are rewrite-covered",
 			Unknown:      "broad non-tail renumber-all deletion across all verified and possible references is not complete",
 			Tools:        "kit dat delete, disconnect, delete-plan, refs, reference_rewrites, codec-patch",
 			Next:         "keep expanding reference coverage; only build renumber-all deletion if tail-swap is insufficient for a real workflow",
 			Verification: "structure_verified_not_engine_verified",
+		},
+		{
+			Domain:       "scenario",
+			Region:       "legacy 1.53 scenario read support",
+			Priority:     2,
+			Known:        "modern scenario readers cover 1.55-1.58; older 1.53 community/classic scenarios are rejected before inspection",
+			Unknown:      "exact per-section field deltas needed for safe read-only header, players, terrain, units, strings, triggers, effects, and conditions",
+			Tools:        "kit scen info/describe/units/triggers/terrain/strings, scenario section parser, legacy fixture diffs",
+			Next:         "add read-only 1.53 support first, gated by section roundtrip/coverage tests; do not add mutation until the read model is stable",
+			Verification: "backlog_logged_not_implemented",
 		},
 		{
 			Domain:       "scenario",

@@ -3037,7 +3037,7 @@ func TestDeletePlanUnitAndUnsupportedGraphic(t *testing.T) {
 		t.Fatalf("drop-site unit delete plan missing optional cleanup metadata: %+v", dropSitePlan)
 	}
 	graphicPlan := DeletePlan(idx, DeletePlanRequest{Section: "graphic", ID: 339})
-	if graphicPlan.Supported || graphicPlan.Strategy != "unsupported" || graphicPlan.Reason == "" || len(graphicPlan.References) == 0 {
+	if graphicPlan.Supported || graphicPlan.Strategy != "unsupported_referenced_stable_slot" || graphicPlan.Reason == "" || len(graphicPlan.References) == 0 {
 		t.Fatalf("graphic delete plan = %+v", graphicPlan)
 	}
 	referencedCivID := firstReferencedCiv(t, idx)
@@ -3077,6 +3077,50 @@ func TestDeletePlanUnitAndUnsupportedGraphic(t *testing.T) {
 	tailColourPlan := DeletePlan(createdIdx, DeletePlanRequest{Section: "player_colour", ID: createdColourID})
 	if !tailColourPlan.Supported || !tailColourPlan.Mutates || tailColourPlan.Strategy != "physical_tail_delete" || !bytes.Contains(tailColourPlan.RecipeHint, []byte("delete_player_colours")) {
 		t.Fatalf("tail player colour delete plan = %+v", tailColourPlan)
+	}
+	createdGraphicDat, graphicCreateReport, err := PatchRecipe(compressed, Recipe{
+		CreateGraphic: &datfile.GraphicCreateRecipe{From: 1711},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	createdGraphicPayload, err := datfile.Inflate(createdGraphicDat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	createdGraphicIdx, err := datfile.Parse(createdGraphicPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	createdGraphicID := graphicCreateReport.CreatedGraphics[0].NewGraphicID
+	tailGraphicPlan := DeletePlan(createdGraphicIdx, DeletePlanRequest{Section: "graphic", ID: createdGraphicID})
+	if !tailGraphicPlan.Supported || !tailGraphicPlan.Mutates || tailGraphicPlan.Strategy != "stable_id_absent_slot" || !bytes.Contains(tailGraphicPlan.RecipeHint, []byte("delete_graphics")) {
+		t.Fatalf("tail graphic delete plan = %+v", tailGraphicPlan)
+	}
+	var graphicDeleteRecipe Recipe
+	if err := json.Unmarshal(tailGraphicPlan.RecipeHint, &graphicDeleteRecipe); err != nil {
+		t.Fatal(err)
+	}
+	deletedGraphicDat, graphicDeleteReport, err := PatchRecipe(createdGraphicDat, graphicDeleteRecipe)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(graphicDeleteReport.DeletedGraphics) != 1 || !graphicDeleteReport.Verified || !graphicDeleteReport.ReadbackOK {
+		t.Fatalf("graphic delete report = %+v", graphicDeleteReport)
+	}
+	deletedGraphicPayload, err := datfile.Inflate(deletedGraphicDat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deletedGraphicIdx, err := datfile.Parse(deletedGraphicPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deletedGraphicIdx.GraphicsSize != createdGraphicIdx.GraphicsSize {
+		t.Fatalf("graphics size changed: before=%d after=%d", createdGraphicIdx.GraphicsSize, deletedGraphicIdx.GraphicsSize)
+	}
+	if _, ok := deletedGraphicIdx.Graphic(createdGraphicID); ok {
+		t.Fatalf("deleted graphic %d still present", createdGraphicID)
 	}
 	buildingConnectionPlan := DeletePlan(idx, DeletePlanRequest{Section: "tech_tree_building_connection", ID: 1})
 	if !buildingConnectionPlan.Supported || !buildingConnectionPlan.Mutates || buildingConnectionPlan.Strategy != "physical_connection_row_delete" || !bytes.Contains(buildingConnectionPlan.RecipeHint, []byte("delete_building_connections")) {
@@ -3215,6 +3259,57 @@ func TestUnitReferencesSeparateCandidateAndPossibleEffectOperands(t *testing.T) 
 	plan := DeletePlan(idx, DeletePlanRequest{Section: "unit", ID: 83, CivID: &civID})
 	if !plan.Supported || len(plan.References) == 0 || !bytes.Contains(plan.CleanupRecipe, []byte("disconnect_units")) {
 		t.Fatalf("delete plan missed local-building references: %+v", plan)
+	}
+}
+
+func TestKnownEffectCommandsDoNotEmitPossibleOperandNoise(t *testing.T) {
+	idx := &datfile.Index{
+		Techs: make([]datfile.Tech, 128),
+		Effects: []datfile.Effect{{
+			Index: 0,
+			Name:  "known multiply command",
+			Commands: []datfile.EffectCommand{
+				semanticCommand(datfile.EffectCommand{Index: 0, Type: 5, A: 83, B: -1, C: 101, D: 1.25}),
+				semanticCommand(datfile.EffectCommand{Index: 1, Type: 250, A: 0, B: 0, C: 101, D: 0}),
+			},
+		}},
+	}
+
+	refs := techIDReferences(idx, 101)
+	possibleCount := 0
+	for _, ref := range refs {
+		if ref.Confidence != "possible_effect_command_operand" {
+			continue
+		}
+		possibleCount++
+		if !strings.Contains(ref.Field, "command[1].c_possible_tech_id") {
+			t.Fatalf("unexpected possible operand ref from known command: %+v all=%+v", ref, refs)
+		}
+	}
+	if possibleCount != 1 {
+		t.Fatalf("possible operand refs = %d, want only the unknown command; refs=%+v", possibleCount, refs)
+	}
+	report := References(idx, DeletePlanRequest{Section: "tech", ID: 101})
+	if report.Summary.PossibleOperand != 1 {
+		t.Fatalf("possible operand summary = %+v refs=%+v", report.Summary, report.References)
+	}
+}
+
+func TestFilterReferenceReportCandidateOperand(t *testing.T) {
+	report := ReferenceReport{
+		References: []ClassifiedReference{
+			{DeleteReference: DeleteReference{Section: "effect", ID: 1, Confidence: "possible_effect_command_operand"}, Class: "possible_operand"},
+			{DeleteReference: DeleteReference{Section: "effect", ID: 2, Confidence: "candidate_effect_command_operand"}, Class: "possible_operand"},
+			{DeleteReference: DeleteReference{Section: "tech", ID: 3, Confidence: "direct"}, Class: "rewrite_supported"},
+		},
+	}
+
+	filtered := FilterReferenceReport(report, ReferenceFilters{Class: "candidate_operand"})
+	if filtered.Summary.Total != 1 || filtered.Summary.PossibleOperand != 1 || filtered.Summary.CandidateOperand != 1 {
+		t.Fatalf("candidate filter summary = %+v refs=%+v", filtered.Summary, filtered.References)
+	}
+	if len(filtered.References) != 1 || filtered.References[0].ID != 2 {
+		t.Fatalf("candidate filter refs = %+v", filtered.References)
 	}
 }
 

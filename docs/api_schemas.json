@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 856,
+  "type_count": 867,
   "types": {
     "aifile.DiffChange": {
       "package": "aifile",
@@ -6109,6 +6109,12 @@
           "optional": true
         },
         {
+          "name": "Operand",
+          "json": "operand",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
           "name": "ReferenceKind",
           "json": "reference_kind",
           "go_type": "string",
@@ -6150,6 +6156,10 @@
         },
         {
           "name": "CommandType",
+          "go_type": "*int"
+        },
+        {
+          "name": "Operand",
           "go_type": "*int"
         },
         {
@@ -7039,6 +7049,13 @@
           "optional": true
         },
         {
+          "name": "DeletedGraphics",
+          "json": "deleted_graphics",
+          "go_type": "[]datfile.GraphicDeleteReport",
+          "ref": "datfile.GraphicDeleteReport",
+          "optional": true
+        },
+        {
           "name": "CreatedUnits",
           "json": "created_units",
           "go_type": "[]datfile.UnitCreateReport",
@@ -7572,6 +7589,12 @@
           "json": "create_graphics",
           "go_type": "[]datfile.GraphicCreateRecipe",
           "ref": "datfile.GraphicCreateRecipe",
+          "optional": true
+        },
+        {
+          "name": "DeleteGraphics",
+          "json": "delete_graphics",
+          "go_type": "[]int",
           "optional": true
         },
         {
@@ -11664,6 +11687,74 @@
         }
       ]
     },
+    "datfile.GraphicDeleteReport": {
+      "package": "datfile",
+      "name": "GraphicDeleteReport",
+      "fields": [
+        {
+          "name": "InputCompressedBytes",
+          "json": "input_compressed_bytes",
+          "go_type": "int"
+        },
+        {
+          "name": "OutputCompressedBytes",
+          "json": "output_compressed_bytes",
+          "go_type": "int"
+        },
+        {
+          "name": "InputInflatedBytes",
+          "json": "input_inflated_bytes",
+          "go_type": "int"
+        },
+        {
+          "name": "OutputInflatedBytes",
+          "json": "output_inflated_bytes",
+          "go_type": "int"
+        },
+        {
+          "name": "InflatedLengthDelta",
+          "json": "inflated_length_delta",
+          "go_type": "int"
+        },
+        {
+          "name": "GraphicID",
+          "json": "graphic_id",
+          "go_type": "int"
+        },
+        {
+          "name": "BeforeGraphicsSize",
+          "json": "before_graphics_size",
+          "go_type": "int"
+        },
+        {
+          "name": "AfterGraphicsSize",
+          "json": "after_graphics_size",
+          "go_type": "int"
+        },
+        {
+          "name": "RemovedRecordBytes",
+          "json": "removed_record_bytes",
+          "go_type": "int"
+        },
+        {
+          "name": "Before",
+          "json": "before",
+          "go_type": "GraphicSummary",
+          "ref": "datfile.GraphicSummary"
+        },
+        {
+          "name": "Verified",
+          "json": "verified",
+          "go_type": "bool"
+        },
+        {
+          "name": "Verification",
+          "json": "verification",
+          "go_type": "aoe2.VerificationClaim",
+          "ref": "aoe2.VerificationClaim"
+        }
+      ]
+    },
     "datfile.GraphicDelta": {
       "package": "datfile",
       "name": "GraphicDelta",
@@ -12914,6 +13005,12 @@
           "optional": true
         },
         {
+          "name": "DeleteGraphics",
+          "json": "delete_graphics",
+          "go_type": "[]int",
+          "optional": true
+        },
+        {
           "name": "CreateUnit",
           "json": "create_unit",
           "go_type": "*UnitCreateRecipe",
@@ -12977,6 +13074,13 @@
           "json": "created_graphics",
           "go_type": "[]GraphicCreateReport",
           "ref": "datfile.GraphicCreateReport",
+          "optional": true
+        },
+        {
+          "name": "DeletedGraphics",
+          "json": "deleted_graphics",
+          "go_type": "[]GraphicDeleteReport",
+          "ref": "datfile.GraphicDeleteReport",
           "optional": true
         },
         {
@@ -15434,6 +15538,130 @@
           "name": "Value",
           "json": "value",
           "go_type": "int16"
+        }
+      ]
+    },
+    "diagnostics.ClassScopeEffectRow": {
+      "package": "diagnostics",
+      "name": "ClassScopeEffectRow",
+      "fields": [
+        {
+          "name": "EffectID",
+          "json": "effect_id",
+          "go_type": "int"
+        },
+        {
+          "name": "EffectName",
+          "json": "effect_name",
+          "go_type": "string"
+        },
+        {
+          "name": "Command",
+          "json": "command",
+          "go_type": "int"
+        },
+        {
+          "name": "Type",
+          "json": "type",
+          "go_type": "uint8"
+        },
+        {
+          "name": "TypeName",
+          "json": "type_name",
+          "go_type": "string"
+        },
+        {
+          "name": "Scope",
+          "json": "scope",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "UnitID",
+          "json": "unit_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "UnitClassID",
+          "json": "unit_class_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "UnitClassName",
+          "json": "unit_class_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "AttributeID",
+          "json": "attribute_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "AttributeName",
+          "json": "attribute_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Amount",
+          "json": "amount",
+          "go_type": "float32"
+        },
+        {
+          "name": "Summary",
+          "json": "summary",
+          "go_type": "string"
+        },
+        {
+          "name": "Details",
+          "json": "details",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "Warnings",
+          "json": "warnings",
+          "go_type": "[]string",
+          "optional": true
+        }
+      ]
+    },
+    "diagnostics.ClassScopeEffectsReport": {
+      "package": "diagnostics",
+      "name": "ClassScopeEffectsReport",
+      "fields": [
+        {
+          "name": "Version",
+          "json": "version",
+          "go_type": "string"
+        },
+        {
+          "name": "Feature",
+          "json": "feature",
+          "go_type": "string"
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "string"
+        },
+        {
+          "name": "Honesty",
+          "json": "honesty",
+          "go_type": "[]string"
+        },
+        {
+          "name": "Matrix",
+          "json": "matrix",
+          "go_type": "datcodec.EffectCommandMatrixReport",
+          "ref": "datcodec.EffectCommandMatrixReport"
+        },
+        {
+          "name": "Rows",
+          "json": "rows",
+          "go_type": "[]ClassScopeEffectRow",
+          "ref": "diagnostics.ClassScopeEffectRow"
         }
       ]
     },
@@ -36474,6 +36702,57 @@
         }
       ]
     },
+    "rpgshop.DemoEarning": {
+      "package": "rpgshop",
+      "name": "DemoEarning",
+      "fields": [
+        {
+          "name": "Signal",
+          "json": "signal",
+          "go_type": "string"
+        },
+        {
+          "name": "Players",
+          "json": "players",
+          "go_type": "[]int"
+        },
+        {
+          "name": "EnemyPlayers",
+          "json": "enemy_players",
+          "go_type": "[]int"
+        },
+        {
+          "name": "GoldPerKill",
+          "json": "gold_per_kill",
+          "go_type": "int"
+        },
+        {
+          "name": "XPPerKill",
+          "json": "xp_per_kill",
+          "go_type": "int"
+        },
+        {
+          "name": "LevelCurve",
+          "json": "level_curve",
+          "go_type": "string"
+        },
+        {
+          "name": "HeroAttribution",
+          "json": "hero_attribution",
+          "go_type": "string"
+        },
+        {
+          "name": "PollTriggerName",
+          "json": "poll_trigger_name",
+          "go_type": "string"
+        },
+        {
+          "name": "PollIntervalNote",
+          "json": "poll_interval_note",
+          "go_type": "string"
+        }
+      ]
+    },
     "rpgshop.DemoOptions": {
       "package": "rpgshop",
       "name": "DemoOptions",
@@ -36564,6 +36843,12 @@
           "json": "shop_items",
           "go_type": "[]DemoShopItem",
           "ref": "rpgshop.DemoShopItem"
+        },
+        {
+          "name": "Earning",
+          "json": "earning",
+          "go_type": "DemoEarning",
+          "ref": "rpgshop.DemoEarning"
         },
         {
           "name": "VerificationClaims",
@@ -36818,6 +37103,14 @@
         {
           "name": "NoConquest",
           "go_type": "bool"
+        },
+        {
+          "name": "CloseoutSeconds",
+          "go_type": "int"
+        },
+        {
+          "name": "CloseoutPlayer",
+          "go_type": "int"
         }
       ]
     },
@@ -36890,6 +37183,18 @@
           "name": "NoConquest",
           "json": "no_conquest",
           "go_type": "bool"
+        },
+        {
+          "name": "CloseoutSeconds",
+          "json": "closeout_seconds",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "CloseoutPlayer",
+          "json": "closeout_player",
+          "go_type": "int",
+          "optional": true
         },
         {
           "name": "TriggerCountBefore",
@@ -38851,6 +39156,18 @@
           "go_type": "string"
         },
         {
+          "name": "Why",
+          "json": "why",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Fix",
+          "json": "fix",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "FactID",
           "json": "fact_id",
           "go_type": "string",
@@ -38882,6 +39199,10 @@
       "fields": [
         {
           "name": "IncludeProvisional",
+          "go_type": "bool"
+        },
+        {
+          "name": "LoadSafety",
           "go_type": "bool"
         }
       ]
@@ -40883,6 +41204,318 @@
           "go_type": "[]PlayerResourceValues",
           "ref": "scenario.PlayerResourceValues",
           "optional": true
+        }
+      ]
+    },
+    "scenario.ShopCatalog": {
+      "package": "scenario",
+      "name": "ShopCatalog",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Player",
+          "json": "player",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "SetupTriggerName",
+          "json": "setup_trigger_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Cleanup",
+          "json": "cleanup",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "ClearTriggers",
+          "json": "clear_triggers",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "RenameShops",
+          "json": "rename_shops",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "Area",
+          "json": "area",
+          "go_type": "*ShopCatalogArea",
+          "ref": "scenario.ShopCatalogArea",
+          "optional": true
+        },
+        {
+          "name": "Shops",
+          "json": "shops",
+          "go_type": "[]ShopCatalogShop",
+          "ref": "scenario.ShopCatalogShop"
+        }
+      ]
+    },
+    "scenario.ShopCatalogArea": {
+      "package": "scenario",
+      "name": "ShopCatalogArea",
+      "fields": [
+        {
+          "name": "X1",
+          "json": "x1",
+          "go_type": "int"
+        },
+        {
+          "name": "Y1",
+          "json": "y1",
+          "go_type": "int"
+        },
+        {
+          "name": "X2",
+          "json": "x2",
+          "go_type": "int"
+        },
+        {
+          "name": "Y2",
+          "json": "y2",
+          "go_type": "int"
+        }
+      ]
+    },
+    "scenario.ShopCatalogItem": {
+      "package": "scenario",
+      "name": "ShopCatalogItem",
+      "fields": [
+        {
+          "name": "Label",
+          "json": "label",
+          "go_type": "string"
+        },
+        {
+          "name": "Description",
+          "json": "description",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "TokenUnit",
+          "json": "token_unit",
+          "go_type": "int"
+        },
+        {
+          "name": "Button",
+          "json": "button",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "TrainTime",
+          "json": "train_time",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Hotkey",
+          "json": "hotkey",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Costs",
+          "json": "costs",
+          "go_type": "[]ShopCatalogItemCost",
+          "ref": "scenario.ShopCatalogItemCost",
+          "optional": true
+        }
+      ]
+    },
+    "scenario.ShopCatalogItemCost": {
+      "package": "scenario",
+      "name": "ShopCatalogItemCost",
+      "fields": [
+        {
+          "name": "ResourceID",
+          "json": "resource_id",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Resource",
+          "json": "resource",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Amount",
+          "json": "amount",
+          "go_type": "int"
+        }
+      ]
+    },
+    "scenario.ShopCatalogReport": {
+      "package": "scenario",
+      "name": "ShopCatalogReport",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Player",
+          "json": "player",
+          "go_type": "int"
+        },
+        {
+          "name": "ShopCount",
+          "json": "shop_count",
+          "go_type": "int"
+        },
+        {
+          "name": "ItemCount",
+          "json": "item_count",
+          "go_type": "int"
+        },
+        {
+          "name": "Cleanup",
+          "json": "cleanup",
+          "go_type": "bool"
+        },
+        {
+          "name": "ClearTriggers",
+          "json": "clear_triggers",
+          "go_type": "bool"
+        },
+        {
+          "name": "Recipe",
+          "json": "recipe",
+          "go_type": "Recipe",
+          "ref": "scenario.Recipe"
+        },
+        {
+          "name": "ShopSummaries",
+          "json": "shop_summaries",
+          "go_type": "[]ShopCatalogSummary",
+          "ref": "scenario.ShopCatalogSummary"
+        },
+        {
+          "name": "Warnings",
+          "json": "warnings",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "Verification",
+          "json": "verification",
+          "go_type": "string"
+        }
+      ]
+    },
+    "scenario.ShopCatalogShop": {
+      "package": "scenario",
+      "name": "ShopCatalogShop",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Description",
+          "json": "description",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ShopUnit",
+          "json": "shop_unit",
+          "go_type": "int"
+        },
+        {
+          "name": "Player",
+          "json": "player",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "ReferenceID",
+          "json": "reference_id",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Caption",
+          "json": "caption",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Items",
+          "json": "items",
+          "go_type": "[]ShopCatalogItem",
+          "ref": "scenario.ShopCatalogItem"
+        }
+      ]
+    },
+    "scenario.ShopCatalogSummary": {
+      "package": "scenario",
+      "name": "ShopCatalogSummary",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "ShopUnit",
+          "json": "shop_unit",
+          "go_type": "int"
+        },
+        {
+          "name": "Player",
+          "json": "player",
+          "go_type": "int"
+        },
+        {
+          "name": "ItemCount",
+          "json": "item_count",
+          "go_type": "int"
+        },
+        {
+          "name": "ButtonMin",
+          "json": "button_min",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "ButtonMax",
+          "json": "button_max",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "HasUnit",
+          "json": "has_unit",
+          "go_type": "bool"
         }
       ]
     },

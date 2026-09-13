@@ -101,6 +101,13 @@ func TestEffectCommandMatrixFiltersByReferenceAndUnknown(t *testing.T) {
 	if unknownOnly.CommandCount != 1 || unknownOnly.TypeCount != 1 || unknownOnly.CommandTypes[0].Type != 250 {
 		t.Fatalf("unknown filter = %+v", unknownOnly)
 	}
+	operandOnly := EffectCommandMatrixWithOptions(idx, EffectCommandMatrixOptions{Operand: intPtr(83)})
+	if operandOnly.CommandCount != 1 || operandOnly.TypeCount != 1 || operandOnly.CommandTypes[0].Type != 4 {
+		t.Fatalf("operand filter = %+v", operandOnly)
+	}
+	if operandOnly.Filters.Operand == nil || *operandOnly.Filters.Operand != 83 {
+		t.Fatalf("operand filter not echoed = %+v", operandOnly.Filters)
+	}
 
 	typedUnits := EffectCommandMatrixWithOptions(idx, EffectCommandMatrixOptions{TypedOnly: true, ReferenceKind: "unit"})
 	if typedUnits.CommandCount != 1 || typedUnits.TypeCount != 1 || typedUnits.CommandTypes[0].Type != 4 {

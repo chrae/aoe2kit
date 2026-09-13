@@ -589,6 +589,71 @@
       "verified_date": "2026-08-14",
       "fixture_ref": "docs/SCORE_PROBE_READBACK_2026-08-14.md",
       "domains": ["score", "team"]
+    },
+    {
+      "id": "scenario.player_count_must_match_active_non_gaia_count",
+      "statement": "AoE2DE can reject a scenario at selection/load time when header player_count does not match the number of active non-Gaia player slots.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-11",
+      "fixture_ref": "xs_sources/scenario_player_setup_and_shop_lessons.md; in-engine rejection of player_count=3 with 8 active players",
+      "domains": ["scenario", "load_safety", "player_slots"],
+      "lint_rule": {
+        "target": "scenario_player_setup",
+        "predicate": "player_count != count(active non-Gaia players 1..8)",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "scenario.locked_civ_open_human_slot_blocks_mp_launch",
+      "statement": "AoE2DE multiplayer scenario lobbies can refuse to launch when an active human player slot has lock_civilization=true and remains unclaimed.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-11",
+      "fixture_ref": "xs_sources/scenario_player_setup_and_shop_lessons.md; MP launch refusal on unclaimed locked-civilization human slots",
+      "domains": ["scenario", "load_safety", "player_slots", "multiplayer"],
+      "lint_rule": {
+        "target": "scenario_player_setup",
+        "predicate": "active && human && lock_civilization",
+        "severity": "warning"
+      }
+    },
+    {
+      "id": "scenario.add_train_location_unique_building_slot",
+      "statement": "AoE2DE building command cards can fail to render train buttons when multiple add_train_location trigger effects target the same train_location_unit_const and button_location pair.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-11",
+      "fixture_ref": "xs_sources/scenario_player_setup_and_shop_lessons.md; tent 1097 slot 1 duplicate add_train_location produced no rendered buttons",
+      "domains": ["scenario", "load_safety", "trigger", "shop"],
+      "lint_rule": {
+        "target": "trigger_effect",
+        "predicate": "duplicate add_train_location(train_location_unit_const, button_location)",
+        "severity": "error"
+      }
+    },
+    {
+      "id": "scenario.train_button_command_card_has_16_slots",
+      "statement": "AoE2DE building train command cards expose a 16-button capacity; shop layouts with more train buttons on one building or button_location values above 16 should be split across buildings.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-11",
+      "fixture_ref": "xs_sources/scenario_player_setup_and_shop_lessons.md; DE command-card capacity confirmed during shop button tests",
+      "domains": ["scenario", "load_safety", "trigger", "shop"],
+      "lint_rule": {
+        "target": "trigger_effect",
+        "predicate": "add_train_location button_location > 16 || count(add_train_location for building) > 16",
+        "severity": "warning"
+      }
+    },
+    {
+      "id": "scenario.de_max_8_non_gaia_players",
+      "statement": "AoE2DE scenario games support at most 8 non-Gaia player slots; Gaia is the separate player 0 slot.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-11",
+      "fixture_ref": "xs_sources/scenario_player_setup_and_shop_lessons.md; player setup/load-safety rules from live scenario launch tests",
+      "domains": ["scenario", "load_safety", "player_slots"],
+      "lint_rule": {
+        "target": "scenario_player_setup",
+        "predicate": "player_count > 8 || active non-Gaia player count > 8",
+        "severity": "error"
+      }
     }
   ]
 }

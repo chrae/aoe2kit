@@ -67,6 +67,33 @@ func TestCRUDMatrixNamesUpdateAndDeleteModes(t *testing.T) {
 	}
 }
 
+func TestScenarioRoadmapDoesNotAdvertiseGaiaInactiveAuthoring(t *testing.T) {
+	report, err := RWDMatrix("scenario")
+	if err != nil {
+		t.Fatalf("RWDMatrix returned error: %v", err)
+	}
+	var found bool
+	for _, row := range report.Rows {
+		if row.Section != "players, diplomacy, resources, victory" {
+			continue
+		}
+		found = true
+		text := row.Write + " " + row.Next
+		if strings.Contains(text, "explicit Gaia active-state control") {
+			t.Fatalf("roadmap still advertises explicit Gaia active-state control: %+v", row)
+		}
+		if !strings.Contains(text, "Gaia-active blank baseline") {
+			t.Fatalf("roadmap should describe Gaia as a baseline, not a disable target: %+v", row)
+		}
+		if !strings.Contains(text, "do not advertise Gaia-inactive authoring") {
+			t.Fatalf("roadmap should preserve the Gaia-inactive caveat: %+v", row)
+		}
+	}
+	if !found {
+		t.Fatal("missing scenario players/diplomacy/resources/victory row")
+	}
+}
+
 func TestDarkBytesIncludesReplayPriorityOne(t *testing.T) {
 	report, err := DarkBytes("replay")
 	if err != nil {

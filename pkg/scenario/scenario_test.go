@@ -304,6 +304,61 @@ func TestWriteBlankScenarioFileSupportsDiagnosticBlankFlags(t *testing.T) {
 	checkIntField(t, file.root.section("Units"), "number_of_players", 9)
 }
 
+func TestWriteBlankScenarioFileCanAddTimerCloseout(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "DiagnosticCloseout.aoe2scenario")
+	report, err := WriteBlankScenarioFile(out, BlankOptions{
+		PlayerCount:     4,
+		HumanSlots:      1,
+		Timestamp:       1800000000,
+		DummyStarters:   true,
+		NoConquest:      true,
+		CloseoutSeconds: 120,
+	})
+	if err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	if report.CloseoutSeconds != 120 || report.CloseoutPlayer != 1 {
+		t.Fatalf("closeout report = %d/P%d, want 120/P1", report.CloseoutSeconds, report.CloseoutPlayer)
+	}
+	if report.TriggerCountAfter != 1 {
+		t.Fatalf("trigger count after = %d, want 1", report.TriggerCountAfter)
+	}
+	file, err := Open(out)
+	if err != nil {
+		t.Fatalf("Open blank output: %v", err)
+	}
+	triggers := file.root.section("Triggers").list("trigger_data")
+	if len(triggers) != 1 {
+		t.Fatalf("triggers = %d, want 1", len(triggers))
+	}
+	trigger := triggers[0]
+	if name, _ := trigger.stringValue("trigger_name"); name != "A2K Blank Closeout - declare victory" {
+		t.Fatalf("trigger name = %q", name)
+	}
+	conditions := trigger.list("condition_data")
+	if len(conditions) != 1 {
+		t.Fatalf("conditions = %d, want 1", len(conditions))
+	}
+	checkIntField(t, conditions[0], "condition_type", 10)
+	checkIntField(t, conditions[0], "timer", 120)
+	effects := trigger.list("effect_data")
+	if len(effects) != 1 {
+		t.Fatalf("effects = %d, want 1", len(effects))
+	}
+	checkIntField(t, effects[0], "effect_type", 13)
+	checkIntField(t, effects[0], "source_player", 1)
+}
+
+func TestWriteBlankScenarioFileRejectsInvalidCloseout(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "BadCloseout.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{PlayerCount: 2, CloseoutSeconds: 30, CloseoutPlayer: 3}); err == nil {
+		t.Fatal("expected invalid closeout player error")
+	}
+	if _, err := WriteBlankScenarioFile(out, BlankOptions{PlayerCount: 2, CloseoutSeconds: -1}); err == nil {
+		t.Fatal("expected invalid closeout seconds error")
+	}
+}
+
 func TestApplyRecipeBulkAddUnitsAssignsSequentialReferences(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "BulkUnits.aoe2scenario")
 	if _, err := WriteBlankScenarioFile(out, BlankOptions{Timestamp: 1800000000}); err != nil {
@@ -2908,6 +2963,95 @@ func TestLintActiveComputerWithoutAuthoredUnits(t *testing.T) {
 	}
 	if !report.OK {
 		t.Fatalf("report should remain OK for warning-only starter-injection lint: %+v", report.Issues)
+	}
+}
+
+func TestLintLoadSafetyPlayerCountAndLockedCiv(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "base.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(input, BlankOptions{PlayerCount: 4, HumanSlots: 4, Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	output := filepath.Join(dir, "bad_players.aoe2scenario")
+	playerCount := 3
+	locked := true
+	if _, err := PatchRecipeFile(input, output, Recipe{
+		Scenario: &ScenarioRecipe{PlayerCount: &playerCount},
+		Players:  []PlayerRecipe{{Player: 2, LockCivilization: &locked}},
+	}); err != nil {
+		t.Fatalf("PatchRecipeFile: %v", err)
+	}
+	report, err := LintFileWithOptions(output, LintOptions{LoadSafety: true})
+	if err != nil {
+		t.Fatalf("LintFileWithOptions: %v", err)
+	}
+	if !hasIssueCode(report.Issues, "load_safety_player_count_mismatch") {
+		t.Fatalf("missing player-count mismatch issue: %+v", report.Issues)
+	}
+	if !hasIssueCode(report.Issues, "load_safety_locked_civ_launch_risk") {
+		t.Fatalf("missing locked-civ launch warning: %+v", report.Issues)
+	}
+	if report.OK {
+		t.Fatalf("load-safety error should make lint fail: %+v", report.Issues)
+	}
+}
+
+func TestLintLoadSafetyTrainButtonCollisionAndOverflow(t *testing.T) {
+	dir := t.TempDir()
+	input := filepath.Join(dir, "base.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(input, BlankOptions{PlayerCount: 1, HumanSlots: 1, Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	output := filepath.Join(dir, "bad_shop.aoe2scenario")
+	player := 1
+	button := 1
+	overflowButton := 17
+	building := 1097
+	unitA := 74
+	unitB := 93
+	unitC := 83
+	if _, err := PatchRecipeFile(input, output, Recipe{
+		Triggers: []TriggerRecipe{{
+			Op:   "add_trigger",
+			Name: "Bad Shop Buttons",
+			Effects: []EffectRecipe{
+				{Op: "add_train_location", SourcePlayer: &player, ObjectListUnitID: &unitA, ObjectListUnitID2: &building, ButtonLocation: &button},
+				{Op: "add_train_location", SourcePlayer: &player, ObjectListUnitID: &unitB, ObjectListUnitID2: &building, ButtonLocation: &button},
+				{Op: "add_train_location", SourcePlayer: &player, ObjectListUnitID: &unitC, ObjectListUnitID2: &building, ButtonLocation: &overflowButton},
+			},
+		}},
+	}); err != nil {
+		t.Fatalf("PatchRecipeFile: %v", err)
+	}
+	report, err := LintFileWithOptions(output, LintOptions{LoadSafety: true})
+	if err != nil {
+		t.Fatalf("LintFileWithOptions: %v", err)
+	}
+	if !hasIssueCode(report.Issues, "load_safety_train_button_slot_collision") {
+		t.Fatalf("missing train-button collision issue: %+v", report.Issues)
+	}
+	if !hasIssueCode(report.Issues, "load_safety_train_button_overflow") {
+		t.Fatalf("missing train-button overflow warning: %+v", report.Issues)
+	}
+	if report.OK {
+		t.Fatalf("load-safety collision should make lint fail: %+v", report.Issues)
+	}
+}
+
+func TestLintLoadSafetyAllowsEmptyActivePlayers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "empty_active_ok.aoe2scenario")
+	if _, err := WriteBlankScenarioFile(path, BlankOptions{PlayerCount: 4, HumanSlots: 4, Timestamp: 1800000000}); err != nil {
+		t.Fatalf("WriteBlankScenarioFile: %v", err)
+	}
+	report, err := LintFileWithOptions(path, LintOptions{LoadSafety: true})
+	if err != nil {
+		t.Fatalf("LintFileWithOptions: %v", err)
+	}
+	if hasIssueCode(report.Issues, "load_safety_empty_active_player") {
+		t.Fatalf("empty active player should not be a load-safety issue: %+v", report.Issues)
+	}
+	if !report.OK {
+		t.Fatalf("editor-style empty active human slots should pass load-safety: %+v", report.Issues)
 	}
 }
 

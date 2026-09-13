@@ -53,6 +53,33 @@ type LocalBuildingEffectRow struct {
 	Warnings    []string `json:"warnings,omitempty"`
 }
 
+type ClassScopeEffectsReport struct {
+	Version string                             `json:"version"`
+	Feature string                             `json:"feature"`
+	Status  string                             `json:"status"`
+	Honesty []string                           `json:"honesty"`
+	Matrix  datcodec.EffectCommandMatrixReport `json:"matrix"`
+	Rows    []ClassScopeEffectRow              `json:"rows"`
+}
+
+type ClassScopeEffectRow struct {
+	EffectID      int      `json:"effect_id"`
+	EffectName    string   `json:"effect_name"`
+	Command       int      `json:"command"`
+	Type          uint8    `json:"type"`
+	TypeName      string   `json:"type_name"`
+	Scope         string   `json:"scope,omitempty"`
+	UnitID        int16    `json:"unit_id"`
+	UnitClassID   int16    `json:"unit_class_id"`
+	UnitClassName string   `json:"unit_class_name,omitempty"`
+	AttributeID   int16    `json:"attribute_id"`
+	AttributeName string   `json:"attribute_name,omitempty"`
+	Amount        float32  `json:"amount"`
+	Summary       string   `json:"summary"`
+	Details       []string `json:"details,omitempty"`
+	Warnings      []string `json:"warnings,omitempty"`
+}
+
 type GeneratedFrom struct {
 	DatPath         string `json:"dat_path"`
 	BaseEffectCount int    `json:"base_effect_count"`
@@ -224,6 +251,26 @@ func WriteDATCommandSemanticsPackWithOptions(datPath, outDir string, opts Semant
 			return SemanticsPack{}, nil, fmt.Errorf("write LOCAL_BUILDING_EFFECTS.md: %w", err)
 		}
 		written = append(written, mdPath)
+	case "class-scope-effects":
+		report, err := BuildClassScopeEffectsReport(datPath)
+		if err != nil {
+			return SemanticsPack{}, nil, err
+		}
+		jsonPath := filepath.Join(outDir, "CLASS_SCOPE_EFFECTS.json")
+		data, err := json.MarshalIndent(report, "", "  ")
+		if err != nil {
+			return SemanticsPack{}, nil, fmt.Errorf("marshal CLASS_SCOPE_EFFECTS.json: %w", err)
+		}
+		data = append(data, '\n')
+		if err := os.WriteFile(jsonPath, data, 0644); err != nil {
+			return SemanticsPack{}, nil, fmt.Errorf("write CLASS_SCOPE_EFFECTS.json: %w", err)
+		}
+		written = append(written, jsonPath)
+		mdPath := filepath.Join(outDir, "CLASS_SCOPE_EFFECTS.md")
+		if err := os.WriteFile(mdPath, []byte(classScopeEffectsMarkdown(report)), 0644); err != nil {
+			return SemanticsPack{}, nil, fmt.Errorf("write CLASS_SCOPE_EFFECTS.md: %w", err)
+		}
+		written = append(written, mdPath)
 	default:
 		return SemanticsPack{}, nil, fmt.Errorf("unknown semantics-pack feature %q", feature)
 	}
@@ -302,6 +349,97 @@ func localBuildingEffectsMarkdown(report LocalBuildingEffectsReport) string {
 	fmt.Fprintf(&b, "## DAT Rows\n\n")
 	for _, row := range report.Rows {
 		fmt.Fprintf(&b, "- effect `%d` `%s`, command `%d`, type `%d` `%s`: %s\n", row.EffectID, row.EffectName, row.Command, row.Type, row.TypeName, row.Summary)
+	}
+	return b.String()
+}
+
+func BuildClassScopeEffectsReport(datPath string) (ClassScopeEffectsReport, error) {
+	payload, err := readDatPayload(datPath)
+	if err != nil {
+		return ClassScopeEffectsReport{}, err
+	}
+	idx, err := datfile.Parse(payload)
+	if err != nil {
+		return ClassScopeEffectsReport{}, fmt.Errorf("parse dat: %w", err)
+	}
+	matrix := datcodec.EffectCommandMatrixWithOptions(idx, datcodec.EffectCommandMatrixOptions{ExampleLimit: 10})
+	report := ClassScopeEffectsReport{
+		Version: "class-scope-effects-v1",
+		Feature: "class-scope-effects",
+		Status:  "structure_generated_engine_pending",
+		Matrix:  matrix,
+		Honesty: []string{
+			"This report inventories scoped or class-targeted DAT effect-command rows; it does not prove runtime behavior.",
+			"Rows with unit_id=-1 and unit_class_id>=0 are class-targeted candidates.",
+			"Rows with non-empty scope apply through the AGE command-family scope labels: team, enemy, neutral, or gaia.",
+		},
+	}
+	for _, effect := range idx.Effects {
+		var explained map[int]datcodec.EffectCommandExplanation
+		for _, command := range effect.Commands {
+			semantic := command.Semantic
+			if semantic == nil {
+				semantic = datfile.InterpretEffectCommand(command)
+			}
+			if semantic == nil {
+				continue
+			}
+			classTargeted := command.A < 0 && command.B >= 0
+			scoped := semantic.Scope != "" && semantic.Scope != "local_building"
+			if !classTargeted && !scoped {
+				continue
+			}
+			if explained == nil {
+				report, err := datcodec.ExplainEffect(idx, effect.Index)
+				if err != nil {
+					return ClassScopeEffectsReport{}, err
+				}
+				explained = make(map[int]datcodec.EffectCommandExplanation, len(report.Commands))
+				for _, item := range report.Commands {
+					explained[item.Index] = item
+				}
+			}
+			item := explained[command.Index]
+			report.Rows = append(report.Rows, ClassScopeEffectRow{
+				EffectID:      effect.Index,
+				EffectName:    effect.Name,
+				Command:       command.Index,
+				Type:          command.Type,
+				TypeName:      item.TypeName,
+				Scope:         semantic.Scope,
+				UnitID:        command.A,
+				UnitClassID:   command.B,
+				UnitClassName: semantic.UnitClassName,
+				AttributeID:   command.C,
+				AttributeName: semantic.AttributeName,
+				Amount:        command.D,
+				Summary:       item.Summary,
+				Details:       item.Details,
+				Warnings:      item.Warnings,
+			})
+		}
+	}
+	return report, nil
+}
+
+func classScopeEffectsMarkdown(report ClassScopeEffectsReport) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Class And Scope Effect Commands\n\n")
+	fmt.Fprintf(&b, "Status: `%s`\n\n", report.Status)
+	for _, line := range report.Honesty {
+		fmt.Fprintf(&b, "- %s\n", line)
+	}
+	fmt.Fprintf(&b, "\n## DAT Rows\n\n")
+	for _, row := range report.Rows {
+		scope := row.Scope
+		if scope == "" {
+			scope = "none"
+		}
+		className := row.UnitClassName
+		if className == "" {
+			className = "unknown"
+		}
+		fmt.Fprintf(&b, "- effect `%d` `%s`, command `%d`, type `%d` `%s`, scope `%s`, class `%d` `%s`: %s\n", row.EffectID, row.EffectName, row.Command, row.Type, row.TypeName, scope, row.UnitClassID, className, row.Summary)
 	}
 	return b.String()
 }

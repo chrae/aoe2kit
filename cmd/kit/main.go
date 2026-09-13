@@ -1513,11 +1513,15 @@ func runFacts(args []string) {
 
 func runScen(args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
 	}
 	if args[0] == "blank" {
 		runScenarioBlank(args[1:])
+		return
+	}
+	if args[0] == "shop-catalog" {
+		runScenarioShopCatalog(args[1:])
 		return
 	}
 	if args[0] == "smoke-recipe" {
@@ -1545,7 +1549,7 @@ func runScen(args []string) {
 		return
 	}
 	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
 	}
 	switch args[0] {
@@ -2595,17 +2599,20 @@ func runScen(args []string) {
 	case "lint":
 		textOut := false
 		includeProvisional := false
+		loadSafety := false
 		for _, arg := range args[2:] {
 			switch arg {
 			case "--text":
 				textOut = true
 			case "--include-provisional":
 				includeProvisional = true
+			case "--load-safety":
+				loadSafety = true
 			default:
 				die("kit scen lint", fmt.Errorf("unknown option %q", arg))
 			}
 		}
-		report, err := scenario.LintFileWithOptions(args[1], scenario.LintOptions{IncludeProvisional: includeProvisional})
+		report, err := scenario.LintFileWithOptions(args[1], scenario.LintOptions{IncludeProvisional: includeProvisional, LoadSafety: loadSafety})
 		if err != nil {
 			die("kit scen lint", err)
 		}
@@ -2754,8 +2761,89 @@ func runScen(args []string) {
 		}
 		printJSON(report)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
+	}
+}
+
+func runScenarioShopCatalog(args []string) {
+	if len(args) == 1 && args[0] == "--example" {
+		printJSON(scenario.ShopCatalogExample())
+		return
+	}
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "usage: kit scen shop-catalog <catalog.json> --out recipe.json [--text|--json]")
+		fmt.Fprintln(os.Stderr, "       kit scen shop-catalog --example")
+		os.Exit(2)
+	}
+	catalogPath := args[0]
+	outPath := ""
+	textOut := false
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--out":
+			if i+1 >= len(args) {
+				die("kit scen shop-catalog", fmt.Errorf("--out needs a value"))
+			}
+			outPath = args[i+1]
+			i++
+		case "--text":
+			textOut = true
+		case "--json":
+			textOut = false
+		default:
+			die("kit scen shop-catalog", fmt.Errorf("unknown option %q", args[i]))
+		}
+	}
+	if outPath == "" {
+		die("kit scen shop-catalog", fmt.Errorf("missing required --out recipe.json"))
+	}
+	catalog, err := scenario.LoadShopCatalogFile(catalogPath)
+	if err != nil {
+		die("kit scen shop-catalog", err)
+	}
+	report, err := scenario.ShopCatalogRecipe(catalog)
+	if err != nil {
+		die("kit scen shop-catalog", err)
+	}
+	data, err := json.MarshalIndent(report.Recipe, "", "  ")
+	if err != nil {
+		die("kit scen shop-catalog", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(outPath, data, 0644); err != nil {
+		die("kit scen shop-catalog", err)
+	}
+	if textOut {
+		printScenarioShopCatalogReport(report, outPath)
+	} else {
+		type outputReport struct {
+			scenario.ShopCatalogReport
+			RecipePath string `json:"recipe_path"`
+		}
+		printJSON(outputReport{ShopCatalogReport: report, RecipePath: outPath})
+	}
+}
+
+func printScenarioShopCatalogReport(report scenario.ShopCatalogReport, outPath string) {
+	fmt.Printf("recipe: %s\n", outPath)
+	fmt.Printf("verification: %s\n", report.Verification)
+	fmt.Printf("shops: %d\n", report.ShopCount)
+	fmt.Printf("items: %d\n", report.ItemCount)
+	fmt.Printf("cleanup: %t\n", report.Cleanup)
+	for _, shop := range report.ShopSummaries {
+		unitText := "existing"
+		if shop.HasUnit {
+			unitText = "created"
+		}
+		buttons := ""
+		if shop.ButtonMin > 0 {
+			buttons = fmt.Sprintf(" buttons=%d..%d", shop.ButtonMin, shop.ButtonMax)
+		}
+		fmt.Printf("- %s unit=%d player=%d items=%d %s%s\n", shop.Name, shop.ShopUnit, shop.Player, shop.ItemCount, unitText, buttons)
+	}
+	for _, warning := range report.Warnings {
+		fmt.Printf("warning: %s\n", warning)
 	}
 }
 
@@ -2836,6 +2924,12 @@ func printScenarioLint(report scenario.LintReport) {
 			fact = fmt.Sprintf(" fact=%s/%s verified=%s", issue.FactID, issue.FactTier, issue.VerifiedDate)
 		}
 		fmt.Printf("- [%s] %s: %s%s\n", issue.Severity, issue.Code, issue.Message, fact)
+		if issue.Why != "" {
+			fmt.Printf("  why: %s\n", issue.Why)
+		}
+		if issue.Fix != "" {
+			fmt.Printf("  fix: %s\n", issue.Fix)
+		}
 	}
 }
 
@@ -3954,9 +4048,14 @@ func printScenarioEffectWhere(report scenario.EffectWhereReport) {
 }
 
 func runScenarioBlank(args []string) {
+	usage := "usage: kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--closeout-seconds N] [--closeout-player N] [--keep-seed-triggers] [--text]"
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]")
+		fmt.Fprintln(os.Stderr, usage)
 		os.Exit(2)
+	}
+	if args[0] == "--help" || args[0] == "-h" || args[0] == "help" {
+		fmt.Println(usage)
+		return
 	}
 	opts := scenario.BlankOptions{PlayerCount: 1, HumanSlots: 1}
 	textOut := false
@@ -4029,6 +4128,26 @@ func runScenarioBlank(args []string) {
 			opts.GaiaActive = true
 		case "--no-conquest":
 			opts.NoConquest = true
+		case "--closeout-seconds":
+			i++
+			if i >= len(args) {
+				die("kit scen blank", fmt.Errorf("--closeout-seconds needs a value"))
+			}
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				die("kit scen blank", fmt.Errorf("--closeout-seconds needs an integer"))
+			}
+			opts.CloseoutSeconds = value
+		case "--closeout-player":
+			i++
+			if i >= len(args) {
+				die("kit scen blank", fmt.Errorf("--closeout-player needs a value"))
+			}
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				die("kit scen blank", fmt.Errorf("--closeout-player needs an integer"))
+			}
+			opts.CloseoutPlayer = value
 		case "--dummy-unit":
 			i++
 			if i >= len(args) {
@@ -4108,7 +4227,7 @@ func printScenarioBlank(report scenario.BlankReport) {
 		report.TileCount,
 		report.SeedSHA256,
 	)
-	fmt.Printf("triggers=%d->%d units=%d->%d clear_triggers=%t dummy_starters=%t dummy_unit=%d gaia_active=%t no_conquest=%t\n",
+	fmt.Printf("triggers=%d->%d units=%d->%d clear_triggers=%t dummy_starters=%t dummy_unit=%d gaia_active=%t no_conquest=%t closeout_seconds=%d closeout_player=%d\n",
 		report.TriggerCountBefore,
 		report.TriggerCountAfter,
 		report.UnitCountBefore,
@@ -4118,6 +4237,8 @@ func printScenarioBlank(report scenario.BlankReport) {
 		report.DummyUnit,
 		report.GaiaActive,
 		report.NoConquest,
+		report.CloseoutSeconds,
+		report.CloseoutPlayer,
 	)
 	fmt.Printf("verification=%s rebuild_ok=%t invariant_ok=%t\n", report.Verification, report.RebuildOK, report.InvariantOK)
 	fmt.Printf("editor_parity_ok=%t note=%q\n", report.EditorParityOK, report.EditorParityNote)
@@ -5034,11 +5155,13 @@ func parseDatRefsOptions(args []string) (datRefsOptions, error) {
 				return opts, errors.New("--class needs a value")
 			}
 			switch args[i] {
-			case "rewrite_supported", "known_readonly", "possible_operand", "unsupported":
+			case "rewrite_supported", "known_readonly", "possible_operand", "candidate_operand", "unsupported":
 				opts.Filters.Class = args[i]
 			default:
-				return opts, fmt.Errorf("--class must be rewrite_supported, known_readonly, possible_operand, or unsupported")
+				return opts, fmt.Errorf("--class must be rewrite_supported, known_readonly, possible_operand, candidate_operand, or unsupported")
 			}
+		case "--all":
+			opts.Filters.Limit = 0
 		case "--confidence":
 			i++
 			if i >= len(args) {
@@ -11928,7 +12051,7 @@ func scenarioInfoArg(path string) (scenarioInfoReport, error) {
 
 func runDat(args []string) {
 	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|diff|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|diff|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|graphic-delete|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
 		os.Exit(2)
 	}
 	if args[0] == "semantics-readback" {
@@ -12413,9 +12536,14 @@ func runDat(args []string) {
 			Terrains      []datfile.Terrain `json:"terrains"`
 		}{Version: idx.Version, TerrainCount: len(idx.Terrains), ReturnedCount: len(terrains), Truncated: truncated, Terrains: terrains})
 	case "terrain":
-		if len(args) != 3 {
-			fmt.Fprintln(os.Stderr, "usage: kit dat terrain <empires*.dat> <terrain_id>")
+		if len(args) < 3 {
+			fmt.Fprintln(os.Stderr, "usage: kit dat terrain <empires*.dat> <terrain_id> [--json]")
 			os.Exit(2)
+		}
+		for _, arg := range args[3:] {
+			if arg != "--json" {
+				die("kit dat", fmt.Errorf("unknown kit dat terrain option %q", arg))
+			}
 		}
 		id, err := strconv.Atoi(args[2])
 		if err != nil {
@@ -12951,6 +13079,7 @@ func runDat(args []string) {
 		report := datcodec.EffectCommandMatrixWithOptions(idx, datcodec.EffectCommandMatrixOptions{
 			ExampleLimit:   opts.ExampleLimit,
 			CommandType:    opts.CommandType,
+			Operand:        opts.Operand,
 			ReferenceKind:  opts.ReferenceKind,
 			ReferenceField: opts.ReferenceField,
 			UnknownOnly:    opts.UnknownOnly,
@@ -13652,6 +13781,16 @@ func runDat(args []string) {
 			die("kit dat", err)
 		}
 		printJSON(report)
+	case "graphic-delete", "delete-graphic":
+		if len(args) != 4 {
+			fmt.Fprintln(os.Stderr, "usage: kit dat graphic-delete <in.dat> <out.dat> <graphic_id>")
+			os.Exit(2)
+		}
+		id, err := strconv.Atoi(args[3])
+		if err != nil {
+			die("kit dat graphic-delete", fmt.Errorf("invalid graphic id %q: %w", args[3], err))
+		}
+		applyDatDeleteFile("kit dat graphic-delete", args[1], args[2], datcodec.DeletePlanRequest{Section: "graphic", ID: id})
 	case "patch-unit":
 		if len(args) < 5 {
 			fmt.Fprintln(os.Stderr, "usage: kit dat patch-unit <in.dat> <out.dat> <civ_id> <unit_id> [scalar flags] [--type50-attack I,field=value] [--cost I,field=value] [--task I,field=value]")
@@ -13801,7 +13940,7 @@ func runDat(args []string) {
 		})
 	case "refs":
 		if len(args) < 4 {
-			fmt.Fprintln(os.Stderr, "usage: kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N] [--text|--json]")
+			fmt.Fprintln(os.Stderr, "usage: kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N|--all] [--text|--json]")
 			os.Exit(2)
 		}
 		id, err := strconv.Atoi(args[3])
@@ -13854,7 +13993,7 @@ func runDat(args []string) {
 		printJSON(report)
 	case "semantics-pack":
 		if len(args) != 3 && len(args) != 5 {
-			fmt.Fprintln(os.Stderr, "usage: kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects]")
+			fmt.Fprintln(os.Stderr, "usage: kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects|class-scope-effects]")
 			os.Exit(2)
 		}
 		opts := diagnostics.SemanticsPackOptions{}
@@ -13912,7 +14051,7 @@ func runDat(args []string) {
 		}
 		printJSON(report)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit dat <info|check|roundtrip|sprite|unit-headers|unit-header|civs|civ-patch|spans|graphics|graphic|graphic-create|graphic-patch|graphic-delete|palette|effects|effect|effect-explain|effect-create|effect-patch|effect-disable|effect-delete|effect-command-delete|command-matrix|techs|tech|tech-explain|tech-create|tech-patch|tech-delete|abilities|ability|ability-create|ability-patch|ability-disable|ability-delete|tech-tree|tech-tree-connection-create|tech-tree-connection-patch|tech-tree-connection-delete|units|unit|unit-create|unit-delete|unit-child-delete|availability|availability-set|terrain-restrictions|terrain-restriction-patch|terrains|terrain|terrain-patch|sounds|sound|sound-create|sound-patch|sound-delete|sound-item-delete|player-colours|player-colour-create|player-colour-patch|player-colour-delete|random-maps|patch-graphic|patch-unit|graphic-delta-delete|graphic-angle-sound-delete|unit-header-task-delete|refs|delete-plan|delete|codec-plan|codec-patch|semantics-pack|semantics-readback|plan|patch> <empires*.dat> [args...]")
 		os.Exit(2)
 	}
 }
@@ -15961,6 +16100,9 @@ func parseDatListOptions(args []string, label string) (limit int, all bool, err 
 		switch args[i] {
 		case "--all":
 			all = true
+		case "--json":
+			// JSON is the default for these read-only list commands; accept the
+			// explicit flag so scripts can use a uniform output option.
 		case "--limit":
 			if i+1 >= len(args) {
 				return 0, false, fmt.Errorf("--limit needs a value")
@@ -16028,6 +16170,7 @@ type datCommandMatrixOptions struct {
 	ExampleLimit   int
 	Text           bool
 	CommandType    *int
+	Operand        *int
 	ReferenceKind  string
 	ReferenceField string
 	UnknownOnly    bool
@@ -16135,6 +16278,16 @@ func parseDatCommandMatrixOptions(args []string) (datCommandMatrixOptions, error
 				return opts, fmt.Errorf("--command-type must be 0..255")
 			}
 			opts.CommandType = &value
+		case "--operand":
+			if i+1 >= len(args) {
+				return opts, fmt.Errorf("--operand needs a value")
+			}
+			i++
+			value, err := strconv.Atoi(args[i])
+			if err != nil {
+				return opts, fmt.Errorf("invalid --operand %q: %w", args[i], err)
+			}
+			opts.Operand = &value
 		case "--reference-kind":
 			if i+1 >= len(args) {
 				return opts, fmt.Errorf("--reference-kind needs a value")
@@ -16152,11 +16305,11 @@ func parseDatCommandMatrixOptions(args []string) (datCommandMatrixOptions, error
 			}
 			i++
 			opts.ReferenceField = args[i]
-		case "--unknown-only":
+		case "--unknown-only", "--unknown":
 			opts.UnknownOnly = true
-		case "--typed-only":
+		case "--typed-only", "--typed":
 			opts.TypedOnly = true
-		case "--candidate-only":
+		case "--candidate-only", "--candidate":
 			opts.CandidateOnly = true
 		default:
 			return opts, fmt.Errorf("unknown kit dat command-matrix option %q", args[i])
@@ -18053,10 +18206,13 @@ func printDatEffectCommandMatrix(report datcodec.EffectCommandMatrixReport) {
 	fmt.Printf("DAT effect command matrix: effects=%d commands=%d types=%d verification=%s\n",
 		report.EffectCount, report.CommandCount, report.TypeCount, report.Verification.Label)
 	filters := report.Filters
-	if filters.CommandType != nil || filters.ReferenceKind != "" || filters.ReferenceField != "" || filters.UnknownOnly || filters.TypedOnly || filters.CandidateOnly {
+	if filters.CommandType != nil || filters.Operand != nil || filters.ReferenceKind != "" || filters.ReferenceField != "" || filters.UnknownOnly || filters.TypedOnly || filters.CandidateOnly {
 		parts := make([]string, 0, 5)
 		if filters.CommandType != nil {
 			parts = append(parts, fmt.Sprintf("command_type=%d", *filters.CommandType))
+		}
+		if filters.Operand != nil {
+			parts = append(parts, fmt.Sprintf("operand=%d", *filters.Operand))
 		}
 		if filters.ReferenceKind != "" {
 			parts = append(parts, "reference_kind="+filters.ReferenceKind)
@@ -19743,8 +19899,8 @@ func usage() {
   kit xs datagen <arrays.json> [--out module.xs]
   kit xs inspect <file.xsdat> [--types string,int,...] [--text]
   kit xsdat decode <file.xsdat> [--types string,int,...] [--ledger expected.json] [--schema rtv12|rtv13|rtv14|rtv141|rtv142|rtv15|rtv16|rtv17|a2ksem2] [--text]
-  kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--keep-seed-triggers] [--text]
-  kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|smoke|smoke-recipe> <file.aoe2scenario>
+  kit scen blank <out.aoe2scenario> [--size N] [--width N] [--height N] [--players N] [--human-slots N] [--timestamp UNIX] [--dummy-starters] [--dummy-unit UNIT_ID] [--dummy-origin X,Y] [--dummy-spacing N] [--no-conquest] [--closeout-seconds N] [--closeout-player N] [--keep-seed-triggers] [--text]
+  kit scen <blank|info|check|describe|settings|strings|refs|delete-plan|delete|disconnect|effects|glossary|idioms|analyze|triggers|units|map|terrain|palette-usage|regions|verify|lint|xs|deploycheck|diff|diff-triggers|write-check|plan|patch|shop-catalog|smoke|smoke-recipe> <file.aoe2scenario>
   kit scen describe <file.aoe2scenario> [--section triggers|units|map|players|victory|messages|disables|ai|resources|all] [--full] [--json] [--no-path|--quiet-header]
   kit scen settings <file.aoe2scenario> [--text|--json]
   kit scen strings <file.aoe2scenario>
@@ -19797,7 +19953,7 @@ func usage() {
   kit scen idioms <file.aoe2scenario> [--text]
   kit scen analyze <file.aoe2scenario>
   kit scen units <file.aoe2scenario> [--named]
-  kit scen lint <file.aoe2scenario> [--text] [--include-provisional]
+  kit scen lint <file.aoe2scenario> [--text] [--include-provisional] [--load-safety]
   kit scen xs <file.aoe2scenario> [--deploy-tree dir] [--text|--json]
   kit scen xs attach <in.aoe2scenario> <out.aoe2scenario> --xs file.xs [--name Entry.xs] [--also-carrier] [--title TITLE] [--trigger-name NAME] [--text|--json]
   kit scen xs deploy <file.aoe2scenario> <deploy-tree> [--name Entry.xs] [--carrier N|--trigger N] [--force] [--check] [--text|--json]
@@ -19810,6 +19966,7 @@ func usage() {
   kit scen write-check <before.aoe2scenario> <after.aoe2scenario> [--text|--json] [--include-provisional]
   kit scen plan <in.aoe2scenario> --recipe recipe.json
   kit scen patch <in.aoe2scenario> <out.aoe2scenario> --recipe recipe.json
+  kit scen shop-catalog <catalog.json> --out recipe.json [--text|--json]
   kit scen smoke-recipe [--x N] [--y N] [--player N] [--unit N] [--terrain N] [--elevation N] [--layer N]
   kit scen smoke <in.aoe2scenario> <out.aoe2scenario> [--x N] [--y N] [--player N] [--unit N] [--terrain N] [--elevation N] [--layer N]
   kit scen terrain <file.aoe2scenario> [--id N] [--tiles] [--text|--json]
@@ -19818,9 +19975,9 @@ func usage() {
   kit dat diff <base.dat> <mod.dat> [--section NAME|all] [--limit N|--all] [--text|--json]
   kit dat codec-plan <in.dat> --recipe recipe.json
   kit dat codec-patch <in.dat> <out.dat> --recipe recipe.json
-  kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects]
+  kit dat semantics-pack <in.dat> <out-dir> [--feature full|local-building-effects|class-scope-effects]
   kit dat semantics-readback <expected.json> --dat empires*.dat --scenario file.aoe2scenario --replay file.aoe2record [--out report.md] [--text]
-  kit dat unit-headers <empires*.dat> [--limit N|--all]
+  kit dat unit-headers <empires*.dat> [--limit N|--all] [--json]
   kit dat unit-header <empires*.dat> <header_id>
   kit dat civs <empires*.dat>
   kit dat civ-patch <in.dat> <out.dat> <civ_id> [--name TEXT] [--tech-tree-id N] [--team-bonus-id N] [--icon-set N] [--resource INDEX,VALUE]
@@ -19829,6 +19986,7 @@ func usage() {
   kit dat graphic <empires*.dat> <graphic_id> [--spans|--raw]
   kit dat graphic-create <in.dat> <out.dat> --from N [graphic scalar flags]
   kit dat graphic-patch <in.dat> <out.dat> <graphic_id> [graphic scalar flags]
+  kit dat graphic-delete <in.dat> <out.dat> <graphic_id>
   kit dat palette <empires*.dat> [--id N] [--min-variants N] [--json|--text]
   kit dat effects <empires*.dat> [--limit N|--all] [--command-type N] [--operand N]
   kit dat effect <empires*.dat> <effect_id>
@@ -19838,7 +19996,7 @@ func usage() {
   kit dat effect-disable <in.dat> <out.dat> <effect_id>
   kit dat effect-delete <in.dat> <out.dat> <effect_id>
   kit dat effect-command-delete <in.dat> <out.dat> <effect_id> <command_index>
-  kit dat command-matrix <empires*.dat> [--limit examples_per_type|--all] [--command-type N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--unknown-only|--candidate-only] [--text|--json]
+  kit dat command-matrix <empires*.dat> [--limit examples_per_type|--all] [--command-type N] [--operand N] [--reference-kind unit|tech] [--reference-field FIELD] [--typed-only|--typed|--unknown-only|--unknown|--candidate-only|--candidate] [--text|--json]
   kit dat techs <empires*.dat> [--limit N|--all] [--name-contains TEXT]
   kit dat tech <empires*.dat> <tech_id>
   kit dat tech-explain <empires*.dat> <tech_id> [--text|--json]
@@ -19862,12 +20020,12 @@ func usage() {
   kit dat unit-child-delete <in.dat> <out.dat> <damage-graphic|attack|armour|train-location|drop-site|task> <civ_id> <unit_id> <row_index>
   kit dat availability <empires*.dat> <unit_id> [--civ N|--all-civs]
   kit dat availability-set <in.dat> <out.dat> <unit_id> (--civ N|--all-civs) --enabled true|false|1|0
-  kit dat terrain-restrictions <empires*.dat> [--limit N|--all]
+  kit dat terrain-restrictions <empires*.dat> [--limit N|--all] [--json]
   kit dat terrain-restriction-patch <in.dat> <out.dat> <restriction_id> --terrain TERRAIN_ID,PASSABILITY
-  kit dat terrains <empires*.dat> [--limit N|--all]
-  kit dat terrain <empires*.dat> <terrain_id>
+  kit dat terrains <empires*.dat> [--limit N|--all] [--json]
+  kit dat terrain <empires*.dat> <terrain_id> [--json]
   kit dat terrain-patch <in.dat> <out.dat> <terrain_id> [--name TEXT] [--name-2 TEXT] [--overlay-mask-name TEXT]
-  kit dat sounds <empires*.dat> [--limit N|--all]
+  kit dat sounds <empires*.dat> [--limit N|--all] [--json]
   kit dat sound <empires*.dat> <sound_id>
   kit dat sound-create <in.dat> <out.dat> --from N [sound-flags] [--item file,resource,probability,civ,icon_set]
   kit dat sound-patch <in.dat> <out.dat> <sound_id> [sound-flags] [--item INDEX,field=value...] [--remove-item N]
@@ -19884,7 +20042,7 @@ func usage() {
   kit dat graphic-angle-sound-delete <in.dat> <out.dat> <graphic_id> <row_index>
   kit dat patch-unit <in.dat> <out.dat> <civ_id> <unit_id> [scalar flags] [--type50-attack I,field=value] [--cost I,field=value] [--task I,field=value]
   kit dat unit-header-task-delete <in.dat> <out.dat> <unit_header_id> <task_index>
-  kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N] [--text|--json]
+  kit dat refs <in.dat> <section> <id> [--class CLASS] [--confidence NAME] [--source-section SECTION] [--limit N|--all] [--text|--json]
   kit dat delete-plan <in.dat> <section|effect-command|sound-item|graphic-row-kind|unit-header-task|unit-row-kind> <target> [--civ N|--all-civs] [--text]
   kit dat delete <in.dat> <out.dat> <section|effect-command|sound-item|graphic-row-kind|unit-header-task|unit-row-kind> <target> [--civ N|--all-civs]
   kit dat disconnect <in.dat> <out.dat> <tech|unit> <id>

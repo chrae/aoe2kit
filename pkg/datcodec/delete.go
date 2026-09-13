@@ -152,8 +152,14 @@ func FilterReferenceReport(report ReferenceReport, filters ReferenceFilters) Ref
 	}
 	matches := make([]ClassifiedReference, 0, len(report.References))
 	for _, ref := range report.References {
-		if filters.Class != "" && ref.Class != filters.Class {
-			continue
+		if filters.Class != "" {
+			if filters.Class == "candidate_operand" {
+				if ref.Confidence != "candidate_effect_command_operand" {
+					continue
+				}
+			} else if ref.Class != filters.Class {
+				continue
+			}
 		}
 		if filters.Confidence != "" && ref.Confidence != filters.Confidence {
 			continue
@@ -228,12 +234,7 @@ func DeletePlan(idx *datfile.Index, request DeletePlanRequest) DeletePlanReport 
 	case "unit_task", "unit-task":
 		return unitChildRowDeletePlan(idx, report, request, "task")
 	case "graphic", "graphics":
-		report.Strategy = "unsupported"
-		report.References = graphicIDReferences(idx, request.ID)
-		report.Reason = "graphics are stable ID-addressed records; AoE2Kit can patch/create graphics, but has no verified tombstone field and physical removal would renumber downstream graphic IDs."
-		if len(report.References) > 0 {
-			report.Warnings = append(report.Warnings, "References list DAT rows that currently point at this graphic ID; patch those rows or clone a new graphic instead of physically deleting the slot.")
-		}
+		return graphicDeletePlan(idx, report, request.ID)
 	case "graphic_delta", "graphic-delta":
 		return graphicChildRowDeletePlan(idx, report, request, "delta")
 	case "graphic_angle_sound", "graphic-angle-sound":
@@ -499,6 +500,32 @@ func abilityIDReferences(idx *datfile.Index, techID int) []DeleteReference {
 	}
 	sortReferences(refs)
 	return refs
+}
+
+func graphicDeletePlan(idx *datfile.Index, report DeletePlanReport, id int) DeletePlanReport {
+	report.References = graphicIDReferences(idx, id)
+	if id < 0 || id >= idx.GraphicsSize {
+		report.Strategy = "unsupported_out_of_range"
+		report.Reason = fmt.Sprintf("graphic %d is outside graphics table size %d", id, idx.GraphicsSize)
+		return report
+	}
+	if _, ok := idx.Graphic(id); !ok {
+		report.Strategy = "already_absent"
+		report.Reason = "graphic slot is already absent; no mutation is needed."
+		return report
+	}
+	if len(report.References) > 0 {
+		report.Strategy = "unsupported_referenced_stable_slot"
+		report.Reason = "graphic slot is referenced by decoded DAT rows; stable-ID delete would leave dangling art references."
+		report.Warnings = append(report.Warnings, "Patch or delete referencing rows first, then re-run delete-plan before deleting the graphic slot.")
+		return report
+	}
+	report.Supported = true
+	report.Mutates = true
+	report.Strategy = "stable_id_absent_slot"
+	report.RecipeHint = mustRecipeHint(Recipe{DeleteGraphics: []int{id}})
+	report.Warnings = append(report.Warnings, "Stable-ID graphic delete is structure-verified only: it zeroes the pointer slot and removes the graphic record while preserving graphics_size and downstream graphic IDs.")
+	return report
 }
 
 func soundDeletePlan(idx *datfile.Index, report DeletePlanReport, id int) DeletePlanReport {
@@ -1215,6 +1242,9 @@ func possibleEffectCommandReferences(idx *datfile.Index, id int, target string) 
 			if len(effectCommandSemanticReferences(command)) > 0 {
 				continue
 			}
+			if !allowPossibleEffectCommandOperandScan(command) {
+				continue
+			}
 			if commandHasTypedEffectCommandReference(command, id, target) {
 				continue
 			}
@@ -1231,6 +1261,17 @@ func possibleEffectCommandReferences(idx *datfile.Index, id int, target string) 
 		}
 	}
 	return refs
+}
+
+func allowPossibleEffectCommandOperandScan(command datfile.EffectCommand) bool {
+	semantic := command.Semantic
+	if semantic == nil {
+		semantic = datfile.InterpretEffectCommand(command)
+	}
+	if semantic == nil {
+		return true
+	}
+	return semantic.TypeName == "" || semantic.TypeName == "unknown"
 }
 
 func candidateEffectCommandReferences(idx *datfile.Index, id int, target string) []DeleteReference {

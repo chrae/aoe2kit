@@ -318,6 +318,42 @@ func TestCreateGraphicGolden(t *testing.T) {
 	}
 }
 
+func TestDeleteGraphicStableIDGolden(t *testing.T) {
+	path := testfixtures.Path(t, "reference_aoe2_dump/dat/empires2_x2_p1.dat")
+	compressed, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	name := "AoE2Kit Delete Graphic Probe"
+	createdDat, createReport, err := CreateGraphic(compressed, GraphicCreateRecipe{
+		From: 1711,
+		Name: &name,
+	})
+	if err != nil {
+		t.Fatalf("CreateGraphic: %v", err)
+	}
+	deletedDat, deleteReport, err := DeleteGraphic(createdDat, createReport.NewGraphicID)
+	if err != nil {
+		t.Fatalf("DeleteGraphic: %v", err)
+	}
+	if !deleteReport.Verified {
+		t.Fatalf("delete report not verified: %+v", deleteReport)
+	}
+	if deleteReport.BeforeGraphicsSize != deleteReport.AfterGraphicsSize {
+		t.Fatalf("graphics size changed: before=%d after=%d", deleteReport.BeforeGraphicsSize, deleteReport.AfterGraphicsSize)
+	}
+	idx, err := Parse(mustInflate(t, deletedDat))
+	if err != nil {
+		t.Fatalf("parse output: %v", err)
+	}
+	if idx.GraphicsSize != createReport.AfterGraphicsSize {
+		t.Fatalf("graphics size = %d, want %d", idx.GraphicsSize, createReport.AfterGraphicsSize)
+	}
+	if _, ok := idx.Graphic(createReport.NewGraphicID); ok {
+		t.Fatalf("deleted graphic %d still present", createReport.NewGraphicID)
+	}
+}
+
 func TestPatchGraphicScalarFieldsGolden(t *testing.T) {
 	path := testfixtures.Path(t, "reference_aoe2_dump/dat/empires2_x2_p1.dat")
 	compressed, err := os.ReadFile(path)

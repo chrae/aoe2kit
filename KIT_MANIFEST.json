@@ -278,7 +278,7 @@
     },
     {
       "name": "kit scen",
-      "summary": "current AoE2DE .aoe2scenario inspection, settings/strings/effects/references/delete-plans/glossary/idioms/analyze, trigger intelligence, describe, lint, embedded/deployed XS census, deploy-tree XS preflight, scenario and trigger-graph diffing, region-context guessing, position-aware terrain inspection, DAT-backed art-palette usage, blank-root scenario creation with optional Outpost dummy starters, trigger/unit/map recipe patching, direct plan-gated scenario deletes, direct trigger/unit/variable/string reference disconnects, composed write-checks, and canonical editor-smoke recipe generation/application",
+      "summary": "current AoE2DE .aoe2scenario inspection, settings/strings/effects/references/delete-plans/glossary/idioms/analyze, trigger intelligence, describe, lint, embedded/deployed XS census, deploy-tree XS preflight, scenario and trigger-graph diffing, region-context guessing, position-aware terrain inspection, DAT-backed art-palette usage, blank-root scenario creation with optional Outpost dummy starters, trigger/unit/map recipe patching, generic train-token shop-catalog recipe generation, direct plan-gated scenario deletes, direct trigger/unit/variable/string reference disconnects, composed write-checks, and canonical editor-smoke recipe generation/application",
       "subcommands": [
         "blank",
         "info",
@@ -313,13 +313,14 @@
         "write-check",
         "plan",
         "patch",
+        "shop-catalog",
         "smoke",
         "smoke-recipe"
       ]
     },
     {
       "name": "kit dat",
-      "summary": "current AoE2DE empires*.dat inspection through graphics including deltas and angle sounds, SLD sprite PNG/manifest export, artwork palette indexing, direct graphic create/patch wrappers, effects, effect-command semantic matrices and authoring explanations, first-class effect create/patch/disable/delete wrappers, direct child-row delete aliases, ability tech/effect joins, first-class tech create/patch/delete and ability create/patch/disable/delete wrappers, direct tech-tree connection create/patch/delete wrappers, unit headers, direct unit create/patch/delete wrappers, direct civ/terrain/availability update wrappers, civ/unit, tech, tech-tree, terrain, sound, player-color, and random-map sections plus decoded-structure diffing, graphics/unit patching, rich unit recipe edits including task rows and decoded count-changing unit lists, graphic/unit record creation, DAT codec roundtrip verification, codec-backed Effects/Techs/Civ/Terrain/Sound/PlayerColour recipe edits, direct sound create/patch/delete wrappers, direct player-colour create/patch/delete wrappers, paired ability creation, sound record creation, neutral reference exploration, unit availability cards, reference-aware delete planning, direct plan-gated DAT deletes, direct semantic tech/unit reference disconnects, semantic unit availability toggles, semantic unit tombstones, semantic sound mutes, DAT command-semantics diagnostic pack generation including local-building feature packs, and replay-backed DAT command-semantics readback reports",
+      "summary": "current AoE2DE empires*.dat inspection through graphics including deltas and angle sounds, SLD sprite PNG/manifest export, artwork palette indexing, direct graphic create/patch/delete wrappers, effects, effect-command semantic matrices and authoring explanations, first-class effect create/patch/disable/delete wrappers, direct child-row delete aliases, ability tech/effect joins, first-class tech create/patch/delete and ability create/patch/disable/delete wrappers, direct tech-tree connection create/patch/delete wrappers, unit headers, direct unit create/patch/delete wrappers, direct civ/terrain/availability update wrappers, civ/unit, tech, tech-tree, terrain, sound, player-color, and random-map sections plus decoded-structure diffing, graphics/unit patching, rich unit recipe edits including task rows and decoded count-changing unit lists, graphic/unit record creation, DAT codec roundtrip verification, codec-backed Effects/Techs/Civ/Terrain/Sound/PlayerColour recipe edits, direct sound create/patch/delete wrappers, direct player-colour create/patch/delete wrappers, paired ability creation, sound record creation, neutral reference exploration, unit availability cards, reference-aware delete planning, direct plan-gated DAT deletes, direct semantic tech/unit reference disconnects, semantic unit availability toggles, semantic unit tombstones, semantic sound mutes, DAT command-semantics diagnostic pack generation including local-building feature packs, and replay-backed DAT command-semantics readback reports",
       "subcommands": [
         "info",
         "check",
@@ -335,6 +336,7 @@
         "graphic",
         "graphic-create",
         "graphic-patch",
+        "graphic-delete",
         "graphic-delta-delete",
         "graphic-angle-sound-delete",
         "palette",
@@ -518,6 +520,7 @@
     "player_career_stats",
     "portable_checks",
     "recipe_templates",
+    "scenario_shop_catalogs",
     "artifact_lineage",
     "release_checks"
   ],

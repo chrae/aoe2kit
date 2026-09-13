@@ -23,14 +23,17 @@ func TestBuildHeroShopDemoWritesFreshScenarioAndArtifacts(t *testing.T) {
 	if report.BlankReport.UnitCountAfter != 3 {
 		t.Fatalf("blank starter units = %d, want 3", report.BlankReport.UnitCountAfter)
 	}
-	if report.PatchReport.TriggerCountAfter != 18 {
-		t.Fatalf("trigger count = %d, want 18", report.PatchReport.TriggerCountAfter)
+	if report.PatchReport.TriggerCountAfter != 17 {
+		t.Fatalf("trigger count = %d, want 17", report.PatchReport.TriggerCountAfter)
 	}
 	if len(report.Variables) != 27 {
 		t.Fatalf("variable count = %d, want 27", len(report.Variables))
 	}
 	if len(report.ShopItems) != 4 {
 		t.Fatalf("shop items = %d, want 4", len(report.ShopItems))
+	}
+	if report.Earning.GoldPerKill != 1 || report.Earning.XPPerKill != 25 || report.Earning.Signal != "xsPlayerAttribute(player, 300+victim_player)" {
+		t.Fatalf("earning report = %+v", report.Earning)
 	}
 	scen, err := scenario.Open(report.ScenarioPath)
 	if err != nil {
@@ -123,7 +126,7 @@ func TestBuildHeroShopDemoWritesFreshScenarioAndArtifacts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read xs: %v", err)
 	}
-	for _, want := range []string{"A2KRPG_Buy", "A2KRPG_SCOPE_PARTY", "A2KRPG_SCOPE_PLAYER", "A2KRPG_SCOPE_HERO", "xsTriggerVariable", "xsSetTriggerVariable"} {
+	for _, want := range []string{"A2KRPG_Buy", "A2KRPG_SCOPE_PARTY", "A2KRPG_SCOPE_PLAYER", "A2KRPG_SCOPE_HERO", "xsTriggerVariable", "xsSetTriggerVariable", "xsPlayerAttribute(player, A2KRPG_ATTR_PLAYER_KILLS_BASE + victim)", "AddPartyXP", "A2KRPG_PollKills"} {
 		if !strings.Contains(string(xs), want) {
 			t.Fatalf("xs module missing %q", want)
 		}
@@ -140,14 +143,14 @@ func TestDemoRecipeCarriesShopAndCurrencyPrimitives(t *testing.T) {
 	if recipe.XS == nil || recipe.XS.Mode != "inline_runtime" {
 		t.Fatalf("xs recipe = %#v", recipe.XS)
 	}
-	var objectiveCount, addTrainCount, costCount, renameCount, descriptionCount, tokenAttrCount, drainCount, purchaseCount int
+	var objectiveCount, addTrainCount, costCount, renameCount, descriptionCount, tokenAttrCount, pollCount, purchaseCount int
 	var nonLandTerrainCount int
 	for _, trigger := range recipe.Triggers {
 		if trigger.DisplayAsObjective != nil && *trigger.DisplayAsObjective {
 			objectiveCount++
 		}
-		if strings.Contains(trigger.Name, "Kill Buffer Drain") {
-			drainCount++
+		if trigger.Name == "A2KRPG 020 Poll Directed Kill XP" {
+			pollCount++
 		}
 		if strings.Contains(trigger.Name, "Buy ") {
 			purchaseCount++
@@ -217,8 +220,8 @@ func TestDemoRecipeCarriesShopAndCurrencyPrimitives(t *testing.T) {
 	if tokenAttrCount != 20 {
 		t.Fatalf("token modify_attribute effects = %d, want 20", tokenAttrCount)
 	}
-	if drainCount != 2 {
-		t.Fatalf("drain triggers = %d, want 2", drainCount)
+	if pollCount != 1 {
+		t.Fatalf("poll triggers = %d, want 1", pollCount)
 	}
 	if purchaseCount != 4 {
 		t.Fatalf("purchase triggers = %d, want 4", purchaseCount)

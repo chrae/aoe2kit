@@ -205,8 +205,10 @@ per active normal player so DE does not fill empty active slots with starter TC
 state. `--no-conquest` sets `conquest_required=0` for diagnostics where empty or
 intentionally inert slots should not end the game by normal conquest rules.
 For controlled replay probes, start from a fresh blank scenario, add inert
-starters, disable conquest, then patch in explicit timer-gated probe triggers
-such as `scen.timer-declare-victory`.
+starters, disable conquest, and use `--closeout-seconds N` when the probe
+should end itself through a timer-gated declare-victory trigger. Use the
+`scen.timer-declare-victory` recipe for the same closeout shape when patching an
+existing scenario instead of creating a blank.
 
 `kit scen patch` refreshes FileHeader `timestamp_of_last_save` to the current
 Unix time by default so generated scenario forks do not keep an inherited stale

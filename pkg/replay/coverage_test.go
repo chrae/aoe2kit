@@ -175,6 +175,46 @@ func TestTinyTriggerReplayGraphGolden(t *testing.T) {
 	}
 }
 
+func TestVER94ConsolidatedTriggerGraphGolden(t *testing.T) {
+	path := testfixtures.Path(t, "VER9.4_consolidated_triggers_PARSEFAIL.aoe2record")
+	if _, err := os.Stat(path); err != nil {
+		t.Skipf("golden replay not present: %v", err)
+	}
+	rec, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !rec.TriggerGraphOK || rec.TriggerGraph == nil {
+		t.Fatalf("trigger graph missing: %s", rec.TriggerGraphErr)
+	}
+	if rec.TriggerGraph.TriggerCount != 3 || rec.TriggerGraph.EffectCount != 1873 || rec.TriggerGraph.ConditionCount != 8 {
+		t.Fatalf("trigger graph counts = %d/%d/%d, want 3/1873/8",
+			rec.TriggerGraph.TriggerCount, rec.TriggerGraph.EffectCount, rec.TriggerGraph.ConditionCount)
+	}
+	if rec.TriggerGraph.SHA256 != "084f05e39075acfbf3d51d00a6b4571d94c8a88973569edbef6430493921e54f" {
+		t.Fatalf("trigger graph hash = %s", rec.TriggerGraph.SHA256)
+	}
+	if len(rec.TriggerGraph.Triggers) == 0 {
+		t.Fatalf("trigger graph has no trigger rows")
+	}
+	effects, _ := rec.TriggerGraph.Triggers[0]["effects"].([]map[string]any)
+	if len(effects) < 3 {
+		t.Fatalf("first consolidated trigger effects = %d, want at least 3", len(effects))
+	}
+	if got := effects[0]["type_name"]; got != "change_variable" {
+		t.Fatalf("first effect type_name = %v, want change_variable", got)
+	}
+	if got := effects[1]["type_name"]; got != "script_call" {
+		t.Fatalf("second effect type_name = %v, want script_call", got)
+	}
+	if got := effects[2]["type_name"]; got != "send_chat" {
+		t.Fatalf("third effect type_name = %v, want send_chat", got)
+	}
+	if msg, _ := effects[2]["message"].(string); !strings.Contains(msg, "BASE NUKE purchased") {
+		t.Fatalf("third effect message = %q, want BASE NUKE purchase text", msg)
+	}
+}
+
 func TestKrmythReplayTriggerGraphCompletesPastHealTriggers(t *testing.T) {
 	path := testfixtures.Path(t, "save-analysis/diagnostics/latest_krmyth_pull_20260904_055048/latest.aoe2record")
 	if _, err := os.Stat(path); err != nil {

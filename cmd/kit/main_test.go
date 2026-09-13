@@ -545,6 +545,24 @@ func TestParseDatTerrainRestrictionPatchOptions(t *testing.T) {
 	}
 }
 
+func TestParseDatListOptionsAcceptsExplicitJSON(t *testing.T) {
+	limit, all, err := parseDatListOptions([]string{"--limit", "3", "--json"}, "kit dat terrains")
+	if err != nil {
+		t.Fatalf("parseDatListOptions: %v", err)
+	}
+	if limit != 3 || all {
+		t.Fatalf("parseDatListOptions limit/all = %d/%v", limit, all)
+	}
+
+	limit, all, err = parseDatListOptions([]string{"--all", "--json"}, "kit dat terrains")
+	if err != nil {
+		t.Fatalf("parseDatListOptions all: %v", err)
+	}
+	if limit != 200 || !all {
+		t.Fatalf("parseDatListOptions all limit/all = %d/%v", limit, all)
+	}
+}
+
 func TestParseDatAvailabilitySetOptions(t *testing.T) {
 	recipe, err := parseDatAvailabilitySetOptions(83, []string{"--civ", "0,1", "--enabled", "0"})
 	if err != nil {
@@ -771,6 +789,13 @@ func TestParseDatCommandMatrixOptionsFilters(t *testing.T) {
 	}
 	if _, err := parseDatCommandMatrixOptions([]string{"--command-type", "256"}); err == nil {
 		t.Fatal("out-of-range command type accepted")
+	}
+	aliasOpts, err := parseDatCommandMatrixOptions([]string{"--typed", "--unknown", "--candidate"})
+	if err != nil {
+		t.Fatalf("parseDatCommandMatrixOptions aliases: %v", err)
+	}
+	if !aliasOpts.TypedOnly || !aliasOpts.UnknownOnly || !aliasOpts.CandidateOnly {
+		t.Fatalf("alias options = %+v", aliasOpts)
 	}
 }
 
@@ -1229,19 +1254,20 @@ func TestParseDatDeleteRequestRejectsMutatingText(t *testing.T) {
 
 func TestParseDatRefsOptions(t *testing.T) {
 	opts, err := parseDatRefsOptions([]string{
-		"--class", "rewrite_supported",
+		"--class", "candidate_operand",
 		"--confidence", "typed_effect_command_reference",
 		"--source-section", "effect",
 		"--limit", "3",
+		"--all",
 		"--text",
 	})
 	if err != nil {
 		t.Fatalf("parseDatRefsOptions: %v", err)
 	}
-	if opts.Filters.Class != "rewrite_supported" ||
+	if opts.Filters.Class != "candidate_operand" ||
 		opts.Filters.Confidence != "typed_effect_command_reference" ||
 		opts.Filters.SourceSection != "effect" ||
-		opts.Filters.Limit != 3 || !opts.Text {
+		opts.Filters.Limit != 0 || !opts.Text {
 		t.Fatalf("refs options = %+v", opts)
 	}
 	if _, err := parseDatRefsOptions([]string{"--class", "bad"}); err == nil {

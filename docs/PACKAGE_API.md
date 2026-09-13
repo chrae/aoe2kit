@@ -1946,6 +1946,7 @@ type EffectCommandExplanation struct {
 
 type EffectCommandMatrixFilters struct {
 	CommandType    *int   `json:"command_type,omitempty"`
+	Operand        *int   `json:"operand,omitempty"`
 	ReferenceKind  string `json:"reference_kind,omitempty"`
 	ReferenceField string `json:"reference_field,omitempty"`
 	UnknownOnly    bool   `json:"unknown_only,omitempty"`
@@ -1956,6 +1957,7 @@ type EffectCommandMatrixFilters struct {
 type EffectCommandMatrixOptions struct {
 	ExampleLimit   int
 	CommandType    *int
+	Operand        *int
 	ReferenceKind  string
 	ReferenceField string
 	UnknownOnly    bool
@@ -2143,6 +2145,7 @@ type PatchReport struct {
 	DisabledEffects                    []int                         `json:"disabled_effects,omitempty"`
 	GraphicReports                     []datfile.PatchReport         `json:"graphic_reports,omitempty"`
 	CreatedGraphics                    []datfile.GraphicCreateReport `json:"created_graphics,omitempty"`
+	DeletedGraphics                    []datfile.GraphicDeleteReport `json:"deleted_graphics,omitempty"`
 	CreatedUnits                       []datfile.UnitCreateReport    `json:"created_units,omitempty"`
 	UnitReports                        []datfile.UnitPatchReport     `json:"unit_reports,omitempty"`
 	CreatedTechs                       []int                         `json:"created_techs,omitempty"`
@@ -2250,6 +2253,7 @@ type Recipe struct {
 	DeleteEffects       []int                           `json:"delete_effects,omitempty"`
 	CreateGraphic       *datfile.GraphicCreateRecipe    `json:"create_graphic,omitempty"`
 	CreateGraphics      []datfile.GraphicCreateRecipe   `json:"create_graphics,omitempty"`
+	DeleteGraphics      []int                           `json:"delete_graphics,omitempty"`
 	Graphics            []datfile.GraphicRecipePatch    `json:"graphics,omitempty"`
 	UnitHeaders         []UnitHeaderPatchRecipe         `json:"unit_headers,omitempty"`
 	CreateUnit          *datfile.UnitCreateRecipe       `json:"create_unit,omitempty"`
@@ -3188,6 +3192,23 @@ type GraphicCreateReport struct {
 
 func CreateGraphic(compressed []byte, recipe GraphicCreateRecipe) ([]byte, GraphicCreateReport, error)
 
+type GraphicDeleteReport struct {
+	InputCompressedBytes  int                    `json:"input_compressed_bytes"`
+	OutputCompressedBytes int                    `json:"output_compressed_bytes"`
+	InputInflatedBytes    int                    `json:"input_inflated_bytes"`
+	OutputInflatedBytes   int                    `json:"output_inflated_bytes"`
+	InflatedLengthDelta   int                    `json:"inflated_length_delta"`
+	GraphicID             int                    `json:"graphic_id"`
+	BeforeGraphicsSize    int                    `json:"before_graphics_size"`
+	AfterGraphicsSize     int                    `json:"after_graphics_size"`
+	RemovedRecordBytes    int                    `json:"removed_record_bytes"`
+	Before                GraphicSummary         `json:"before"`
+	Verified              bool                   `json:"verified"`
+	Verification          aoe2.VerificationClaim `json:"verification"`
+}
+
+func DeleteGraphic(compressed []byte, graphicID int) ([]byte, GraphicDeleteReport, error)
+
 type GraphicDelta struct {
 	Index        int   `json:"index"`
 	GraphicID    int16 `json:"graphic_id"`
@@ -3474,6 +3495,7 @@ type Recipe struct {
 	Graphics       []GraphicRecipePatch  `json:"graphics,omitempty"`
 	CreateGraphic  *GraphicCreateRecipe  `json:"create_graphic,omitempty"`
 	CreateGraphics []GraphicCreateRecipe `json:"create_graphics,omitempty"`
+	DeleteGraphics []int                 `json:"delete_graphics,omitempty"`
 	CreateUnit     *UnitCreateRecipe     `json:"create_unit,omitempty"`
 	CreateUnits    []UnitCreateRecipe    `json:"create_units,omitempty"`
 	Units          []UnitRecipePatch     `json:"units,omitempty"`
@@ -3489,6 +3511,7 @@ type RecipeReport struct {
 	InflatedLengthDelta   int                    `json:"inflated_length_delta"`
 	GraphicReports        []PatchReport          `json:"graphic_reports,omitempty"`
 	CreatedGraphics       []GraphicCreateReport  `json:"created_graphics,omitempty"`
+	DeletedGraphics       []GraphicDeleteReport  `json:"deleted_graphics,omitempty"`
 	CreatedUnits          []UnitCreateReport     `json:"created_units,omitempty"`
 	UnitReports           []UnitPatchReport      `json:"unit_reports,omitempty"`
 	Verified              bool                   `json:"verified"`
@@ -4026,6 +4049,35 @@ FUNCTIONS
 func WriteDATCommandSemanticsReadbackMarkdown(report *SemanticsReadbackReport, path string) error
 
 TYPES
+
+type ClassScopeEffectRow struct {
+	EffectID      int      `json:"effect_id"`
+	EffectName    string   `json:"effect_name"`
+	Command       int      `json:"command"`
+	Type          uint8    `json:"type"`
+	TypeName      string   `json:"type_name"`
+	Scope         string   `json:"scope,omitempty"`
+	UnitID        int16    `json:"unit_id"`
+	UnitClassID   int16    `json:"unit_class_id"`
+	UnitClassName string   `json:"unit_class_name,omitempty"`
+	AttributeID   int16    `json:"attribute_id"`
+	AttributeName string   `json:"attribute_name,omitempty"`
+	Amount        float32  `json:"amount"`
+	Summary       string   `json:"summary"`
+	Details       []string `json:"details,omitempty"`
+	Warnings      []string `json:"warnings,omitempty"`
+}
+
+type ClassScopeEffectsReport struct {
+	Version string                             `json:"version"`
+	Feature string                             `json:"feature"`
+	Status  string                             `json:"status"`
+	Honesty []string                           `json:"honesty"`
+	Matrix  datcodec.EffectCommandMatrixReport `json:"matrix"`
+	Rows    []ClassScopeEffectRow              `json:"rows"`
+}
+
+func BuildClassScopeEffectsReport(datPath string) (ClassScopeEffectsReport, error)
 
 type CommandClaim struct {
 	Kind        string   `json:"kind,omitempty"`
@@ -8945,7 +8997,7 @@ package roadmap // import "aoe2kit/pkg/roadmap"
 
 CONSTANTS
 
-const Version = "2026-09-04"
+const Version = "2026-09-12"
 
 FUNCTIONS
 
@@ -9083,6 +9135,18 @@ func XSModule() string
 
 TYPES
 
+type DemoEarning struct {
+	Signal           string `json:"signal"`
+	Players          []int  `json:"players"`
+	EnemyPlayers     []int  `json:"enemy_players"`
+	GoldPerKill      int    `json:"gold_per_kill"`
+	XPPerKill        int    `json:"xp_per_kill"`
+	LevelCurve       string `json:"level_curve"`
+	HeroAttribution  string `json:"hero_attribution"`
+	PollTriggerName  string `json:"poll_trigger_name"`
+	PollIntervalNote string `json:"poll_interval_note"`
+}
+
 type DemoOptions struct {
 	OutputDir    string
 	ScenarioName string
@@ -9103,6 +9167,7 @@ type DemoReport struct {
 	PatchReport        scenario.PatchReport `json:"patch_report"`
 	Variables          []DemoVariable       `json:"variables"`
 	ShopItems          []DemoShopItem       `json:"shop_items"`
+	Earning            DemoEarning          `json:"earning"`
 	VerificationClaims []string             `json:"verification_claims"`
 	KnownGaps          []string             `json:"known_gaps"`
 	Files              map[string]string    `json:"files"`
@@ -9137,6 +9202,13 @@ package scenario // import "aoe2kit/pkg/scenario"
 CONSTANTS
 
 const (
+	ShopCatalogDefaultPlayer    = 1
+	ShopCatalogDefaultTrainTime = 1
+	ShopCatalogDefaultHotkey    = 0
+	ShopCatalogDefaultAreaMin   = 0
+	ShopCatalogDefaultAreaMax   = 479
+)
+const (
 	MinScenarioMapSize = 80
 	MaxScenarioMapSize = 480
 )
@@ -9154,6 +9226,7 @@ func EffectTypeForOp(op string) (int, bool)
 func EffectTypeName(effectType int) string
 func InflateRaw(compressed []byte) ([]byte, error)
 func ScenarioMapPresetSizesString() string
+func SortedShopCatalogCostResources(costs []ShopCatalogItemCost) []int
 func StringContainsDisconnectRecipeFile(path string, text string) ([]int, ReferenceReport, Recipe, error)
 func StringDisconnectRecipeFile(path string, stringID int) (ReferenceReport, Recipe, error)
 func StringPrefixDisconnectRecipeFile(path string, prefix string) ([]int, ReferenceReport, Recipe, error)
@@ -9219,6 +9292,8 @@ type BlankOptions struct {
 	InactiveRestHuman bool
 	GaiaActive        bool
 	NoConquest        bool
+	CloseoutSeconds   int
+	CloseoutPlayer    int
 }
 
 type BlankReport struct {
@@ -9235,6 +9310,8 @@ type BlankReport struct {
 	DummyUnit          int    `json:"dummy_unit,omitempty"`
 	GaiaActive         bool   `json:"gaia_active"`
 	NoConquest         bool   `json:"no_conquest"`
+	CloseoutSeconds    int    `json:"closeout_seconds,omitempty"`
+	CloseoutPlayer     int    `json:"closeout_player,omitempty"`
 	TriggerCountBefore int    `json:"trigger_count_before"`
 	TriggerCountAfter  int    `json:"trigger_count_after"`
 	UnitCountBefore    int    `json:"unit_count_before"`
@@ -9855,6 +9932,8 @@ type LintIssue struct {
 	Severity     string `json:"severity"`
 	Code         string `json:"code"`
 	Message      string `json:"message"`
+	Why          string `json:"why,omitempty"`
+	Fix          string `json:"fix,omitempty"`
 	FactID       string `json:"fact_id,omitempty"`
 	FactTier     string `json:"fact_tier,omitempty"`
 	VerifiedDate string `json:"verified_date,omitempty"`
@@ -9863,6 +9942,7 @@ type LintIssue struct {
 
 type LintOptions struct {
 	IncludeProvisional bool
+	LoadSafety         bool
 }
 
 type LintReport struct {
@@ -10353,6 +10433,81 @@ type SettingsReport struct {
 }
 
 func SettingsFile(path string) (SettingsReport, error)
+
+type ShopCatalog struct {
+	Name             string            `json:"name,omitempty"`
+	Player           int               `json:"player,omitempty"`
+	SetupTriggerName string            `json:"setup_trigger_name,omitempty"`
+	Cleanup          bool              `json:"cleanup,omitempty"`
+	ClearTriggers    bool              `json:"clear_triggers,omitempty"`
+	RenameShops      *bool             `json:"rename_shops,omitempty"`
+	Area             *ShopCatalogArea  `json:"area,omitempty"`
+	Shops            []ShopCatalogShop `json:"shops"`
+}
+
+func LoadShopCatalogFile(path string) (ShopCatalog, error)
+
+func ShopCatalogExample() ShopCatalog
+
+type ShopCatalogArea struct {
+	X1 int `json:"x1"`
+	Y1 int `json:"y1"`
+	X2 int `json:"x2"`
+	Y2 int `json:"y2"`
+}
+
+type ShopCatalogItem struct {
+	Label       string                `json:"label"`
+	Description string                `json:"description,omitempty"`
+	TokenUnit   int                   `json:"token_unit"`
+	Button      int                   `json:"button,omitempty"`
+	TrainTime   *int                  `json:"train_time,omitempty"`
+	Hotkey      *int                  `json:"hotkey,omitempty"`
+	Costs       []ShopCatalogItemCost `json:"costs,omitempty"`
+}
+
+type ShopCatalogItemCost struct {
+	ResourceID *int   `json:"resource_id,omitempty"`
+	Resource   string `json:"resource,omitempty"`
+	Amount     int    `json:"amount"`
+}
+
+type ShopCatalogReport struct {
+	Name          string               `json:"name,omitempty"`
+	Player        int                  `json:"player"`
+	ShopCount     int                  `json:"shop_count"`
+	ItemCount     int                  `json:"item_count"`
+	Cleanup       bool                 `json:"cleanup"`
+	ClearTriggers bool                 `json:"clear_triggers"`
+	Recipe        Recipe               `json:"recipe"`
+	ShopSummaries []ShopCatalogSummary `json:"shop_summaries"`
+	Warnings      []string             `json:"warnings,omitempty"`
+	Verification  string               `json:"verification"`
+}
+
+func ShopCatalogRecipe(catalog ShopCatalog) (ShopCatalogReport, error)
+
+type ShopCatalogShop struct {
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	ShopUnit    int               `json:"shop_unit"`
+	Player      int               `json:"player,omitempty"`
+	X           *float64          `json:"x,omitempty"`
+	Y           *float64          `json:"y,omitempty"`
+	ReferenceID *int              `json:"reference_id,omitempty"`
+	Caption     string            `json:"caption,omitempty"`
+	Items       []ShopCatalogItem `json:"items"`
+}
+
+type ShopCatalogSummary struct {
+	Name      string `json:"name"`
+	ShopUnit  int    `json:"shop_unit"`
+	Player    int    `json:"player"`
+	ItemCount int    `json:"item_count"`
+	ButtonMin int    `json:"button_min,omitempty"`
+	ButtonMax int    `json:"button_max,omitempty"`
+	HasUnit   bool   `json:"has_unit"`
+}
 
 type SmokeRecipeOptions struct {
 	Player       int

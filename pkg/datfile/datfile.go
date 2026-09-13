@@ -2132,6 +2132,7 @@ type Recipe struct {
 	Graphics       []GraphicRecipePatch  `json:"graphics,omitempty"`
 	CreateGraphic  *GraphicCreateRecipe  `json:"create_graphic,omitempty"`
 	CreateGraphics []GraphicCreateRecipe `json:"create_graphics,omitempty"`
+	DeleteGraphics []int                 `json:"delete_graphics,omitempty"`
 	CreateUnit     *UnitCreateRecipe     `json:"create_unit,omitempty"`
 	CreateUnits    []UnitCreateRecipe    `json:"create_units,omitempty"`
 	Units          []UnitRecipePatch     `json:"units,omitempty"`
@@ -2141,6 +2142,7 @@ func (recipe Recipe) Empty() bool {
 	return len(recipe.Graphics) == 0 &&
 		recipe.CreateGraphic == nil &&
 		len(recipe.CreateGraphics) == 0 &&
+		len(recipe.DeleteGraphics) == 0 &&
 		recipe.CreateUnit == nil &&
 		len(recipe.CreateUnits) == 0 &&
 		len(recipe.Units) == 0
@@ -2288,6 +2290,7 @@ type RecipeReport struct {
 	InflatedLengthDelta   int                    `json:"inflated_length_delta"`
 	GraphicReports        []PatchReport          `json:"graphic_reports,omitempty"`
 	CreatedGraphics       []GraphicCreateReport  `json:"created_graphics,omitempty"`
+	DeletedGraphics       []GraphicDeleteReport  `json:"deleted_graphics,omitempty"`
 	CreatedUnits          []UnitCreateReport     `json:"created_units,omitempty"`
 	UnitReports           []UnitPatchReport      `json:"unit_reports,omitempty"`
 	Verified              bool                   `json:"verified"`
@@ -2307,6 +2310,21 @@ type GraphicCreateReport struct {
 	Template              GraphicSummary         `json:"template"`
 	Created               GraphicSummary         `json:"created"`
 	ChangedFields         []string               `json:"changed_fields"`
+	Verified              bool                   `json:"verified"`
+	Verification          aoe2.VerificationClaim `json:"verification"`
+}
+
+type GraphicDeleteReport struct {
+	InputCompressedBytes  int                    `json:"input_compressed_bytes"`
+	OutputCompressedBytes int                    `json:"output_compressed_bytes"`
+	InputInflatedBytes    int                    `json:"input_inflated_bytes"`
+	OutputInflatedBytes   int                    `json:"output_inflated_bytes"`
+	InflatedLengthDelta   int                    `json:"inflated_length_delta"`
+	GraphicID             int                    `json:"graphic_id"`
+	BeforeGraphicsSize    int                    `json:"before_graphics_size"`
+	AfterGraphicsSize     int                    `json:"after_graphics_size"`
+	RemovedRecordBytes    int                    `json:"removed_record_bytes"`
+	Before                GraphicSummary         `json:"before"`
 	Verified              bool                   `json:"verified"`
 	Verification          aoe2.VerificationClaim `json:"verification"`
 }
@@ -3264,6 +3282,14 @@ func PatchRecipe(compressed []byte, recipe Recipe) ([]byte, RecipeReport, error)
 	}
 	current := append([]byte(nil), compressed...)
 	report := RecipeReport{InputCompressedBytes: len(compressed)}
+	for i, id := range recipe.DeleteGraphics {
+		output, deleteReport, err := DeleteGraphic(current, id)
+		if err != nil {
+			return nil, RecipeReport{}, fmt.Errorf("delete_graphics[%d] id=%d: %w", i, id, err)
+		}
+		current = output
+		report.DeletedGraphics = append(report.DeletedGraphics, deleteReport)
+	}
 	for i, item := range recipe.Graphics {
 		output, patchReport, err := PatchGraphic(current, item.ID, GraphicPatch{
 			Name:               item.Name,
@@ -3505,6 +3531,92 @@ func CreateGraphic(compressed []byte, recipe GraphicCreateRecipe) ([]byte, Graph
 		Verified:              true,
 		Verification:          aoe2.StructureVerification(true),
 	}
+	return output, report, nil
+}
+
+func DeleteGraphic(compressed []byte, graphicID int) ([]byte, GraphicDeleteReport, error) {
+	payload, err := Inflate(compressed)
+	if err != nil {
+		return nil, GraphicDeleteReport{}, err
+	}
+	beforeIdx, err := Parse(payload)
+	if err != nil {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("index input: %w", err)
+	}
+	if graphicID < 0 || graphicID >= beforeIdx.GraphicsSize {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d is outside graphics table size %d", graphicID, beforeIdx.GraphicsSize)
+	}
+	graphic, ok := beforeIdx.Graphic(graphicID)
+	if !ok {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d is already absent", graphicID)
+	}
+	if graphic.RecordSpan.Len() <= 0 {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d has invalid record span %d..%d", graphicID, graphic.RecordSpan.Start, graphic.RecordSpan.End)
+	}
+	graphicPointers, ok := beforeIdx.spanByName("graphic_pointers")
+	if !ok || graphicPointers.Len() != beforeIdx.GraphicsSize*4 {
+		return nil, GraphicDeleteReport{}, errors.New("graphic_pointers span unavailable or malformed")
+	}
+	pointerStart := graphicPointers.Start + graphicID*4
+	if pointerStart < graphicPointers.Start || pointerStart+4 > graphicPointers.End {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic pointer %d is outside pointer table", graphicID)
+	}
+	if binary.LittleEndian.Uint32(payload[pointerStart:pointerStart+4]) == 0 {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d has an absent pointer", graphicID)
+	}
+	if graphic.RecordSpan.Start < graphicPointers.End {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d record starts before graphic pointer table ends", graphicID)
+	}
+
+	outPayload := make([]byte, 0, len(payload)-graphic.RecordSpan.Len())
+	outPayload = append(outPayload, payload[:pointerStart]...)
+	outPayload = append(outPayload, 0, 0, 0, 0)
+	outPayload = append(outPayload, payload[pointerStart+4:graphic.RecordSpan.Start]...)
+	outPayload = append(outPayload, payload[graphic.RecordSpan.End:]...)
+
+	output, err := Deflate(outPayload)
+	if err != nil {
+		return nil, GraphicDeleteReport{}, err
+	}
+	roundTripPayload, err := Inflate(output)
+	if err != nil {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("inflate patched output: %w", err)
+	}
+	if !bytes.Equal(outPayload, roundTripPayload) {
+		return nil, GraphicDeleteReport{}, errors.New("patched payload changed after deflate/inflate round trip")
+	}
+	afterIdx, err := Parse(roundTripPayload)
+	if err != nil {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("re-index patched output: %w", err)
+	}
+	if afterIdx.GraphicsSize != beforeIdx.GraphicsSize {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphics count changed: got %d want %d", afterIdx.GraphicsSize, beforeIdx.GraphicsSize)
+	}
+	if _, ok := afterIdx.Graphic(graphicID); ok {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("graphic %d still present after delete", graphicID)
+	}
+	expectedDelta := -graphic.RecordSpan.Len()
+	if got := len(roundTripPayload) - len(payload); got != expectedDelta {
+		return nil, GraphicDeleteReport{}, fmt.Errorf("inflated length delta mismatch: got %d want %d", got, expectedDelta)
+	}
+	if err := verifyNeighborCanaries(beforeIdx, afterIdx, graphicID); err != nil {
+		return nil, GraphicDeleteReport{}, err
+	}
+	report := GraphicDeleteReport{
+		InputCompressedBytes:  len(compressed),
+		OutputCompressedBytes: len(output),
+		InputInflatedBytes:    len(payload),
+		OutputInflatedBytes:   len(roundTripPayload),
+		InflatedLengthDelta:   len(roundTripPayload) - len(payload),
+		GraphicID:             graphicID,
+		BeforeGraphicsSize:    beforeIdx.GraphicsSize,
+		AfterGraphicsSize:     afterIdx.GraphicsSize,
+		RemovedRecordBytes:    graphic.RecordSpan.Len(),
+		Before:                graphic.Summary(),
+		Verified:              true,
+		Verification:          aoe2.StructureVerification(true),
+	}
+	report.Verification.Note = "Stable-ID graphic delete zeroes the graphic pointer slot and removes the record bytes; this is structurally verified, not engine-verified."
 	return output, report, nil
 }
 

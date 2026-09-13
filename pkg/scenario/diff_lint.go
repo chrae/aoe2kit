@@ -37,6 +37,8 @@ type LintIssue struct {
 	Severity     string `json:"severity"`
 	Code         string `json:"code"`
 	Message      string `json:"message"`
+	Why          string `json:"why,omitempty"`
+	Fix          string `json:"fix,omitempty"`
 	FactID       string `json:"fact_id,omitempty"`
 	FactTier     string `json:"fact_tier,omitempty"`
 	VerifiedDate string `json:"verified_date,omitempty"`
@@ -52,6 +54,7 @@ type LintSummary struct {
 
 type LintOptions struct {
 	IncludeProvisional bool
+	LoadSafety         bool
 }
 
 func DiffFiles(beforePath, afterPath string) (DiffReport, error) {
@@ -180,6 +183,9 @@ func (f *File) LintWithOptions(opts LintOptions) LintReport {
 	} else {
 		report.addIssue("error", "missing_triggers", "scenario has no parsed trigger section")
 	}
+	if opts.LoadSafety {
+		lintLoadSafety(&report, f, opts)
+	}
 	if f.Map != nil {
 		if f.Map.Width*f.Map.Height != f.Map.TileCount {
 			report.addIssue("error", "map_tile_count", fmt.Sprintf("map dimensions %dx%d imply %d tiles but parsed %d", f.Map.Width, f.Map.Height, f.Map.Width*f.Map.Height, f.Map.TileCount))
@@ -240,6 +246,155 @@ func (f *File) LintWithOptions(opts LintOptions) LintReport {
 	report.OK = !hasLintSeverity(report.Issues, "error")
 	report.Verification = aoe2.StructureVerification(report.OK)
 	return report
+}
+
+type trainButtonKey struct {
+	building int
+	slot     int
+}
+
+type trainButtonState struct {
+	count       int
+	trigger     int
+	effect      int
+	sourceUnits []int
+}
+
+func lintLoadSafety(report *LintReport, f *File, opts LintOptions) {
+	if f == nil {
+		return
+	}
+	activeNonGaia := activeNonGaiaPlayers(f.Players)
+	if f.PlayerCount > 8 {
+		report.addIssueFactDetail(
+			"error",
+			"load_safety_too_many_players",
+			fmt.Sprintf("scenario player_count=%d exceeds the DE hard cap of 8 non-Gaia players", f.PlayerCount),
+			"DE supports at most 8 non-Gaia player slots plus Gaia.",
+			"Set scenario player_count to 1..8 and keep only player slots 1..8 active.",
+			"scenario.de_max_8_non_gaia_players",
+			opts,
+		)
+	}
+	if len(activeNonGaia) > 8 {
+		report.addIssueFactDetail(
+			"error",
+			"load_safety_too_many_active_players",
+			fmt.Sprintf("scenario has %d active non-Gaia players: %v", len(activeNonGaia), activeNonGaia),
+			"DE supports at most 8 non-Gaia player slots plus Gaia.",
+			"Deactivate non-Gaia slots above the intended playable player count.",
+			"scenario.de_max_8_non_gaia_players",
+			opts,
+		)
+	}
+	if f.PlayerCount != len(activeNonGaia) {
+		report.addIssueFactDetail(
+			"error",
+			"load_safety_player_count_mismatch",
+			fmt.Sprintf("scenario player_count=%d but active non-Gaia player count=%d (%v)", f.PlayerCount, len(activeNonGaia), activeNonGaia),
+			"DE can reject scenario loading when header player_count disagrees with active playable slots.",
+			"Set scenario player_count to the active non-Gaia player count.",
+			"scenario.player_count_must_match_active_non_gaia_count",
+			opts,
+		)
+	}
+	for _, player := range f.Players {
+		if player.Player <= 0 || player.Player > 8 || !player.Active || !player.Human || !player.LockCivilization {
+			continue
+		}
+		report.addIssueFactDetail(
+			"warning",
+			"load_safety_locked_civ_launch_risk",
+			fmt.Sprintf("P%d is active+human with lock_civilization=true", player.Player),
+			"DE multiplayer lobbies can refuse to launch when open human slots with locked civilizations are unclaimed.",
+			"Use lock_civilization=false for open human slots, or make the slot non-human/closed if it must stay locked.",
+			"scenario.locked_civ_open_human_slot_blocks_mp_launch",
+			opts,
+		)
+	}
+	if f.root != nil {
+		if section := f.root.section("Triggers"); section != nil {
+			lintTrainButtonLoadSafety(report, section.list("trigger_data"), opts)
+		}
+	}
+}
+
+func activeNonGaiaPlayers(players []PlayerInfo) []int {
+	var out []int
+	for _, player := range players {
+		if player.Player > 0 && player.Player <= 8 && player.Active {
+			out = append(out, player.Player)
+		}
+	}
+	sort.Ints(out)
+	return out
+}
+
+func lintTrainButtonLoadSafety(report *LintReport, triggerNodes []*parsedNode, opts LintOptions) {
+	byKey := map[trainButtonKey]*trainButtonState{}
+	perBuilding := map[int]int{}
+	for i, trigger := range triggerNodes {
+		for j, effect := range trigger.list("effect_data") {
+			effectType, _ := effect.intValue("effect_type")
+			if effectType != 102 {
+				continue
+			}
+			building, buildingOK := effect.intValue("object_list_unit_id_2")
+			slot, slotOK := effect.intValue("button_location")
+			sourceUnit, _ := effect.intValue("object_list_unit_id")
+			if !buildingOK || !slotOK {
+				continue
+			}
+			if slot > 16 {
+				report.addIssueFactDetail(
+					"warning",
+					"load_safety_train_button_overflow",
+					fmt.Sprintf("trigger %d effect %d add_train_location targets building %d button_location=%d", i, j, building, slot),
+					"DE command cards expose 16 train-button positions; higher locations may not render as intended.",
+					"Use button_location 1..16 and split larger shops across multiple buildings.",
+					"scenario.train_button_command_card_has_16_slots",
+					opts,
+				)
+			}
+			key := trainButtonKey{building: building, slot: slot}
+			state := byKey[key]
+			if state == nil {
+				state = &trainButtonState{trigger: i, effect: j}
+				byKey[key] = state
+			}
+			state.count++
+			state.sourceUnits = append(state.sourceUnits, sourceUnit)
+			perBuilding[building]++
+		}
+	}
+	for key, state := range byKey {
+		if state.count <= 1 {
+			continue
+		}
+		report.addIssueFactDetail(
+			"error",
+			"load_safety_train_button_slot_collision",
+			fmt.Sprintf("%d add_train_location effects share building %d button_location=%d; first seen at trigger %d effect %d; unit buttons=%v", state.count, key.building, key.slot, state.trigger, state.effect, state.sourceUnits),
+			"DE can corrupt the building command card when more than one add_train_location writes the same building/button slot, causing buttons to disappear in-engine.",
+			"Use exactly one add_train_location per (train_location_unit_const, button_location); multi-player shops need separate per-player buildings or distinct slots.",
+			"scenario.add_train_location_unique_building_slot",
+			opts,
+		)
+	}
+	for building, count := range perBuilding {
+		if count <= 16 {
+			continue
+		}
+		report.addIssueFactDetail(
+			"warning",
+			"load_safety_train_button_overflow",
+			fmt.Sprintf("building %d has %d add_train_location effects", building, count),
+			"DE command cards expose 16 train-button positions per building.",
+			"Split shops with more than 16 train buttons across multiple buildings.",
+			"scenario.train_button_command_card_has_16_slots",
+			opts,
+		)
+	}
 }
 
 func lintTriggerPlayerCoverage(report *LintReport, file *File, _ LintOptions) {
@@ -454,8 +609,22 @@ func (r *LintReport) addIssue(severity, code, message string) {
 	r.Issues = append(r.Issues, LintIssue{Severity: severity, Code: code, Message: message})
 }
 
+func (r *LintReport) addIssueDetail(severity, code, message, why, fix string) {
+	r.Issues = append(r.Issues, LintIssue{Severity: severity, Code: code, Message: message, Why: why, Fix: fix})
+}
+
 func (r *LintReport) addIssueFact(severity, code, message, factID string, opts LintOptions) {
 	issue := LintIssue{Severity: severity, Code: code, Message: message}
+	citation := enginefacts.CitationFor(factID, opts.IncludeProvisional)
+	issue.FactID = citation.FactID
+	issue.FactTier = citation.Tier
+	issue.VerifiedDate = citation.VerifiedDate
+	issue.FixtureRef = citation.FixtureRef
+	r.Issues = append(r.Issues, issue)
+}
+
+func (r *LintReport) addIssueFactDetail(severity, code, message, why, fix, factID string, opts LintOptions) {
+	issue := LintIssue{Severity: severity, Code: code, Message: message, Why: why, Fix: fix}
 	citation := enginefacts.CitationFor(factID, opts.IncludeProvisional)
 	issue.FactID = citation.FactID
 	issue.FactTier = citation.Tier
