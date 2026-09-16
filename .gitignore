@@ -17,6 +17,9 @@ tmp/
 /bin/
 /build/
 
+# Scratch sprite frame dumps from `kit dat sprite`.
+/*_png/
+
 # Local handoff archive produced by `./kit pack AoE2Kit.zip`.
 /AoE2Kit.zip
 /AoE2Kit.zip.sha256

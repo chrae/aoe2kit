@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"image/draw"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,6 +64,7 @@ type SLDLayer struct {
 type SLDExportOptions struct {
 	OutDir string
 	Limit  int
+	Stats  bool
 }
 
 type SLDExportReport struct {
@@ -75,6 +77,7 @@ type SLDExportReport struct {
 	ManifestPath string                 `json:"manifest_path,omitempty"`
 	ContactSheet string                 `json:"contact_sheet,omitempty"`
 	Exported     []SLDExportedFrame     `json:"exported,omitempty"`
+	Stats        []SLDFrameStats        `json:"stats,omitempty"`
 	Warnings     []string               `json:"warnings,omitempty"`
 }
 
@@ -92,6 +95,39 @@ type SLDExportedFrame struct {
 	LayerWidth   int    `json:"layer_width"`
 	LayerHeight  int    `json:"layer_height"`
 	OpaquePixels int    `json:"opaque_pixels"`
+}
+
+type SLDFrameStats struct {
+	FrameOrdinal   int            `json:"frame_ordinal"`
+	FrameIndex     uint16         `json:"frame_index"`
+	CanvasWidth    int            `json:"canvas_width"`
+	CanvasHeight   int            `json:"canvas_height"`
+	Bounds         SLDFrameBounds `json:"bounds"`
+	OpaquePixels   int            `json:"opaque_pixels"`
+	CanvasCoverage float64        `json:"canvas_coverage"`
+	MeanR          float64        `json:"mean_r"`
+	MeanG          float64        `json:"mean_g"`
+	MeanB          float64        `json:"mean_b"`
+	MeanSaturation float64        `json:"mean_saturation"`
+	HueBuckets     SLDHueBuckets  `json:"hue_buckets"`
+	State          string         `json:"state"`
+}
+
+type SLDFrameBounds struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type SLDHueBuckets struct {
+	Green  float64 `json:"green"`
+	Yellow float64 `json:"yellow"`
+	Red    float64 `json:"red"`
+	Brown  float64 `json:"brown"`
+	Grey   float64 `json:"grey"`
+	White  float64 `json:"white"`
+	Other  float64 `json:"other"`
 }
 
 type SLDManifest struct {
@@ -143,23 +179,18 @@ func ParseSLD(data []byte) (*SLD, error) {
 		raw:     append([]byte(nil), data...),
 	}
 	frameCount := int(binary.LittleEndian.Uint16(data[6:8]))
+	if !supportedSLDFrameHeaderMarker(data) {
+		return nil, fmt.Errorf("unsupported SLD frame header marker 0x%04x", binary.LittleEndian.Uint16(data[10:12]))
+	}
 	pos := 16
 	for i := 0; i < frameCount; i++ {
-		if pos+12 > len(data) {
+		frameHeaderBytes := sldFrameHeaderBytes(data, i)
+		if pos+frameHeaderBytes > len(data) {
 			return nil, fmt.Errorf("frame %d header exceeds file at %d", i, pos)
 		}
-		frame := SLDFrame{
-			Ordinal:  i,
-			Width:    int(binary.LittleEndian.Uint16(data[pos : pos+2])),
-			Height:   int(binary.LittleEndian.Uint16(data[pos+2 : pos+4])),
-			HotspotX: int(int16(binary.LittleEndian.Uint16(data[pos+4 : pos+6]))),
-			HotspotY: int(int16(binary.LittleEndian.Uint16(data[pos+6 : pos+8]))),
-			Type:     data[pos+8],
-			Unknown:  data[pos+9],
-			Index:    binary.LittleEndian.Uint16(data[pos+10 : pos+12]),
-			Start:    pos,
-		}
-		pos += 12
+		frame := parseSLDFrameHeader(data, pos, frameHeaderBytes)
+		frame.Ordinal = i
+		pos += frameHeaderBytes
 		for _, kind := range sldLayerKinds {
 			if frame.Type&kind.Mask == 0 {
 				continue
@@ -178,6 +209,41 @@ func ParseSLD(data []byte) (*SLD, error) {
 		file.warnings = append(file.warnings, fmt.Sprintf("%d trailing bytes after final frame", len(data)-pos))
 	}
 	return file, nil
+}
+
+func supportedSLDFrameHeaderMarker(data []byte) bool {
+	marker := binary.LittleEndian.Uint16(data[10:12])
+	return marker == 0x0010 || marker == 0x000e
+}
+
+func sldFrameHeaderBytes(data []byte, frameOrdinal int) int {
+	if binary.LittleEndian.Uint16(data[10:12]) == 0x000e && frameOrdinal == 0 {
+		return 10
+	}
+	return 12
+}
+
+func parseSLDFrameHeader(data []byte, pos int, headerBytes int) SLDFrame {
+	frame := SLDFrame{
+		Width:  int(binary.LittleEndian.Uint16(data[pos : pos+2])),
+		Height: int(binary.LittleEndian.Uint16(data[pos+2 : pos+4])),
+		Start:  pos,
+	}
+	if headerBytes == 10 {
+		center := int(int16(binary.LittleEndian.Uint16(data[pos+4 : pos+6])))
+		frame.HotspotX = center
+		frame.HotspotY = center
+		frame.Type = data[pos+6]
+		frame.Unknown = data[pos+7]
+		frame.Index = binary.LittleEndian.Uint16(data[pos+8 : pos+10])
+		return frame
+	}
+	frame.HotspotX = int(int16(binary.LittleEndian.Uint16(data[pos+4 : pos+6])))
+	frame.HotspotY = int(int16(binary.LittleEndian.Uint16(data[pos+6 : pos+8])))
+	frame.Type = data[pos+8]
+	frame.Unknown = data[pos+9]
+	frame.Index = binary.LittleEndian.Uint16(data[pos+10 : pos+12])
+	return frame
 }
 
 func ExportSLD(path string, options SLDExportOptions) (SLDExportReport, error) {
@@ -233,6 +299,11 @@ func ExportSLD(path string, options SLDExportOptions) (SLDExportReport, error) {
 			return report, err
 		}
 		opaquePixels := countOpaquePixels(img)
+		var stats SLDFrameStats
+		if options.Stats {
+			stats = analyzeSLDFrame(frame, img)
+			report.Stats = append(report.Stats, stats)
+		}
 		contactFrames = append(contactFrames, img)
 		report.Exported = append(report.Exported, SLDExportedFrame{
 			FrameOrdinal: frame.Ordinal,
@@ -510,6 +581,187 @@ func countOpaquePixels(img *image.RGBA) int {
 		}
 	}
 	return count
+}
+
+func analyzeSLDFrame(frame SLDFrame, img *image.RGBA) SLDFrameStats {
+	bounds := img.Bounds()
+	minX, minY := bounds.Max.X, bounds.Max.Y
+	maxX, maxY := bounds.Min.X-1, bounds.Min.Y-1
+	var opaque int
+	var sumR, sumG, sumB, sumSat float64
+	var buckets SLDHueBuckets
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < bounds.Max.X; x++ {
+			c := img.RGBAAt(x, y)
+			if c.A == 0 {
+				continue
+			}
+			opaque++
+			if x < minX {
+				minX = x
+			}
+			if y < minY {
+				minY = y
+			}
+			if x > maxX {
+				maxX = x
+			}
+			if y > maxY {
+				maxY = y
+			}
+			r := float64(c.R) / 255.0
+			g := float64(c.G) / 255.0
+			b := float64(c.B) / 255.0
+			h, s, v := rgbToHSV(r, g, b)
+			sumR += float64(c.R)
+			sumG += float64(c.G)
+			sumB += float64(c.B)
+			sumSat += s
+			switch classifyHueBucket(h, s, v) {
+			case "green":
+				buckets.Green++
+			case "yellow":
+				buckets.Yellow++
+			case "red":
+				buckets.Red++
+			case "brown":
+				buckets.Brown++
+			case "grey":
+				buckets.Grey++
+			case "white":
+				buckets.White++
+			default:
+				buckets.Other++
+			}
+		}
+	}
+	stats := SLDFrameStats{
+		FrameOrdinal: frame.Ordinal,
+		FrameIndex:   frame.Index,
+		CanvasWidth:  frame.Width,
+		CanvasHeight: frame.Height,
+	}
+	if opaque == 0 {
+		stats.State = "unknown"
+		return stats
+	}
+	stats.Bounds = SLDFrameBounds{X: minX, Y: minY, Width: maxX - minX + 1, Height: maxY - minY + 1}
+	stats.OpaquePixels = opaque
+	canvasPixels := frame.Width * frame.Height
+	if canvasPixels > 0 {
+		stats.CanvasCoverage = float64(opaque) / float64(canvasPixels)
+	}
+	stats.MeanR = sumR / float64(opaque)
+	stats.MeanG = sumG / float64(opaque)
+	stats.MeanB = sumB / float64(opaque)
+	stats.MeanSaturation = sumSat / float64(opaque)
+	stats.HueBuckets = normalizeHueBuckets(buckets, opaque)
+	stats.State = classifyTreeState(stats.HueBuckets)
+	return stats
+}
+
+func normalizeHueBuckets(buckets SLDHueBuckets, total int) SLDHueBuckets {
+	if total <= 0 {
+		return SLDHueBuckets{}
+	}
+	div := float64(total)
+	return SLDHueBuckets{
+		Green:  buckets.Green / div,
+		Yellow: buckets.Yellow / div,
+		Red:    buckets.Red / div,
+		Brown:  buckets.Brown / div,
+		Grey:   buckets.Grey / div,
+		White:  buckets.White / div,
+		Other:  buckets.Other / div,
+	}
+}
+
+func rgbToHSV(r, g, b float64) (h, s, v float64) {
+	maxV := math.Max(r, math.Max(g, b))
+	minV := math.Min(r, math.Min(g, b))
+	delta := maxV - minV
+	v = maxV
+	if maxV > 0 {
+		s = delta / maxV
+	}
+	if delta == 0 {
+		return 0, s, v
+	}
+	switch maxV {
+	case r:
+		h = math.Mod((g-b)/delta, 6)
+	case g:
+		h = (b-r)/delta + 2
+	default:
+		h = (r-g)/delta + 4
+	}
+	h *= 60
+	if h < 0 {
+		h += 360
+	}
+	return h, s, v
+}
+
+func classifyHueBucket(h, s, v float64) string {
+	if v >= 0.72 && s <= 0.22 {
+		return "white"
+	}
+	if s <= 0.20 {
+		return "grey"
+	}
+	if h >= 72 && h <= 168 && s >= 0.18 {
+		return "green"
+	}
+	if h < 24 || h >= 340 {
+		return "red"
+	}
+	if h >= 20 && h <= 64 && v <= 0.56 {
+		return "brown"
+	}
+	if h >= 34 && h <= 76 {
+		return "yellow"
+	}
+	if h >= 20 && h < 34 && v <= 0.70 {
+		return "brown"
+	}
+	return "other"
+}
+
+func classifyTreeState(b SLDHueBuckets) string {
+	if b.White+b.Grey >= 0.48 && b.Green < 0.18 && b.Yellow+b.Red < 0.18 {
+		return "snow"
+	}
+	if b.Green < 0.09 && b.Brown > 0.80 && b.Yellow < 0.10 {
+		return "bare-dead"
+	}
+	if b.Green < 0.06 && b.Brown+b.Grey > 0.60 && b.Yellow < 0.05 {
+		return "bare-dead"
+	}
+	if b.Green+b.Yellow >= 0.70 && b.Green >= 0.08 && b.Red < 0.03 && b.Brown < 0.30 {
+		return "green"
+	}
+	if b.Green >= 0.30 && b.Green >= b.Yellow+b.Red && b.Green >= b.Brown {
+		return "green"
+	}
+	if b.Red >= 0.12 && b.Red >= b.Yellow*0.75 && b.Green < 0.35 {
+		return "autumn-red"
+	}
+	if b.Yellow+b.Brown >= 0.35 && b.Green < 0.40 {
+		return "autumn-gold"
+	}
+	if b.Green < 0.20 && b.Yellow+b.Red < 0.22 && b.Brown+b.Grey+b.White >= 0.45 {
+		return "bare-dead"
+	}
+	if b.Green >= b.Yellow && b.Green >= b.Red && b.Green >= b.Brown {
+		return "green"
+	}
+	if b.Red >= b.Yellow {
+		return "autumn-red"
+	}
+	if b.Yellow+b.Brown >= b.Grey+b.White {
+		return "autumn-gold"
+	}
+	return "bare-dead"
 }
 
 func contactSheet(frames []image.Image) image.Image {

@@ -27,6 +27,7 @@ import (
 	"aoe2kit/pkg/enginefacts"
 	"aoe2kit/pkg/fx"
 	"aoe2kit/pkg/geom"
+	"aoe2kit/pkg/geotrace"
 	"aoe2kit/pkg/gfx"
 	"aoe2kit/pkg/kit"
 	"aoe2kit/pkg/modpack"
@@ -122,6 +123,8 @@ func main() {
 		runDat(os.Args[2:])
 	case "gfx":
 		runGFX(os.Args[2:])
+	case "geo":
+		runGeo(os.Args[2:])
 	case "fx":
 		runFX(os.Args[2:])
 	case "xs":
@@ -309,6 +312,609 @@ func printRoadmapDarkText(report roadmap.DarkReport) {
 			fmt.Printf("  - %s\n", note)
 		}
 	}
+}
+
+func runGeo(args []string) {
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, geoTraceUsage())
+		os.Exit(2)
+	}
+	switch args[0] {
+	case "trace-dem":
+		bboxRaw := ""
+		centerRaw := ""
+		spanKm := 0.0
+		gridSize := 32
+		provider := "opentopodata"
+		landmaskProvider := ""
+		landmaskPath := ""
+		inlandWaterProvider := ""
+		inlandWaterPath := ""
+		landcoverProvider := ""
+		landcoverCacheDir := ""
+		landcoverPath := ""
+		landcoverDir := ""
+		climateZone := ""
+		feltMappingPath := ""
+		orient := ""
+		outPath := ""
+		recipeOutPath := ""
+		scenarioOutPath := ""
+		omitReportCells := false
+		omitReportRecipe := false
+		waterFraction := -1.0
+		waterFractionSet := false
+		seamWaterColumns := 0
+		floraDensity := 10.0
+		landFaunaDensity := 10.0
+		fishDensity := 10.0
+		shoreFishDensity := -1.0
+		oceanFishDensity := -1.0
+		shoreBandWidth := 1.0
+		waterBandWidth := 2.0
+		roadsProvider := ""
+		roadsPath := ""
+		roadsCacheDir := ""
+		roadSimplifyTiles := 0.0
+		adminBorders := false
+		wrapEW := false
+		wrapPlayers := []int{1}
+		sailDemo := false
+		for i := 1; i < len(args); i++ {
+			switch args[i] {
+			case "--bbox":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--bbox needs minLat,minLon,maxLat,maxLon"))
+				}
+				bboxRaw = args[i]
+			case "--center":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--center needs lat,lon"))
+				}
+				centerRaw = args[i]
+			case "--span-km":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--span-km needs a positive kilometer span"))
+				}
+				value, err := strconv.ParseFloat(args[i], 64)
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value <= 0 {
+					die("kit geo trace-dem", fmt.Errorf("--span-km needs a positive kilometer span"))
+				}
+				spanKm = value
+			case "--grid":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--grid needs a size"))
+				}
+				value, err := strconv.Atoi(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				gridSize = value
+			case "--provider":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--provider needs a value"))
+				}
+				provider = args[i]
+			case "--landmask":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landmask needs a value"))
+				}
+				landmaskProvider = args[i]
+			case "--landmask-file":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landmask-file needs a path"))
+				}
+				landmaskPath = args[i]
+			case "--inland-water":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--inland-water needs a value"))
+				}
+				inlandWaterProvider = args[i]
+			case "--inland-water-file":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--inland-water-file needs a path"))
+				}
+				inlandWaterPath = args[i]
+			case "--landcover":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landcover needs a value"))
+				}
+				landcoverProvider = args[i]
+			case "--landcover-cache":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landcover-cache needs a directory"))
+				}
+				landcoverCacheDir = args[i]
+			case "--landcover-file":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landcover-file needs a path"))
+				}
+				landcoverPath = args[i]
+			case "--landcover-dir":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--landcover-dir needs a directory"))
+				}
+				landcoverDir = args[i]
+			case "--climate":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--climate needs a zone"))
+				}
+				climateZone = args[i]
+			case "--felt-mapping":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--felt-mapping needs a path"))
+				}
+				feltMappingPath = args[i]
+			case "--orient":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--orient needs iso, iso-cw, iso-ccw, iso-ccw-screen, grid, or diamond"))
+				}
+				orient = args[i]
+			case "--out":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--out needs a path"))
+				}
+				outPath = args[i]
+			case "--recipe-out":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--recipe-out needs a path"))
+				}
+				recipeOutPath = args[i]
+			case "--scenario-out":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--scenario-out needs a path"))
+				}
+				scenarioOutPath = args[i]
+			case "--omit-report-cells":
+				omitReportCells = true
+			case "--omit-report-recipe":
+				omitReportRecipe = true
+			case "--water-fraction":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--water-fraction needs a value between 0 and 1"))
+				}
+				value, err := strconv.ParseFloat(args[i], 64)
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value <= 0 || value >= 1 {
+					die("kit geo trace-dem", fmt.Errorf("--water-fraction needs a value between 0 and 1"))
+				}
+				waterFraction = value
+				waterFractionSet = true
+			case "--seam-water-cols":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--seam-water-cols needs a count"))
+				}
+				value, err := strconv.Atoi(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value < 0 {
+					die("kit geo trace-dem", fmt.Errorf("--seam-water-cols must be >= 0"))
+				}
+				seamWaterColumns = value
+			case "--flora-density":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--flora-density needs a 1-10 value"))
+				}
+				value, err := parseDensityDial(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				floraDensity = value
+			case "--land-fauna-density":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--land-fauna-density needs a 1-10 value"))
+				}
+				value, err := parseDensityDial(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				landFaunaDensity = value
+			case "--fish-density":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--fish-density needs a 1-10 value"))
+				}
+				value, err := parseDensityDial(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				fishDensity = value
+			case "--shore-fish-density":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--shore-fish-density needs a 1-10 value"))
+				}
+				value, err := parseDensityDial(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				shoreFishDensity = value
+			case "--ocean-fish-density":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--ocean-fish-density needs a 1-10 value"))
+				}
+				value, err := parseDensityDial(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				oceanFishDensity = value
+			case "--shore-band-width":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--shore-band-width needs a positive tile width"))
+				}
+				value, err := strconv.ParseFloat(args[i], 64)
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value <= 0 {
+					die("kit geo trace-dem", fmt.Errorf("--shore-band-width needs a positive tile width"))
+				}
+				shoreBandWidth = value
+			case "--water-band-width":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--water-band-width needs a positive tile width"))
+				}
+				value, err := strconv.ParseFloat(args[i], 64)
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value <= 0 {
+					die("kit geo trace-dem", fmt.Errorf("--water-band-width needs a positive tile width"))
+				}
+				waterBandWidth = value
+			case "--roads":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--roads needs osm-interstate, osm-motorway, osm-major, or nhpn-interstate with --roads-file"))
+				}
+				roadsProvider = args[i]
+			case "--roads-file":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--roads-file needs a path"))
+				}
+				roadsPath = args[i]
+			case "--roads-cache":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--roads-cache needs a directory"))
+				}
+				roadsCacheDir = args[i]
+			case "--road-simplify-tiles":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--road-simplify-tiles needs a non-negative tile tolerance"))
+				}
+				value, err := strconv.ParseFloat(args[i], 64)
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				if value < 0 {
+					die("kit geo trace-dem", fmt.Errorf("--road-simplify-tiles needs a non-negative tile tolerance"))
+				}
+				roadSimplifyTiles = value
+			case "--admin-borders":
+				adminBorders = true
+			case "--wrap-ew":
+				wrapEW = true
+			case "--wrap-players":
+				i++
+				if i >= len(args) {
+					die("kit geo trace-dem", fmt.Errorf("--wrap-players needs comma-separated player ids"))
+				}
+				value, err := parseCommaInts(args[i])
+				if err != nil {
+					die("kit geo trace-dem", err)
+				}
+				wrapPlayers = value
+			case "--sail-demo":
+				sailDemo = true
+			default:
+				die("kit geo trace-dem", fmt.Errorf("unknown arg %q", args[i]))
+			}
+		}
+		var bbox geotrace.BBox
+		if bboxRaw != "" {
+			if centerRaw != "" || spanKm > 0 {
+				die("kit geo trace-dem", fmt.Errorf("--bbox cannot be combined with --center/--span-km"))
+			}
+			var err error
+			bbox, err = parseGeoBBox(bboxRaw)
+			if err != nil {
+				die("kit geo trace-dem", err)
+			}
+		} else {
+			if centerRaw == "" || spanKm <= 0 {
+				die("kit geo trace-dem", fmt.Errorf("--bbox or --center lat,lon with --span-km is required"))
+			}
+			centerLat, centerLon, err := parseGeoCenter(centerRaw)
+			if err != nil {
+				die("kit geo trace-dem", err)
+			}
+			bbox = geoBBoxFromCenterSpan(centerLat, centerLon, spanKm)
+		}
+		if wrapEW {
+			if !waterFractionSet {
+				waterFraction = 0.40
+			}
+			if seamWaterColumns == 0 {
+				seamWaterColumns = 4
+			}
+		}
+		if shoreFishDensity <= 0 {
+			shoreFishDensity = fishDensity
+		}
+		if oceanFishDensity <= 0 {
+			oceanFishDensity = fishDensity
+		}
+		report, err := geotrace.TraceDEM(geotrace.Options{
+			BBox:                bbox,
+			GridSize:            gridSize,
+			Provider:            provider,
+			LandmaskProvider:    landmaskProvider,
+			LandmaskPath:        landmaskPath,
+			InlandWaterProvider: inlandWaterProvider,
+			InlandWaterPath:     inlandWaterPath,
+			LandcoverProvider:   landcoverProvider,
+			LandcoverCacheDir:   landcoverCacheDir,
+			LandcoverPath:       landcoverPath,
+			LandcoverDir:        landcoverDir,
+			ClimateZone:         climateZone,
+			FeltMappingPath:     feltMappingPath,
+			Orient:              orient,
+			TargetWaterFraction: waterFraction,
+			SeamWaterColumns:    seamWaterColumns,
+			FloraDensity:        floraDensity,
+			LandFaunaDensity:    landFaunaDensity,
+			FishDensity:         fishDensity,
+			ShoreFishDensity:    shoreFishDensity,
+			OceanFishDensity:    oceanFishDensity,
+			ShoreBandWidth:      shoreBandWidth,
+			WaterBandWidth:      waterBandWidth,
+			RoadsProvider:       roadsProvider,
+			RoadsPath:           roadsPath,
+			RoadsCacheDir:       roadsCacheDir,
+			RoadSimplifyTiles:   roadSimplifyTiles,
+			AdminBorders:        adminBorders,
+		})
+		if err != nil {
+			die("kit geo trace-dem", err)
+		}
+		if report.Recipe != nil {
+			if wrapEW {
+				if report.Orient == "diamond" {
+					report.Recipe.Triggers = append(report.Recipe.Triggers, geotrace.BuildDiamondLongitudeWrapTriggers(gridSize, wrapPlayers, seamWaterColumns)...)
+				} else {
+					report.Recipe.Triggers = append(report.Recipe.Triggers, geotrace.BuildEastWestWrapTriggers(gridSize, wrapPlayers)...)
+				}
+			}
+			if sailDemo {
+				report.Recipe.Units = append(report.Recipe.Units, geotrace.BuildSailDemoUnits(gridSize)...)
+			}
+			if wrapEW || sailDemo {
+				zero := 0
+				report.Recipe.Victory = &scenario.VictoryRecipe{ConquestRequired: &zero}
+			}
+		}
+		if recipeOutPath != "" {
+			if report.Recipe == nil {
+				die("kit geo trace-dem", fmt.Errorf("--recipe-out requires a landmask so the emitted recipe has explicit land/water masks"))
+			}
+			if err := writeJSONFile(recipeOutPath, report.Recipe); err != nil {
+				die("kit geo trace-dem", err)
+			}
+		}
+		if scenarioOutPath != "" {
+			if report.Recipe == nil {
+				die("kit geo trace-dem", fmt.Errorf("--scenario-out requires a landmask so the emitted scenario has explicit land/water masks"))
+			}
+			if err := writeGeoTraceScenario(scenarioOutPath, gridSize, *report.Recipe); err != nil {
+				die("kit geo trace-dem", err)
+			}
+		}
+		reportForJSON := report
+		if omitReportCells {
+			reportForJSON.Cells = nil
+		}
+		if omitReportRecipe {
+			reportForJSON.Recipe = nil
+		}
+		data, err := json.MarshalIndent(reportForJSON, "", "  ")
+		if err != nil {
+			die("kit geo trace-dem", err)
+		}
+		data = append(data, '\n')
+		if outPath != "" {
+			if err := os.WriteFile(outPath, data, 0o644); err != nil {
+				die("kit geo trace-dem", err)
+			}
+			fmt.Printf("wrote %s cells=%d coastline=%s tile_m=%.0f", outPath, len(report.Cells), report.CoastlineConfidence, report.ApproxTileMeters)
+			if report.RoadCells > 0 {
+				fmt.Printf(" roads=%d ways=%d vertices=%d/%d simplify_tiles=%.2f", report.RoadCells, report.RoadWayCount, report.RoadVertexCount, report.RoadVertexCountRaw, report.RoadSimplifyTiles)
+			}
+			if recipeOutPath != "" {
+				fmt.Printf(" recipe=%s", recipeOutPath)
+			}
+			if scenarioOutPath != "" {
+				fmt.Printf(" scenario=%s", scenarioOutPath)
+			}
+			fmt.Println()
+			return
+		}
+		fmt.Print(string(data))
+	default:
+		fmt.Fprintln(os.Stderr, geoTraceUsage())
+		os.Exit(2)
+	}
+}
+
+func geoTraceUsage() string {
+	return "usage: kit geo trace-dem [--bbox minLat,minLon,maxLat,maxLon] [--center lat,lon] [--span-km N] [--grid N] [--provider opentopodata|flat] [--landmask naturalearth|geojson] [--landmask-file path] [--inland-water naturalearth|geojson] [--inland-water-file path] [--landcover worldcover|glc-fcs30d] [--landcover-cache dir] [--landcover-dir dir] [--landcover-file path] [--climate zone] [--felt-mapping path] [--orient iso|iso-cw|iso-ccw|iso-ccw-screen|grid|diamond] [--water-fraction 0..1] [--flora-density 1..10] [--land-fauna-density 1..10] [--fish-density 1..10] [--shore-fish-density 1..10] [--ocean-fish-density 1..10] [--shore-band-width tiles] [--water-band-width tiles] [--roads osm-interstate|osm-motorway|osm-major|nhpn-interstate] [--roads-file roads.json] [--roads-cache dir] [--road-simplify-tiles N] [--admin-borders] [--seam-water-cols N] [--wrap-ew] [--wrap-players 1,2] [--sail-demo] [--omit-report-cells] [--omit-report-recipe] [--out report.json] [--recipe-out recipe.json] [--scenario-out out.aoe2scenario]"
+}
+
+func writeGeoTraceScenario(outPath string, gridSize int, recipe scenario.Recipe) error {
+	dir := filepath.Dir(outPath)
+	if dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	tmp, err := os.CreateTemp(dir, ".geotrace-blank-*.aoe2scenario")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	defer os.Remove(tmpPath)
+	if _, err := scenario.WriteBlankScenarioFile(tmpPath, scenario.BlankOptions{
+		PlayerCount: 1,
+		HumanSlots:  1,
+		MapWidth:    gridSize,
+		MapHeight:   gridSize,
+	}); err != nil {
+		return err
+	}
+	terrainPath := tmpPath + ".terrain.aoe2scenario"
+	defer os.Remove(terrainPath)
+	terrainRecipe := recipe
+	terrainRecipe.Units = nil
+	if _, err := scenario.PatchRecipeFile(tmpPath, terrainPath, terrainRecipe); err != nil {
+		return err
+	}
+	unitRecipe := scenario.Recipe{Units: recipe.Units}
+	_, err = scenario.PatchRecipeFile(terrainPath, outPath, unitRecipe)
+	return err
+}
+
+func writeJSONFile(path string, value any) error {
+	if dir := filepath.Dir(path); dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return err
+		}
+	}
+	data, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return os.WriteFile(path, data, 0o644)
+}
+
+func parseGeoBBox(raw string) (geotrace.BBox, error) {
+	parts := strings.Split(raw, ",")
+	if len(parts) != 4 {
+		return geotrace.BBox{}, fmt.Errorf("bbox must be minLat,minLon,maxLat,maxLon")
+	}
+	values := make([]float64, 4)
+	for i, part := range parts {
+		value, err := strconv.ParseFloat(strings.TrimSpace(part), 64)
+		if err != nil {
+			return geotrace.BBox{}, err
+		}
+		values[i] = value
+	}
+	return geotrace.BBox{MinLat: values[0], MinLon: values[1], MaxLat: values[2], MaxLon: values[3]}, nil
+}
+
+func parseGeoCenter(raw string) (lat, lon float64, err error) {
+	parts := strings.Split(raw, ",")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("center must be lat,lon")
+	}
+	lat, err = strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	lon, err = strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	if lat < -90 || lat > 90 || lon < -180 || lon > 180 {
+		return 0, 0, fmt.Errorf("center is out of range")
+	}
+	return lat, lon, nil
+}
+
+func geoBBoxFromCenterSpan(lat, lon, spanKm float64) geotrace.BBox {
+	half := spanKm / 2
+	kmPerLat := 111.320
+	kmPerLon := 111.320 * math.Cos(lat*math.Pi/180)
+	if kmPerLon <= 0 {
+		kmPerLon = 1
+	}
+	latHalf := half / kmPerLat
+	lonHalf := half / kmPerLon
+	return geotrace.BBox{
+		MinLat: lat - latHalf,
+		MinLon: lon - lonHalf,
+		MaxLat: lat + latHalf,
+		MaxLon: lon + lonHalf,
+	}
+}
+
+func parseCommaInts(raw string) ([]int, error) {
+	parts := strings.Split(raw, ",")
+	out := make([]int, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		value, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("expected at least one integer")
+	}
+	return out, nil
+}
+
+func parseDensityDial(raw string) (float64, error) {
+	value, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+	if err != nil {
+		return 0, err
+	}
+	if value < 1 || value > 10 {
+		return 0, fmt.Errorf("density dial must be in range 1..10")
+	}
+	return value, nil
 }
 
 func runRPG(args []string) {
@@ -6157,7 +6763,7 @@ func collect(args []string) {
 			report.New++
 			entry := registry.Entry{
 				Name:         "UNLABELED " + result.FingerprintTier + " " + shortHash(result.Fingerprint),
-				Description:  "TODO: add human-reviewed orientation text so this fingerprint teaches a fresh AI what scenario/map this is.",
+				Description:  "Needs human-reviewed orientation text so this fingerprint teaches a fresh AI what scenario/map this is.",
 				Tier:         result.FingerprintTier,
 				Fingerprint:  result.Fingerprint,
 				TriggerCount: result.TriggerCount,
@@ -14474,6 +15080,8 @@ func parseSLDExportOptions(prefix string, args []string) (gfx.SLDExportOptions, 
 			options.Limit = int(value)
 		case "--text":
 			text = true
+		case "--stats":
+			options.Stats = true
 		default:
 			die(prefix, fmt.Errorf("unknown option %q", args[i]))
 		}
@@ -14512,6 +15120,14 @@ func printSLDExportText(report gfx.SLDExportReport) {
 		fmt.Printf("frame %d index=%d %s %dx%d anchor=%d,%d opaque=%d -> %s\n",
 			exported.FrameOrdinal, exported.FrameIndex, exported.Layer, exported.Width, exported.Height,
 			exported.HotspotX, exported.HotspotY, exported.OpaquePixels, exported.Path)
+	}
+	for _, stats := range report.Stats {
+		fmt.Printf("stats frame=%d index=%d state=%s bbox=%d,%d,%dx%d coverage=%.4f mean_rgb=%.1f,%.1f,%.1f sat=%.3f buckets=green:%.3f yellow:%.3f red:%.3f brown:%.3f grey:%.3f white:%.3f other:%.3f\n",
+			stats.FrameOrdinal, stats.FrameIndex, stats.State,
+			stats.Bounds.X, stats.Bounds.Y, stats.Bounds.Width, stats.Bounds.Height,
+			stats.CanvasCoverage, stats.MeanR, stats.MeanG, stats.MeanB, stats.MeanSaturation,
+			stats.HueBuckets.Green, stats.HueBuckets.Yellow, stats.HueBuckets.Red, stats.HueBuckets.Brown,
+			stats.HueBuckets.Grey, stats.HueBuckets.White, stats.HueBuckets.Other)
 	}
 	for _, warning := range report.Warnings {
 		fmt.Printf("warning: %s\n", warning)
@@ -19825,6 +20441,7 @@ func usage() {
   kit roadmap rwd [--domain scenario|dat|replay|all] [--text|--json]
   kit roadmap dark [--domain scenario|dat|replay|all] [--text|--json]
   kit rpg shop-demo [--out-dir DIR] [--name TEXT] [--timestamp UNIX] [--text|--json]
+  kit geo trace-dem [--bbox minLat,minLon,maxLat,maxLon] [--center lat,lon] [--span-km N] [--grid N] [--landmask naturalearth|geojson] [--landcover worldcover|glc-fcs30d] [--roads osm-interstate|osm-motorway|osm-major|nhpn-interstate] [--out report.json] [--recipe-out recipe.json] [--scenario-out out.aoe2scenario]
   kit identify <file.aoe2scenario|file.aoe2record> [--registry known_scenarios.json] [--ai-registry known_ais.json] [--register NAME] [--family FAMILY] [--description TEXT]
   kit collect <folder> [--registry known_scenarios.json] [--dry-run]
   kit player stats <profileId> [--match-type N] [--cache-dir DIR] [--force] [--text]
@@ -20036,7 +20653,7 @@ func usage() {
   kit dat player-colour-patch <in.dat> <out.dat> <colour_id> [colour-flags]
   kit dat player-colour-delete <in.dat> <out.dat> <colour_id>
   kit dat random-maps <empires*.dat>
-  kit dat sprite <file.sld> [--out dir] [--limit N] [--text]
+  kit dat sprite <file.sld> [--out dir] [--limit N] [--stats] [--text]
   kit dat patch-graphic <in.dat> <out.dat> <graphic_id> [graphic scalar flags]
   kit dat graphic-delta-delete <in.dat> <out.dat> <graphic_id> <row_index>
   kit dat graphic-angle-sound-delete <in.dat> <out.dat> <graphic_id> <row_index>

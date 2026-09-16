@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
-  "command_count": 222,
+  "command_count": 223,
   "probed_count": 41,
   "commands": [
     {
@@ -2194,7 +2194,7 @@
       ],
       "name": "dat sprite",
       "group": "dat",
-      "usage": "kit dat sprite \u003cfile.sld\u003e [--out dir] [--limit N] [--text]",
+      "usage": "kit dat sprite \u003cfile.sld\u003e [--out dir] [--limit N] [--stats] [--text]",
       "flags": [
         {
           "name": "--out",
@@ -2203,6 +2203,9 @@
         {
           "name": "--limit",
           "value_hint": "N"
+        },
+        {
+          "name": "--stats"
         },
         {
           "name": "--text"
@@ -3138,6 +3141,62 @@
       "positional": [
         "\u003cname\u003e",
         "descriptor"
+      ],
+      "mutates": true,
+      "network": false,
+      "trait": "writes",
+      "input": "other",
+      "probe_status": "skipped_mutating"
+    },
+    {
+      "path": [
+        "geo",
+        "trace-dem"
+      ],
+      "name": "geo trace-dem",
+      "group": "geo",
+      "usage": "kit geo trace-dem [--bbox minLat,minLon,maxLat,maxLon] [--center lat,lon] [--span-km N] [--grid N] [--landmask naturalearth|geojson] [--landcover worldcover|glc-fcs30d] [--roads osm-interstate|osm-motorway|osm-major|nhpn-interstate] [--out report.json] [--recipe-out recipe.json] [--scenario-out out.aoe2scenario]",
+      "flags": [
+        {
+          "name": "--bbox",
+          "value_hint": "minLat,minLon,maxLat,maxLon"
+        },
+        {
+          "name": "--center",
+          "value_hint": "lat,lon"
+        },
+        {
+          "name": "--span-km",
+          "value_hint": "N"
+        },
+        {
+          "name": "--grid",
+          "value_hint": "N"
+        },
+        {
+          "name": "--landmask",
+          "value_hint": "naturalearth|geojson"
+        },
+        {
+          "name": "--landcover",
+          "value_hint": "worldcover|glc-fcs30d"
+        },
+        {
+          "name": "--roads",
+          "value_hint": "osm-interstate|osm-motorway|osm-major|nhpn-interstate"
+        },
+        {
+          "name": "--out",
+          "value_hint": "report.json"
+        },
+        {
+          "name": "--recipe-out",
+          "value_hint": "recipe.json"
+        },
+        {
+          "name": "--scenario-out",
+          "value_hint": "out.aoe2scenario"
+        }
       ],
       "mutates": true,
       "network": false,

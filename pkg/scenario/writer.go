@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sort"
@@ -27,6 +28,7 @@ type Recipe struct {
 	Strings          []StringRecipe          `json:"strings,omitempty"`
 	Variables        []VariableRecipe        `json:"variables,omitempty"`
 	Triggers         []TriggerRecipe         `json:"triggers"`
+	Masks            []MaskRecipe            `json:"masks,omitempty"`
 	Units            []UnitRecipe            `json:"units,omitempty"`
 	Map              []MapRecipe             `json:"map,omitempty"`
 }
@@ -150,50 +152,263 @@ type StringRecipe struct {
 	Required *bool   `json:"required,omitempty"`
 }
 
+type MaskRecipe struct {
+	Name       string           `json:"name"`
+	Op         string           `json:"op"`
+	X1         int              `json:"x1,omitempty"`
+	Y1         int              `json:"y1,omitempty"`
+	X2         int              `json:"x2,omitempty"`
+	Y2         int              `json:"y2,omitempty"`
+	Radius     *int             `json:"radius,omitempty"`
+	TerrainIDs []int            `json:"terrain_ids,omitempty"`
+	Masks      []string         `json:"masks,omitempty"`
+	Seed       *int             `json:"seed,omitempty"`
+	Scale      *float64         `json:"scale,omitempty"`
+	Threshold  *float64         `json:"threshold,omitempty"`
+	Iterations *int             `json:"iterations,omitempty"`
+	Invert     *bool            `json:"invert,omitempty"`
+	Cells      []MaskCellRecipe `json:"cells,omitempty"`
+}
+
+type MaskCellRecipe struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
 type MapRecipe struct {
-	Op        string `json:"op"`
-	X1        int    `json:"x1"`
-	Y1        int    `json:"y1"`
-	X2        int    `json:"x2"`
-	Y2        int    `json:"y2"`
-	TargetX   *int   `json:"target_x,omitempty"`
-	TargetY   *int   `json:"target_y,omitempty"`
-	Radius    *int   `json:"radius,omitempty"`
-	Thickness *int   `json:"thickness,omitempty"`
-	TerrainID *int   `json:"terrain_id,omitempty"`
-	Elevation *int   `json:"elevation,omitempty"`
-	Layer     *int   `json:"layer,omitempty"`
+	Op         string   `json:"op"`
+	Mask       string   `json:"mask,omitempty"`
+	X1         int      `json:"x1"`
+	Y1         int      `json:"y1"`
+	X2         int      `json:"x2"`
+	Y2         int      `json:"y2"`
+	Width      *int     `json:"width,omitempty"`
+	Height     *int     `json:"height,omitempty"`
+	TargetX    *int     `json:"target_x,omitempty"`
+	TargetY    *int     `json:"target_y,omitempty"`
+	Radius     *int     `json:"radius,omitempty"`
+	Thickness  *int     `json:"thickness,omitempty"`
+	TerrainID  *int     `json:"terrain_id,omitempty"`
+	TerrainID2 *int     `json:"terrain_id_2,omitempty"`
+	Elevation  *int     `json:"elevation,omitempty"`
+	Layer      *int     `json:"layer,omitempty"`
+	Seed       *int     `json:"seed,omitempty"`
+	Scale      *float64 `json:"scale,omitempty"`
+	Threshold  *float64 `json:"threshold,omitempty"`
+	Iterations *int     `json:"iterations,omitempty"`
+	TerrainIDs []int    `json:"terrain_ids,omitempty"`
+	GridFile   string   `json:"grid_file,omitempty"`
+
+	TerrainIDGrid []int `json:"-"`
+	LayerGrid     []int `json:"-"`
+	ElevationGrid []int `json:"-"`
+	baseDir       string
+}
+
+func (recipe *MapRecipe) UnmarshalJSON(data []byte) error {
+	type wire struct {
+		Op         string          `json:"op"`
+		Mask       string          `json:"mask,omitempty"`
+		X1         int             `json:"x1"`
+		Y1         int             `json:"y1"`
+		X2         int             `json:"x2"`
+		Y2         int             `json:"y2"`
+		Width      *int            `json:"width,omitempty"`
+		Height     *int            `json:"height,omitempty"`
+		TargetX    *int            `json:"target_x,omitempty"`
+		TargetY    *int            `json:"target_y,omitempty"`
+		Radius     *int            `json:"radius,omitempty"`
+		Thickness  *int            `json:"thickness,omitempty"`
+		TerrainID  json.RawMessage `json:"terrain_id,omitempty"`
+		TerrainID2 *int            `json:"terrain_id_2,omitempty"`
+		Elevation  json.RawMessage `json:"elevation,omitempty"`
+		Layer      json.RawMessage `json:"layer,omitempty"`
+		Seed       *int            `json:"seed,omitempty"`
+		Scale      *float64        `json:"scale,omitempty"`
+		Threshold  *float64        `json:"threshold,omitempty"`
+		Iterations *int            `json:"iterations,omitempty"`
+		TerrainIDs []int           `json:"terrain_ids,omitempty"`
+		GridFile   string          `json:"grid_file,omitempty"`
+	}
+	var raw wire
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	terrainID, terrainGrid, err := decodeMapRecipeIntOrGrid(raw.TerrainID, "terrain_id")
+	if err != nil {
+		return err
+	}
+	elevation, elevationGrid, err := decodeMapRecipeIntOrGrid(raw.Elevation, "elevation")
+	if err != nil {
+		return err
+	}
+	layer, layerGrid, err := decodeMapRecipeIntOrGrid(raw.Layer, "layer")
+	if err != nil {
+		return err
+	}
+	*recipe = MapRecipe{
+		Op:            raw.Op,
+		Mask:          raw.Mask,
+		X1:            raw.X1,
+		Y1:            raw.Y1,
+		X2:            raw.X2,
+		Y2:            raw.Y2,
+		Width:         raw.Width,
+		Height:        raw.Height,
+		TargetX:       raw.TargetX,
+		TargetY:       raw.TargetY,
+		Radius:        raw.Radius,
+		Thickness:     raw.Thickness,
+		TerrainID:     terrainID,
+		TerrainID2:    raw.TerrainID2,
+		Elevation:     elevation,
+		Layer:         layer,
+		Seed:          raw.Seed,
+		Scale:         raw.Scale,
+		Threshold:     raw.Threshold,
+		Iterations:    raw.Iterations,
+		TerrainIDs:    raw.TerrainIDs,
+		GridFile:      raw.GridFile,
+		TerrainIDGrid: terrainGrid,
+		LayerGrid:     layerGrid,
+		ElevationGrid: elevationGrid,
+	}
+	return nil
+}
+
+func (recipe MapRecipe) MarshalJSON() ([]byte, error) {
+	type wire struct {
+		Op         string   `json:"op"`
+		Mask       string   `json:"mask,omitempty"`
+		X1         int      `json:"x1"`
+		Y1         int      `json:"y1"`
+		X2         int      `json:"x2"`
+		Y2         int      `json:"y2"`
+		Width      *int     `json:"width,omitempty"`
+		Height     *int     `json:"height,omitempty"`
+		TargetX    *int     `json:"target_x,omitempty"`
+		TargetY    *int     `json:"target_y,omitempty"`
+		Radius     *int     `json:"radius,omitempty"`
+		Thickness  *int     `json:"thickness,omitempty"`
+		TerrainID  any      `json:"terrain_id,omitempty"`
+		TerrainID2 *int     `json:"terrain_id_2,omitempty"`
+		Elevation  any      `json:"elevation,omitempty"`
+		Layer      any      `json:"layer,omitempty"`
+		Seed       *int     `json:"seed,omitempty"`
+		Scale      *float64 `json:"scale,omitempty"`
+		Threshold  *float64 `json:"threshold,omitempty"`
+		Iterations *int     `json:"iterations,omitempty"`
+		TerrainIDs []int    `json:"terrain_ids,omitempty"`
+		GridFile   string   `json:"grid_file,omitempty"`
+	}
+	var terrainID any
+	if recipe.TerrainID != nil {
+		terrainID = *recipe.TerrainID
+	}
+	if len(recipe.TerrainIDGrid) > 0 {
+		terrainID = recipe.TerrainIDGrid
+	}
+	var elevation any
+	if recipe.Elevation != nil {
+		elevation = *recipe.Elevation
+	}
+	if len(recipe.ElevationGrid) > 0 {
+		elevation = recipe.ElevationGrid
+	}
+	var layer any
+	if recipe.Layer != nil {
+		layer = *recipe.Layer
+	}
+	if len(recipe.LayerGrid) > 0 {
+		layer = recipe.LayerGrid
+	}
+	return json.Marshal(wire{
+		Op:         recipe.Op,
+		Mask:       recipe.Mask,
+		X1:         recipe.X1,
+		Y1:         recipe.Y1,
+		X2:         recipe.X2,
+		Y2:         recipe.Y2,
+		Width:      recipe.Width,
+		Height:     recipe.Height,
+		TargetX:    recipe.TargetX,
+		TargetY:    recipe.TargetY,
+		Radius:     recipe.Radius,
+		Thickness:  recipe.Thickness,
+		TerrainID:  terrainID,
+		TerrainID2: recipe.TerrainID2,
+		Elevation:  elevation,
+		Layer:      layer,
+		Seed:       recipe.Seed,
+		Scale:      recipe.Scale,
+		Threshold:  recipe.Threshold,
+		Iterations: recipe.Iterations,
+		TerrainIDs: recipe.TerrainIDs,
+		GridFile:   recipe.GridFile,
+	})
+}
+
+func decodeMapRecipeIntOrGrid(raw json.RawMessage, name string) (*int, []int, error) {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
+		return nil, nil, nil
+	}
+	if raw[0] == '[' {
+		var values []int
+		if err := json.Unmarshal(raw, &values); err != nil {
+			return nil, nil, fmt.Errorf("%s array: %w", name, err)
+		}
+		return nil, values, nil
+	}
+	var value int
+	if err := json.Unmarshal(raw, &value); err != nil {
+		return nil, nil, fmt.Errorf("%s scalar: %w", name, err)
+	}
+	return &value, nil, nil
 }
 
 type UnitRecipe struct {
-	Op                    string   `json:"op"`
-	Player                int      `json:"player"`
-	UnitConst             int      `json:"unit_const"`
-	X                     *float64 `json:"x,omitempty"`
-	Y                     *float64 `json:"y,omitempty"`
-	Z                     *float64 `json:"z,omitempty"`
-	ReferenceID           *int     `json:"reference_id,omitempty"`
-	TargetPlayer          *int     `json:"target_player,omitempty"`
-	TargetIndex           *int     `json:"target_index,omitempty"`
-	TargetCaption         string   `json:"target_caption,omitempty"`
-	TargetUnitConst       *int     `json:"target_unit_const,omitempty"`
-	TargetAreaX1          *float64 `json:"target_area_x1,omitempty"`
-	TargetAreaY1          *float64 `json:"target_area_y1,omitempty"`
-	TargetAreaX2          *float64 `json:"target_area_x2,omitempty"`
-	TargetAreaY2          *float64 `json:"target_area_y2,omitempty"`
-	TargetX               *float64 `json:"target_x,omitempty"`
-	TargetY               *float64 `json:"target_y,omitempty"`
-	OffsetX               *float64 `json:"offset_x,omitempty"`
-	OffsetY               *float64 `json:"offset_y,omitempty"`
-	ReferenceIDBase       *int     `json:"reference_id_base,omitempty"`
-	CaptionSuffix         string   `json:"caption_suffix,omitempty"`
-	SetPlayer             *int     `json:"set_player,omitempty"`
-	Status                *int     `json:"status,omitempty"`
-	Rotation              *float64 `json:"rotation,omitempty"`
-	InitialAnimationFrame *int     `json:"initial_animation_frame,omitempty"`
-	GarrisonedInID        *int     `json:"garrisoned_in_id,omitempty"`
-	CaptionStringID       *int     `json:"caption_string_id,omitempty"`
-	CaptionString         string   `json:"caption_string,omitempty"`
+	Op                    string        `json:"op"`
+	Player                int           `json:"player"`
+	UnitConst             int           `json:"unit_const"`
+	X                     *float64      `json:"x,omitempty"`
+	Y                     *float64      `json:"y,omitempty"`
+	Z                     *float64      `json:"z,omitempty"`
+	ReferenceID           *int          `json:"reference_id,omitempty"`
+	TargetPlayer          *int          `json:"target_player,omitempty"`
+	TargetIndex           *int          `json:"target_index,omitempty"`
+	TargetCaption         string        `json:"target_caption,omitempty"`
+	TargetUnitConst       *int          `json:"target_unit_const,omitempty"`
+	TargetAreaX1          *float64      `json:"target_area_x1,omitempty"`
+	TargetAreaY1          *float64      `json:"target_area_y1,omitempty"`
+	TargetAreaX2          *float64      `json:"target_area_x2,omitempty"`
+	TargetAreaY2          *float64      `json:"target_area_y2,omitempty"`
+	TargetX               *float64      `json:"target_x,omitempty"`
+	TargetY               *float64      `json:"target_y,omitempty"`
+	OffsetX               *float64      `json:"offset_x,omitempty"`
+	OffsetY               *float64      `json:"offset_y,omitempty"`
+	ReferenceIDBase       *int          `json:"reference_id_base,omitempty"`
+	Count                 *int          `json:"count,omitempty"`
+	Centers               []PointRecipe `json:"centers,omitempty"`
+	Spread                *float64      `json:"spread,omitempty"`
+	MinDistance           *float64      `json:"min_distance,omitempty"`
+	AllowedTerrainIDs     []int         `json:"allowed_terrain_ids,omitempty"`
+	Exact                 *bool         `json:"exact,omitempty"`
+	Seed                  *int          `json:"seed,omitempty"`
+	CaptionSuffix         string        `json:"caption_suffix,omitempty"`
+	SetPlayer             *int          `json:"set_player,omitempty"`
+	Status                *int          `json:"status,omitempty"`
+	Rotation              *float64      `json:"rotation,omitempty"`
+	RotationChoices       []float64     `json:"rotation_choices,omitempty"`
+	InitialAnimationFrame *int          `json:"initial_animation_frame,omitempty"`
+	GarrisonedInID        *int          `json:"garrisoned_in_id,omitempty"`
+	CaptionStringID       *int          `json:"caption_string_id,omitempty"`
+	CaptionString         string        `json:"caption_string,omitempty"`
+}
+
+type PointRecipe struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
 }
 
 type TriggerRecipe struct {
@@ -388,6 +603,10 @@ func LoadRecipe(path string) (Recipe, error) {
 	if err := json.Unmarshal(data, &recipe); err != nil {
 		return Recipe{}, err
 	}
+	baseDir := filepath.Dir(path)
+	for i := range recipe.Map {
+		recipe.Map[i].baseDir = baseDir
+	}
 	return recipe, nil
 }
 
@@ -415,6 +634,10 @@ func PatchRecipeFile(input, output string, recipe Recipe) (PatchReport, error) {
 	if file.Units != nil {
 		unitsBefore = file.Units.Total
 	}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		return PatchReport{}, err
+	}
 	if err := file.ApplyRecipe(recipe); err != nil {
 		return PatchReport{}, err
 	}
@@ -422,7 +645,6 @@ func PatchRecipeFile(input, output string, recipe Recipe) (PatchReport, error) {
 	if err := file.SetScenario(ScenarioRecipe{TimestampOfLastSave: &timestamp}); err != nil {
 		return PatchReport{}, err
 	}
-	mapTilesChanged := plannedMapTiles(recipe)
 	if err := file.Write(output); err != nil {
 		return PatchReport{}, err
 	}
@@ -453,7 +675,7 @@ func PatchRecipeFile(input, output string, recipe Recipe) (PatchReport, error) {
 		TriggerCountAfter:   after,
 		UnitCountBefore:     unitsBefore,
 		UnitCountAfter:      unitsAfter,
-		MapTilesChanged:     mapTilesChanged,
+		MapTilesChanged:     plan.MapTilesChanged,
 		TimestampOfLastSave: timestamp,
 		RebuildOK:           true,
 		InvariantOK:         invariantOK,
@@ -749,11 +971,19 @@ func (f *File) Plan(recipe Recipe) (Plan, error) {
 	}
 	for _, unit := range recipe.Units {
 		switch unit.Op {
-		case "add_unit", "edit_unit", "remove_unit", "remove_units_in_area", "remove_units_for_player", "copy_units_in_area", "move_units_in_area", "edit_units_in_area":
+		case "add_unit", "cluster_scatter", "edit_unit", "remove_unit", "remove_units_in_area", "remove_units_for_player", "copy_units_in_area", "move_units_in_area", "edit_units_in_area":
+			matches := 0
 			if unit.Op == "edit_unit" {
 				if _, _, _, err := f.findUnit(unit); err != nil {
 					return Plan{}, err
 				}
+			}
+			if unit.Op == "cluster_scatter" {
+				count, err := f.validateClusterScatter(unit)
+				if err != nil {
+					return Plan{}, err
+				}
+				matches = count
 			}
 			if unit.Op == "remove_unit" {
 				target, _, _, err := f.findUnit(unit)
@@ -766,7 +996,6 @@ func (f *File) Plan(recipe Recipe) (Plan, error) {
 					}
 				}
 			}
-			matches := 0
 			if unit.Op == "remove_units_in_area" {
 				targets, err := f.findUnitsInArea(unit)
 				if err != nil {
@@ -829,6 +1058,8 @@ func (f *File) Plan(recipe Recipe) (Plan, error) {
 			switch unit.Op {
 			case "add_unit":
 				plan.UnitCountAfter++
+			case "cluster_scatter":
+				plan.UnitCountAfter += matches
 			case "remove_unit":
 				plan.UnitCountAfter--
 			case "remove_units_in_area":
@@ -846,10 +1077,14 @@ func (f *File) Plan(recipe Recipe) (Plan, error) {
 			return Plan{}, fmt.Errorf("unsupported unit op %q", unit.Op)
 		}
 	}
+	masks, err := f.resolveMaskRecipes(recipe.Masks)
+	if err != nil {
+		return Plan{}, err
+	}
 	for _, mapPatch := range recipe.Map {
 		switch mapPatch.Op {
-		case "set_terrain_rect", "set_terrain_circle", "set_terrain_line", "set_terrain_border", "copy_terrain_area":
-			changed, err := f.countMapTiles(mapPatch)
+		case "set_terrain_rect", "set_terrain_circle", "set_terrain_line", "set_terrain_border", "copy_terrain_area", "noise_fill", "erode", "semantic_erode", "set_terrain_mask", "layered_crossfade", "terrain_grid":
+			changed, err := f.countMapTiles(mapPatch, masks)
 			if err != nil {
 				return Plan{}, err
 			}
@@ -1003,6 +1238,17 @@ func (f *File) ApplyRecipe(recipe Recipe) error {
 		switch unit.Op {
 		case "add_unit":
 			pendingAddUnits = append(pendingAddUnits, unit)
+		case "cluster_scatter":
+			if err := flushAddUnits(); err != nil {
+				return err
+			}
+			adds, err := f.ClusterScatterUnits(unit)
+			if err != nil {
+				return err
+			}
+			if err := f.AddUnits(adds); err != nil {
+				return err
+			}
 		case "edit_unit":
 			if err := flushAddUnits(); err != nil {
 				return err
@@ -1059,14 +1305,42 @@ func (f *File) ApplyRecipe(recipe Recipe) error {
 	if err := flushAddUnits(); err != nil {
 		return err
 	}
+	masks, err := f.resolveMaskRecipes(recipe.Masks)
+	if err != nil {
+		return err
+	}
 	for _, mapPatch := range recipe.Map {
 		switch mapPatch.Op {
 		case "set_terrain_rect", "set_terrain_circle", "set_terrain_line", "set_terrain_border":
-			if err := f.SetTerrain(mapPatch); err != nil {
+			if err := f.SetTerrainWithMasks(mapPatch, masks); err != nil {
+				return err
+			}
+		case "set_terrain_mask":
+			if err := f.SetTerrainWithMasks(mapPatch, masks); err != nil {
+				return err
+			}
+		case "layered_crossfade":
+			if err := f.LayeredCrossfadeTerrainWithMasks(mapPatch, masks); err != nil {
+				return err
+			}
+		case "noise_fill":
+			if err := f.NoiseFillTerrainWithMasks(mapPatch, masks); err != nil {
+				return err
+			}
+		case "erode":
+			if err := f.ErodeTerrainWithMasks(mapPatch, masks, false); err != nil {
+				return err
+			}
+		case "semantic_erode":
+			if err := f.ErodeTerrainWithMasks(mapPatch, masks, true); err != nil {
 				return err
 			}
 		case "copy_terrain_area":
 			if err := f.CopyTerrainArea(mapPatch); err != nil {
+				return err
+			}
+		case "terrain_grid":
+			if err := f.ApplyTerrainGrid(mapPatch); err != nil {
 				return err
 			}
 		default:
@@ -2055,6 +2329,183 @@ func (f *File) AddUnits(recipes []UnitRecipe) error {
 	return f.refreshUnits()
 }
 
+func (f *File) validateClusterScatter(recipe UnitRecipe) (int, error) {
+	if recipe.UnitConst <= 0 {
+		return 0, fmt.Errorf("cluster_scatter requires positive unit_const")
+	}
+	if recipe.Count == nil || *recipe.Count < 0 {
+		return 0, fmt.Errorf("cluster_scatter requires non-negative count")
+	}
+	if *recipe.Count == 0 {
+		return 0, nil
+	}
+	if len(recipe.Centers) == 0 && (recipe.TargetAreaX1 == nil || recipe.TargetAreaY1 == nil || recipe.TargetAreaX2 == nil || recipe.TargetAreaY2 == nil) {
+		return 0, fmt.Errorf("cluster_scatter requires centers or target_area")
+	}
+	if recipe.Spread != nil && *recipe.Spread <= 0 {
+		return 0, fmt.Errorf("cluster_scatter spread must be > 0")
+	}
+	if recipe.MinDistance != nil && *recipe.MinDistance < 0 {
+		return 0, fmt.Errorf("cluster_scatter min_distance must be >= 0")
+	}
+	return *recipe.Count, nil
+}
+
+func (f *File) ClusterScatterUnits(recipe UnitRecipe) ([]UnitRecipe, error) {
+	count, err := f.validateClusterScatter(recipe)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, nil
+	}
+	tiles, width, height, err := f.mapTiles()
+	if err != nil {
+		return nil, err
+	}
+	terrainIDs := make([]int, len(tiles))
+	for i, tile := range tiles {
+		id, _ := tile.intValue("terrain_id")
+		terrainIDs[i] = id
+	}
+	allowed := intSet(recipe.AllowedTerrainIDs)
+	x1, y1, x2, y2 := 0.0, 0.0, float64(width), float64(height)
+	if recipe.TargetAreaX1 != nil {
+		x1 = *recipe.TargetAreaX1
+	}
+	if recipe.TargetAreaY1 != nil {
+		y1 = *recipe.TargetAreaY1
+	}
+	if recipe.TargetAreaX2 != nil {
+		x2 = *recipe.TargetAreaX2
+	}
+	if recipe.TargetAreaY2 != nil {
+		y2 = *recipe.TargetAreaY2
+	}
+	if x1 > x2 || y1 > y2 {
+		return nil, fmt.Errorf("cluster_scatter target area is inverted")
+	}
+	centers := append([]PointRecipe(nil), recipe.Centers...)
+	if len(centers) == 0 {
+		centers = []PointRecipe{{X: (x1 + x2) / 2, Y: (y1 + y2) / 2}}
+	}
+	spread := 4.0
+	if recipe.Spread != nil {
+		spread = *recipe.Spread
+	}
+	minDistance := 0.75
+	if recipe.MinDistance != nil {
+		minDistance = *recipe.MinDistance
+	}
+	exact := true
+	if recipe.Exact != nil {
+		exact = *recipe.Exact
+	}
+	seed := int64(0)
+	if recipe.Seed != nil {
+		seed = int64(*recipe.Seed)
+	}
+	r := rand.New(rand.NewSource(seed))
+	var placed []PointRecipe
+	var adds []UnitRecipe
+	for i := 0; i < count; i++ {
+		center := centers[i%len(centers)]
+		x, y, ok := scatterRandomPoint(r, center, spread, x1, y1, x2, y2, width, height, terrainIDs, allowed, placed, minDistance)
+		if !ok {
+			x, y, ok = scatterFallbackPoint(center, x1, y1, x2, y2, width, height, terrainIDs, allowed, placed, minDistance)
+		}
+		if !ok {
+			if exact {
+				return nil, fmt.Errorf("cluster_scatter placed %d/%d unit(s) before habitat/min-distance constraints exhausted", len(adds), count)
+			}
+			continue
+		}
+		placed = append(placed, PointRecipe{X: x, Y: y})
+		add := recipe
+		add.Op = "add_unit"
+		add.X = ptrFloat64(x)
+		add.Y = ptrFloat64(y)
+		if add.Z == nil {
+			add.Z = ptrFloat64(0)
+		}
+		if add.Status == nil {
+			add.Status = ptrInt(2)
+		}
+		if add.Rotation == nil {
+			if len(recipe.RotationChoices) > 0 {
+				add.Rotation = ptrFloat64(recipe.RotationChoices[r.Intn(len(recipe.RotationChoices))])
+			} else {
+				add.Rotation = ptrFloat64(r.Float64() * 31)
+			}
+		}
+		if recipe.ReferenceIDBase != nil {
+			ref := *recipe.ReferenceIDBase + i
+			add.ReferenceID = &ref
+		}
+		if recipe.CaptionSuffix != "" && recipe.CaptionString != "" {
+			add.CaptionString = fmt.Sprintf("%s%s%d", recipe.CaptionString, recipe.CaptionSuffix, i+1)
+		}
+		adds = append(adds, add)
+	}
+	return adds, nil
+}
+
+func scatterRandomPoint(r *rand.Rand, center PointRecipe, spread, x1, y1, x2, y2 float64, width, height int, terrainIDs []int, allowed map[int]bool, placed []PointRecipe, minDistance float64) (float64, float64, bool) {
+	for attempt := 0; attempt < 800; attempt++ {
+		localSpread := spread
+		if attempt > 400 {
+			localSpread *= 1.75
+		}
+		x := center.X + r.NormFloat64()*localSpread
+		y := center.Y + r.NormFloat64()*localSpread
+		if validScatterPoint(x, y, x1, y1, x2, y2, width, height, terrainIDs, allowed, placed, minDistance) {
+			return x, y, true
+		}
+	}
+	return 0, 0, false
+}
+
+func scatterFallbackPoint(center PointRecipe, x1, y1, x2, y2 float64, width, height int, terrainIDs []int, allowed map[int]bool, placed []PointRecipe, minDistance float64) (float64, float64, bool) {
+	bestX, bestY := 0.0, 0.0
+	bestDist := math.MaxFloat64
+	for yy := maxInt(0, int(math.Floor(y1))); yy <= minInt(height-1, int(math.Ceil(y2))); yy++ {
+		for xx := maxInt(0, int(math.Floor(x1))); xx <= minInt(width-1, int(math.Ceil(x2))); xx++ {
+			x, y := float64(xx)+0.5, float64(yy)+0.5
+			if !validScatterPoint(x, y, x1, y1, x2, y2, width, height, terrainIDs, allowed, placed, minDistance) {
+				continue
+			}
+			d := math.Hypot(x-center.X, y-center.Y)
+			if d < bestDist {
+				bestDist = d
+				bestX, bestY = x, y
+			}
+		}
+	}
+	if bestDist == math.MaxFloat64 {
+		return 0, 0, false
+	}
+	return bestX, bestY, true
+}
+
+func validScatterPoint(x, y, x1, y1, x2, y2 float64, width, height int, terrainIDs []int, allowed map[int]bool, placed []PointRecipe, minDistance float64) bool {
+	if x < x1 || y < y1 || x > x2 || y > y2 {
+		return false
+	}
+	tx, ty := int(math.Floor(x)), int(math.Floor(y))
+	if tx < 0 || ty < 0 || tx >= width || ty >= height {
+		return false
+	}
+	if len(allowed) > 0 && !allowed[terrainIDs[ty*width+tx]] {
+		return false
+	}
+	for _, p := range placed {
+		if math.Hypot(x-p.X, y-p.Y) < minDistance {
+			return false
+		}
+	}
+	return true
+}
+
 func (f *File) EditUnit(recipe UnitRecipe) error {
 	unitNode, playerSection, unitIndex, err := f.findUnit(recipe)
 	if err != nil {
@@ -2313,6 +2764,155 @@ func (f *File) SetTerrainRect(recipe MapRecipe) error {
 	return f.SetTerrain(recipe)
 }
 
+type terrainGridPayload struct {
+	Width     int   `json:"width"`
+	Height    int   `json:"height"`
+	TerrainID []int `json:"terrain_id"`
+	Layer     []int `json:"layer"`
+	Elevation []int `json:"elevation,omitempty"`
+}
+
+type resolvedTerrainGrid struct {
+	X1        int
+	Y1        int
+	Width     int
+	Height    int
+	TerrainID []int
+	Layer     []int
+	Elevation []int
+}
+
+func (f *File) ApplyTerrainGrid(recipe MapRecipe) error {
+	tiles, mapWidth, mapHeight, err := f.mapTiles()
+	if err != nil {
+		return err
+	}
+	grid, err := resolveTerrainGridRecipe(recipe, mapWidth, mapHeight)
+	if err != nil {
+		return err
+	}
+	for y := 0; y < grid.Height; y++ {
+		for x := 0; x < grid.Width; x++ {
+			src := y*grid.Width + x
+			dst := (grid.Y1+y)*mapWidth + grid.X1 + x
+			tile := tiles[dst]
+			if err := setIntField(tile, "terrain_id", "u8", grid.TerrainID[src]); err != nil {
+				return err
+			}
+			if err := setIntField(tile, "layer", "s16", grid.Layer[src]); err != nil {
+				return err
+			}
+			if grid.Elevation != nil {
+				if err := setIntField(tile, "elevation", "u8", grid.Elevation[src]); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return f.refreshMapAfterTerrainEdit()
+}
+
+func resolveTerrainGridRecipe(recipe MapRecipe, mapWidth, mapHeight int) (resolvedTerrainGrid, error) {
+	loaded := terrainGridPayload{
+		TerrainID: append([]int(nil), recipe.TerrainIDGrid...),
+		Layer:     append([]int(nil), recipe.LayerGrid...),
+		Elevation: append([]int(nil), recipe.ElevationGrid...),
+	}
+	if recipe.Width != nil {
+		loaded.Width = *recipe.Width
+	}
+	if recipe.Height != nil {
+		loaded.Height = *recipe.Height
+	}
+	if recipe.GridFile != "" {
+		fromFile, err := loadTerrainGridPayload(recipe)
+		if err != nil {
+			return resolvedTerrainGrid{}, err
+		}
+		loaded = fromFile
+		if recipe.Width != nil {
+			loaded.Width = *recipe.Width
+		}
+		if recipe.Height != nil {
+			loaded.Height = *recipe.Height
+		}
+		if len(recipe.TerrainIDGrid) > 0 {
+			loaded.TerrainID = append([]int(nil), recipe.TerrainIDGrid...)
+		}
+		if len(recipe.LayerGrid) > 0 {
+			loaded.Layer = append([]int(nil), recipe.LayerGrid...)
+		}
+		if len(recipe.ElevationGrid) > 0 {
+			loaded.Elevation = append([]int(nil), recipe.ElevationGrid...)
+		}
+	}
+	if loaded.Width == 0 {
+		loaded.Width = mapWidth - recipe.X1
+	}
+	if loaded.Height == 0 {
+		loaded.Height = mapHeight - recipe.Y1
+	}
+	grid := resolvedTerrainGrid{
+		X1:        recipe.X1,
+		Y1:        recipe.Y1,
+		Width:     loaded.Width,
+		Height:    loaded.Height,
+		TerrainID: loaded.TerrainID,
+		Layer:     loaded.Layer,
+		Elevation: loaded.Elevation,
+	}
+	if err := validateTerrainGrid(grid, mapWidth, mapHeight); err != nil {
+		return resolvedTerrainGrid{}, err
+	}
+	return grid, nil
+}
+
+func loadTerrainGridPayload(recipe MapRecipe) (terrainGridPayload, error) {
+	path := recipe.GridFile
+	if recipe.baseDir != "" && !filepath.IsAbs(path) {
+		path = filepath.Join(recipe.baseDir, path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return terrainGridPayload{}, fmt.Errorf("terrain_grid grid_file %q: %w", recipe.GridFile, err)
+	}
+	var payload terrainGridPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return terrainGridPayload{}, fmt.Errorf("terrain_grid grid_file %q: %w", recipe.GridFile, err)
+	}
+	return payload, nil
+}
+
+func validateTerrainGrid(grid resolvedTerrainGrid, mapWidth, mapHeight int) error {
+	if grid.Width <= 0 || grid.Height <= 0 {
+		return fmt.Errorf("terrain_grid width and height must be > 0")
+	}
+	if grid.X1 < 0 || grid.Y1 < 0 || grid.X1+grid.Width > mapWidth || grid.Y1+grid.Height > mapHeight {
+		return fmt.Errorf("terrain_grid rectangle (%d,%d) %dx%d outside map %dx%d", grid.X1, grid.Y1, grid.Width, grid.Height, mapWidth, mapHeight)
+	}
+	want := grid.Width * grid.Height
+	if len(grid.TerrainID) != want {
+		return fmt.Errorf("terrain_grid terrain_id length = %d, want %d", len(grid.TerrainID), want)
+	}
+	if len(grid.Layer) != want {
+		return fmt.Errorf("terrain_grid layer length = %d, want %d", len(grid.Layer), want)
+	}
+	if len(grid.Elevation) != 0 && len(grid.Elevation) != want {
+		return fmt.Errorf("terrain_grid elevation length = %d, want 0 or %d", len(grid.Elevation), want)
+	}
+	for i, id := range grid.TerrainID {
+		if id < 0 || id > 255 {
+			return fmt.Errorf("terrain_grid terrain_id[%d] = %d outside u8 range", i, id)
+		}
+	}
+	for i, elevation := range grid.Elevation {
+		if elevation < 0 || elevation > 255 {
+			return fmt.Errorf("terrain_grid elevation[%d] = %d outside u8 range", i, elevation)
+		}
+	}
+	return nil
+}
+
 func ValidateScenarioMapSize(width, height int) error {
 	if width != height {
 		return fmt.Errorf("scenario map size %dx%d is non-square; kit scen blank only emits canonical square DE map-size presets", width, height)
@@ -2394,11 +2994,15 @@ func (f *File) ResizeMap(width, height int) error {
 }
 
 func (f *File) SetTerrain(recipe MapRecipe) error {
+	return f.SetTerrainWithMasks(recipe, nil)
+}
+
+func (f *File) SetTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error {
 	tiles, width, height, err := f.mapTiles()
 	if err != nil {
 		return err
 	}
-	points, err := mapPatchPoints(recipe, width, height)
+	points, err := mapPatchPointsWithMasks(recipe, width, height, masks)
 	if err != nil {
 		return err
 	}
@@ -2423,6 +3027,151 @@ func (f *File) SetTerrain(recipe MapRecipe) error {
 			}
 		}
 	}
+	f.body = f.root.raw()
+	f.InflatedBytes = len(f.body)
+	if mapInfo, err := f.root.mapInfo(); err == nil {
+		f.Map = mapInfo
+	} else {
+		return err
+	}
+	return nil
+}
+
+func (f *File) LayeredCrossfadeTerrain(recipe MapRecipe) error {
+	return f.LayeredCrossfadeTerrainWithMasks(recipe, nil)
+}
+
+func (f *File) LayeredCrossfadeTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error {
+	if recipe.TerrainID == nil || recipe.TerrainID2 == nil {
+		return fmt.Errorf("layered_crossfade requires terrain_id bottom and terrain_id_2 top")
+	}
+	layer := *recipe.TerrainID2
+	patch := recipe
+	patch.TerrainID = recipe.TerrainID
+	patch.Layer = &layer
+	return f.SetTerrainWithMasks(patch, masks)
+}
+
+func (f *File) NoiseFillTerrain(recipe MapRecipe) error {
+	return f.NoiseFillTerrainWithMasks(recipe, nil)
+}
+
+func (f *File) NoiseFillTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error {
+	tiles, width, height, err := f.mapTiles()
+	if err != nil {
+		return err
+	}
+	if recipe.TerrainID == nil || recipe.TerrainID2 == nil {
+		return fmt.Errorf("noise_fill requires terrain_id and terrain_id_2")
+	}
+	points, err := mapPatchPointsWithMasks(recipe, width, height, masks)
+	if err != nil {
+		return err
+	}
+	scale := 8.0
+	if recipe.Scale != nil {
+		scale = *recipe.Scale
+	}
+	if scale <= 0 {
+		return fmt.Errorf("noise_fill scale must be > 0")
+	}
+	threshold := 0.5
+	if recipe.Threshold != nil {
+		threshold = *recipe.Threshold
+	}
+	seed := 0
+	if recipe.Seed != nil {
+		seed = *recipe.Seed
+	}
+	for _, point := range points {
+		id := *recipe.TerrainID
+		if valueNoise2D(float64(point.X)/scale, float64(point.Y)/scale, seed) >= threshold {
+			id = *recipe.TerrainID2
+		}
+		if err := setIntField(tiles[point.Y*width+point.X], "terrain_id", "u8", id); err != nil {
+			return err
+		}
+	}
+	return f.refreshMapAfterTerrainEdit()
+}
+
+func (f *File) ErodeTerrain(recipe MapRecipe) error {
+	return f.ErodeTerrainWithMasks(recipe, nil, false)
+}
+
+func (f *File) ErodeTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask, semantic bool) error {
+	tiles, width, height, err := f.mapTiles()
+	if err != nil {
+		return err
+	}
+	points, err := mapPatchPointsWithMasks(recipe, width, height, masks)
+	if err != nil {
+		return err
+	}
+	iterations := 1
+	if recipe.Iterations != nil {
+		iterations = *recipe.Iterations
+	}
+	if iterations < 1 {
+		return fmt.Errorf("erode iterations must be >= 1")
+	}
+	current := make([]int, len(tiles))
+	for i, tile := range tiles {
+		id, _ := tile.intValue("terrain_id")
+		current[i] = id
+	}
+	pointSet := map[mapPoint]bool{}
+	for _, point := range points {
+		pointSet[point] = true
+	}
+	classSet := intSet(recipe.TerrainIDs)
+	for iter := 0; iter < iterations; iter++ {
+		next := append([]int(nil), current...)
+		for _, point := range points {
+			x, y := point.X, point.Y
+			if semantic && len(classSet) > 0 && !classSet[current[y*width+x]] {
+				continue
+			}
+			counts := map[int]int{}
+			for dy := -1; dy <= 1; dy++ {
+				for dx := -1; dx <= 1; dx++ {
+					xx, yy := x+dx, y+dy
+					if xx < 0 || yy < 0 || xx >= width || yy >= height {
+						continue
+					}
+					if !pointSet[mapPoint{X: xx, Y: yy}] {
+						continue
+					}
+					id := current[yy*width+xx]
+					if semantic && len(classSet) > 0 && !classSet[id] {
+						continue
+					}
+					counts[id]++
+				}
+			}
+			bestID := current[y*width+x]
+			bestCount := counts[bestID]
+			for id, count := range counts {
+				if count > bestCount || (count == bestCount && id == bestID) {
+					bestID = id
+					bestCount = count
+				}
+			}
+			if bestCount >= 5 {
+				next[y*width+x] = bestID
+			}
+		}
+		current = next
+	}
+	for _, point := range points {
+		if err := setIntField(tiles[point.Y*width+point.X], "terrain_id", "u8", current[point.Y*width+point.X]); err != nil {
+			return err
+		}
+	}
+	return f.refreshMapAfterTerrainEdit()
+}
+
+func (f *File) refreshMapAfterTerrainEdit() error {
 	f.body = f.root.raw()
 	f.InflatedBytes = len(f.body)
 	if mapInfo, err := f.root.mapInfo(); err == nil {
@@ -3094,6 +3843,14 @@ func intSet(values []int) map[int]bool {
 		out[value] = true
 	}
 	return out
+}
+
+func ptrInt(value int) *int {
+	return &value
+}
+
+func ptrFloat64(value float64) *float64 {
+	return &value
 }
 
 func countIntsLessThan(values []int, target int) int {
@@ -3886,12 +4643,260 @@ func cloneParsedNode(src *parsedNode) *parsedNode {
 	return dst
 }
 
-func (f *File) countMapTiles(recipe MapRecipe) (int, error) {
+type terrainMask struct {
+	Name   string
+	Width  int
+	Height int
+	Cells  []bool
+}
+
+func (m terrainMask) at(x, y int) bool {
+	if x < 0 || y < 0 || x >= m.Width || y >= m.Height {
+		return false
+	}
+	return m.Cells[y*m.Width+x]
+}
+
+func (m terrainMask) count() int {
+	n := 0
+	for _, v := range m.Cells {
+		if v {
+			n++
+		}
+	}
+	return n
+}
+
+func (f *File) resolveMaskRecipes(recipes []MaskRecipe) (map[string]terrainMask, error) {
+	tiles, width, height, err := f.mapTiles()
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]terrainMask{}
+	for _, recipe := range recipes {
+		if recipe.Name == "" {
+			return nil, fmt.Errorf("mask op %q requires name", recipe.Op)
+		}
+		if _, exists := out[recipe.Name]; exists {
+			return nil, fmt.Errorf("duplicate mask name %q", recipe.Name)
+		}
+		mask, err := buildTerrainMask(recipe, out, tiles, width, height)
+		if err != nil {
+			return nil, err
+		}
+		if recipe.Invert != nil && *recipe.Invert {
+			for i := range mask.Cells {
+				mask.Cells[i] = !mask.Cells[i]
+			}
+		}
+		mask.Name = recipe.Name
+		out[recipe.Name] = mask
+	}
+	return out, nil
+}
+
+func buildTerrainMask(recipe MaskRecipe, masks map[string]terrainMask, tiles []*parsedNode, width, height int) (terrainMask, error) {
+	mask := terrainMask{Name: recipe.Name, Width: width, Height: height, Cells: make([]bool, width*height)}
+	switch recipe.Op {
+	case "rect", "":
+		rect := MapRecipe{X1: recipe.X1, Y1: recipe.Y1, X2: recipe.X2, Y2: recipe.Y2}
+		if err := validateMapRect(rect, width, height); err != nil {
+			return terrainMask{}, err
+		}
+		for y := rect.Y1; y <= rect.Y2; y++ {
+			for x := rect.X1; x <= rect.X2; x++ {
+				mask.Cells[y*width+x] = true
+			}
+		}
+	case "circle":
+		if recipe.Radius == nil {
+			return terrainMask{}, fmt.Errorf("mask %q circle requires radius", recipe.Name)
+		}
+		r := *recipe.Radius
+		if r < 0 {
+			return terrainMask{}, fmt.Errorf("mask %q circle radius must be >= 0", recipe.Name)
+		}
+		for y := maxInt(0, recipe.Y1-r); y <= minInt(height-1, recipe.Y1+r); y++ {
+			for x := maxInt(0, recipe.X1-r); x <= minInt(width-1, recipe.X1+r); x++ {
+				if (x-recipe.X1)*(x-recipe.X1)+(y-recipe.Y1)*(y-recipe.Y1) <= r*r {
+					mask.Cells[y*width+x] = true
+				}
+			}
+		}
+	case "blob":
+		if recipe.Radius == nil {
+			return terrainMask{}, fmt.Errorf("mask %q blob requires radius", recipe.Name)
+		}
+		r := *recipe.Radius
+		if r < 0 {
+			return terrainMask{}, fmt.Errorf("mask %q blob radius must be >= 0", recipe.Name)
+		}
+		seed := 0
+		if recipe.Seed != nil {
+			seed = *recipe.Seed
+		}
+		scale := math.Max(3, float64(r)/3)
+		if recipe.Scale != nil {
+			scale = *recipe.Scale
+		}
+		if scale <= 0 {
+			return terrainMask{}, fmt.Errorf("mask %q blob scale must be > 0", recipe.Name)
+		}
+		threshold := 1.0
+		if recipe.Threshold != nil {
+			threshold = *recipe.Threshold
+		}
+		extent := int(math.Ceil(float64(r) * 1.25))
+		for y := maxInt(0, recipe.Y1-extent); y <= minInt(height-1, recipe.Y1+extent); y++ {
+			for x := maxInt(0, recipe.X1-extent); x <= minInt(width-1, recipe.X1+extent); x++ {
+				d := math.Hypot(float64(x-recipe.X1), float64(y-recipe.Y1)) / float64(maxInt(1, r))
+				edge := threshold + (valueNoise2D(float64(x)/scale, float64(y)/scale, seed)-0.5)*0.35
+				if d <= edge {
+					mask.Cells[y*width+x] = true
+				}
+			}
+		}
+	case "from_terrain_class":
+		if len(recipe.TerrainIDs) == 0 {
+			return terrainMask{}, fmt.Errorf("mask %q from_terrain_class requires terrain_ids", recipe.Name)
+		}
+		ids := intSet(recipe.TerrainIDs)
+		for i, tile := range tiles {
+			id, _ := tile.intValue("terrain_id")
+			if ids[id] {
+				mask.Cells[i] = true
+			}
+		}
+	case "cells":
+		if len(recipe.Cells) == 0 {
+			return terrainMask{}, fmt.Errorf("mask %q cells requires cells", recipe.Name)
+		}
+		for _, cell := range recipe.Cells {
+			if cell.X < 0 || cell.Y < 0 || cell.X >= width || cell.Y >= height {
+				return terrainMask{}, fmt.Errorf("mask %q cell (%d,%d) outside map %dx%d", recipe.Name, cell.X, cell.Y, width, height)
+			}
+			mask.Cells[cell.Y*width+cell.X] = true
+		}
+	case "union", "intersect", "subtract":
+		if len(recipe.Masks) == 0 {
+			return terrainMask{}, fmt.Errorf("mask %q %s requires masks", recipe.Name, recipe.Op)
+		}
+		first, err := requireTerrainMask(masks, recipe.Masks[0])
+		if err != nil {
+			return terrainMask{}, err
+		}
+		copy(mask.Cells, first.Cells)
+		if recipe.Op == "union" {
+			for _, name := range recipe.Masks[1:] {
+				other, err := requireTerrainMask(masks, name)
+				if err != nil {
+					return terrainMask{}, err
+				}
+				for i := range mask.Cells {
+					mask.Cells[i] = mask.Cells[i] || other.Cells[i]
+				}
+			}
+		}
+		if recipe.Op == "intersect" {
+			for _, name := range recipe.Masks[1:] {
+				other, err := requireTerrainMask(masks, name)
+				if err != nil {
+					return terrainMask{}, err
+				}
+				for i := range mask.Cells {
+					mask.Cells[i] = mask.Cells[i] && other.Cells[i]
+				}
+			}
+		}
+		if recipe.Op == "subtract" {
+			for _, name := range recipe.Masks[1:] {
+				other, err := requireTerrainMask(masks, name)
+				if err != nil {
+					return terrainMask{}, err
+				}
+				for i := range mask.Cells {
+					mask.Cells[i] = mask.Cells[i] && !other.Cells[i]
+				}
+			}
+		}
+	case "dilate", "erode":
+		if len(recipe.Masks) != 1 {
+			return terrainMask{}, fmt.Errorf("mask %q %s requires exactly one input mask", recipe.Name, recipe.Op)
+		}
+		base, err := requireTerrainMask(masks, recipe.Masks[0])
+		if err != nil {
+			return terrainMask{}, err
+		}
+		copy(mask.Cells, base.Cells)
+		iterations := 1
+		if recipe.Iterations != nil {
+			iterations = *recipe.Iterations
+		}
+		if iterations < 1 {
+			return terrainMask{}, fmt.Errorf("mask %q iterations must be >= 1", recipe.Name)
+		}
+		for i := 0; i < iterations; i++ {
+			mask.Cells = maskNeighborhoodPass(mask.Cells, width, height, recipe.Op == "dilate")
+		}
+	default:
+		return terrainMask{}, fmt.Errorf("unsupported mask op %q", recipe.Op)
+	}
+	if mask.count() == 0 {
+		return terrainMask{}, fmt.Errorf("mask %q produced no tiles", recipe.Name)
+	}
+	return mask, nil
+}
+
+func requireTerrainMask(masks map[string]terrainMask, name string) (terrainMask, error) {
+	mask, ok := masks[name]
+	if !ok {
+		return terrainMask{}, fmt.Errorf("unknown mask %q", name)
+	}
+	return mask, nil
+}
+
+func maskNeighborhoodPass(in []bool, width, height int, dilate bool) []bool {
+	out := make([]bool, len(in))
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if dilate {
+				for yy := maxInt(0, y-1); yy <= minInt(height-1, y+1); yy++ {
+					for xx := maxInt(0, x-1); xx <= minInt(width-1, x+1); xx++ {
+						if in[yy*width+xx] {
+							out[y*width+x] = true
+							goto nextDilate
+						}
+					}
+				}
+			nextDilate:
+				continue
+			}
+			out[y*width+x] = true
+			for yy := maxInt(0, y-1); yy <= minInt(height-1, y+1); yy++ {
+				for xx := maxInt(0, x-1); xx <= minInt(width-1, x+1); xx++ {
+					if !in[yy*width+xx] {
+						out[y*width+x] = false
+					}
+				}
+			}
+		}
+	}
+	return out
+}
+
+func (f *File) countMapTiles(recipe MapRecipe, masks map[string]terrainMask) (int, error) {
 	_, width, height, err := f.mapTiles()
 	if err != nil {
 		return 0, err
 	}
-	points, err := mapPatchPoints(recipe, width, height)
+	if recipe.Op == "terrain_grid" {
+		grid, err := resolveTerrainGridRecipe(recipe, width, height)
+		if err != nil {
+			return 0, err
+		}
+		return grid.Width * grid.Height, nil
+	}
+	points, err := mapPatchPointsWithMasks(recipe, width, height, masks)
 	if err != nil {
 		return 0, err
 	}
@@ -3908,56 +4913,6 @@ func validateMapRect(recipe MapRecipe, width, height int) error {
 	return nil
 }
 
-func plannedMapTiles(recipe Recipe) int {
-	total := 0
-	for _, mapPatch := range recipe.Map {
-		switch mapPatch.Op {
-		case "set_terrain_rect":
-			if mapPatch.X1 <= mapPatch.X2 && mapPatch.Y1 <= mapPatch.Y2 {
-				total += (mapPatch.X2 - mapPatch.X1 + 1) * (mapPatch.Y2 - mapPatch.Y1 + 1)
-			}
-		case "set_terrain_circle":
-			if mapPatch.Radius != nil && *mapPatch.Radius >= 0 {
-				r := *mapPatch.Radius
-				for dy := -r; dy <= r; dy++ {
-					for dx := -r; dx <= r; dx++ {
-						if dx*dx+dy*dy <= r*r {
-							total++
-						}
-					}
-				}
-			}
-		case "set_terrain_line":
-			total += linePointEstimate(mapPatch.X1, mapPatch.Y1, mapPatch.X2, mapPatch.Y2)
-		case "set_terrain_border":
-			if mapPatch.X1 <= mapPatch.X2 && mapPatch.Y1 <= mapPatch.Y2 {
-				thickness := 1
-				if mapPatch.Thickness != nil {
-					thickness = *mapPatch.Thickness
-				}
-				if thickness > 0 {
-					width := mapPatch.X2 - mapPatch.X1 + 1
-					height := mapPatch.Y2 - mapPatch.Y1 + 1
-					innerWidth := width - 2*thickness
-					if innerWidth < 0 {
-						innerWidth = 0
-					}
-					innerHeight := height - 2*thickness
-					if innerHeight < 0 {
-						innerHeight = 0
-					}
-					total += width*height - innerWidth*innerHeight
-				}
-			}
-		case "copy_terrain_area":
-			if mapPatch.X1 <= mapPatch.X2 && mapPatch.Y1 <= mapPatch.Y2 {
-				total += (mapPatch.X2 - mapPatch.X1 + 1) * (mapPatch.Y2 - mapPatch.Y1 + 1)
-			}
-		}
-	}
-	return total
-}
-
 type mapPoint struct {
 	X int
 	Y int
@@ -3965,7 +4920,7 @@ type mapPoint struct {
 
 func mapPatchPoints(recipe MapRecipe, width, height int) ([]mapPoint, error) {
 	switch recipe.Op {
-	case "set_terrain_rect", "":
+	case "set_terrain_rect", "noise_fill", "erode", "semantic_erode", "layered_crossfade", "":
 		if recipe.Op == "" {
 			recipe.Op = "set_terrain_rect"
 		}
@@ -4054,6 +5009,42 @@ func mapPatchPoints(recipe MapRecipe, width, height int) ([]mapPoint, error) {
 	}
 }
 
+func mapPatchPointsWithMasks(recipe MapRecipe, width, height int, masks map[string]terrainMask) ([]mapPoint, error) {
+	if recipe.Mask == "" {
+		if recipe.Op == "set_terrain_mask" {
+			return nil, fmt.Errorf("set_terrain_mask requires mask")
+		}
+		return mapPatchPoints(recipe, width, height)
+	}
+	mask, err := requireTerrainMask(masks, recipe.Mask)
+	if err != nil {
+		return nil, err
+	}
+	x1, y1, x2, y2 := 0, 0, width-1, height-1
+	if mapRecipeHasRect(recipe) {
+		if err := validateMapRect(recipe, width, height); err != nil {
+			return nil, err
+		}
+		x1, y1, x2, y2 = recipe.X1, recipe.Y1, recipe.X2, recipe.Y2
+	}
+	var points []mapPoint
+	for y := y1; y <= y2; y++ {
+		for x := x1; x <= x2; x++ {
+			if mask.at(x, y) {
+				points = append(points, mapPoint{X: x, Y: y})
+			}
+		}
+	}
+	if len(points) == 0 {
+		return nil, fmt.Errorf("%s mask %q selected no tiles", recipe.Op, recipe.Mask)
+	}
+	return points, nil
+}
+
+func mapRecipeHasRect(recipe MapRecipe) bool {
+	return recipe.X1 != 0 || recipe.Y1 != 0 || recipe.X2 != 0 || recipe.Y2 != 0
+}
+
 func validateMapPoints(op string, points []mapPoint, width, height int) ([]mapPoint, error) {
 	if len(points) == 0 {
 		return nil, fmt.Errorf("%s produced no tiles", op)
@@ -4116,20 +5107,57 @@ func uniqueSortedMapPoints(points []mapPoint) []mapPoint {
 	return out
 }
 
-func linePointEstimate(x1, y1, x2, y2 int) int {
-	dx := absInt(x2 - x1)
-	dy := absInt(y2 - y1)
-	if dx > dy {
-		return dx + 1
-	}
-	return dy + 1
-}
-
 func absInt(v int) int {
 	if v < 0 {
 		return -v
 	}
 	return v
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func valueNoise2D(x, y float64, seed int) float64 {
+	x0 := int(math.Floor(x))
+	y0 := int(math.Floor(y))
+	x1 := x0 + 1
+	y1 := y0 + 1
+	tx := smoothNoiseStep(x - float64(x0))
+	ty := smoothNoiseStep(y - float64(y0))
+	a := lerpFloat64(hashUnitNoise(x0, y0, seed), hashUnitNoise(x1, y0, seed), tx)
+	b := lerpFloat64(hashUnitNoise(x0, y1, seed), hashUnitNoise(x1, y1, seed), tx)
+	return lerpFloat64(a, b, ty)
+}
+
+func smoothNoiseStep(t float64) float64 {
+	return t * t * t * (t*(t*6-15) + 10)
+}
+
+func lerpFloat64(a, b, t float64) float64 {
+	return a + (b-a)*t
+}
+
+func hashUnitNoise(x, y, seed int) float64 {
+	n := uint64(uint32(x))*0x9e3779b185ebca87 ^
+		uint64(uint32(y))*0xc2b2ae3d27d4eb4f ^
+		uint64(uint32(seed))*0x165667b19e3779f9
+	n ^= n >> 33
+	n *= 0xff51afd7ed558ccd
+	n ^= n >> 33
+	n *= 0xc4ceb9fe1a85ec53
+	n ^= n >> 33
+	return float64(n&0xffffffff) / float64(math.MaxUint32)
 }
 
 func (f *File) variableStructSpec() (SectionSpec, error) {

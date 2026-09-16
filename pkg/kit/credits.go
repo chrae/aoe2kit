@@ -35,6 +35,7 @@ type CreditEntry struct {
 	CorrectionState string   `json:"correction_state"`
 	Credit          string   `json:"credit"`
 	Notes           []string `json:"notes,omitempty"`
+	CreditClass     string   `json:"credit_class,omitempty"`
 }
 
 func Credits(root string) (CreditsDocument, error) {
@@ -69,38 +70,65 @@ func CreditsNoticeMarkdown(doc CreditsDocument) []byte {
 	fmt.Fprintf(&b, "## Credit Principle\n\n")
 	fmt.Fprintf(&b, "Attribution is abundant and automatic. Personal thanks is scarce, deliberate, and human. ")
 	fmt.Fprintf(&b, "The ledger keeps unpaid gratitude visible instead of pretending it has been paid.\n\n")
-	fmt.Fprintf(&b, "## References\n\n")
-	for _, entry := range doc.References {
-		fmt.Fprintf(&b, "### %s\n\n", entry.Name)
-		if len(entry.Authors) > 0 {
-			fmt.Fprintf(&b, "- Authors: %s\n", strings.Join(entry.Authors, ", "))
-		}
-		if entry.URL != "" {
-			fmt.Fprintf(&b, "- URL: %s\n", entry.URL)
-		}
-		if entry.License != "" {
-			fmt.Fprintf(&b, "- License: %s\n", entry.License)
-		}
-		if entry.Permission != "" {
-			fmt.Fprintf(&b, "- Permission: %s\n", entry.Permission)
-		}
-		fmt.Fprintf(&b, "- Gave: %s\n", entry.Gave)
-		fmt.Fprintf(&b, "- Role: %s\n", entry.Role)
-		fmt.Fprintf(&b, "- Relationship: %s\n", entry.Relationship)
-		fmt.Fprintf(&b, "- Rung earned: %s\n", entry.RungEarned)
-		fmt.Fprintf(&b, "- Thanks status: %s\n", entry.ThanksStatus)
-		if entry.GiveBackStatus != "" {
-			fmt.Fprintf(&b, "- Give-back status: %s\n", entry.GiveBackStatus)
-		}
-		fmt.Fprintf(&b, "- Correction state: %s\n\n", entry.CorrectionState)
-		fmt.Fprintf(&b, "%s\n\n", entry.Credit)
-		if len(entry.Notes) > 0 {
-			fmt.Fprintf(&b, "Notes:\n")
-			for _, note := range entry.Notes {
-				fmt.Fprintf(&b, "- %s\n", note)
+
+	section := func(title, intro, wantClass string) {
+		var items []CreditEntry
+		for _, e := range doc.References {
+			cc := e.CreditClass
+			if cc == "" {
+				cc = "reference"
 			}
-			fmt.Fprintf(&b, "\n")
+			if cc == wantClass {
+				items = append(items, e)
+			}
+		}
+		if len(items) == 0 {
+			return
+		}
+		fmt.Fprintf(&b, "## %s\n\n", title)
+		fmt.Fprintf(&b, "%s\n\n", intro)
+		for _, entry := range items {
+			writeCreditEntry(&b, entry)
 		}
 	}
+	section("Built On",
+		"Published work studied, built on, or used as a reference. Attribution is abundant and automatic.",
+		"reference")
+	section("Personal Thanks",
+		"Individual people who have directly, personally helped the author. Scarce, deliberate, and human.",
+		"personal_thanks")
 	return b.Bytes()
+}
+
+func writeCreditEntry(b *bytes.Buffer, entry CreditEntry) {
+	fmt.Fprintf(b, "### %s\n\n", entry.Name)
+	if len(entry.Authors) > 0 {
+		fmt.Fprintf(b, "- Authors: %s\n", strings.Join(entry.Authors, ", "))
+	}
+	if entry.URL != "" {
+		fmt.Fprintf(b, "- URL: %s\n", entry.URL)
+	}
+	if entry.License != "" {
+		fmt.Fprintf(b, "- License: %s\n", entry.License)
+	}
+	if entry.Permission != "" {
+		fmt.Fprintf(b, "- Permission: %s\n", entry.Permission)
+	}
+	fmt.Fprintf(b, "- Gave: %s\n", entry.Gave)
+	fmt.Fprintf(b, "- Role: %s\n", entry.Role)
+	fmt.Fprintf(b, "- Relationship: %s\n", entry.Relationship)
+	fmt.Fprintf(b, "- Rung earned: %s\n", entry.RungEarned)
+	fmt.Fprintf(b, "- Thanks status: %s\n", entry.ThanksStatus)
+	if entry.GiveBackStatus != "" {
+		fmt.Fprintf(b, "- Give-back status: %s\n", entry.GiveBackStatus)
+	}
+	fmt.Fprintf(b, "- Correction state: %s\n\n", entry.CorrectionState)
+	fmt.Fprintf(b, "%s\n\n", entry.Credit)
+	if len(entry.Notes) > 0 {
+		fmt.Fprintf(b, "Notes:\n")
+		for _, note := range entry.Notes {
+			fmt.Fprintf(b, "- %s\n", note)
+		}
+		fmt.Fprintf(b, "\n")
+	}
 }

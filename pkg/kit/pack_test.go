@@ -113,6 +113,7 @@ func TestPublicProfileKeepsReleaseDocsAndDropsInternalDiagnostics(t *testing.T) 
 	mustWrite(t, filepath.Join(root, "docs", "DAT_ENGINE.md"), "dat")
 	mustWrite(t, filepath.Join(root, "docs", "REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md"), "internal readback")
 	mustWrite(t, filepath.Join(root, "docs", "diagnostics", "v15", "probe.xs"), "internal")
+	mustWrite(t, filepath.Join(root, "tools", "internal_compile", "main.go"), "package main\n")
 
 	files, err := packFileList(root, filepath.Join(root, "out.zip"), ProfilePublic.excludes(), ProfilePublic.includesBinary())
 	if err != nil {
@@ -131,7 +132,7 @@ func TestPublicProfileKeepsReleaseDocsAndDropsInternalDiagnostics(t *testing.T) 
 			t.Fatalf("public profile should include %s; got %#v", rel, seen)
 		}
 	}
-	for _, rel := range []string{"kit", "DEX_TASK_internal.md", "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md", "docs/diagnostics/v15/probe.xs"} {
+	for _, rel := range []string{"kit", "DEX_TASK_internal.md", "docs/REPLAY_TRANSPARENCY_DIAGNOSTIC_V15_READBACK.md", "docs/diagnostics/v15/probe.xs", "tools/internal_compile/main.go"} {
 		if seen[rel] {
 			t.Fatalf("public profile should exclude %s", rel)
 		}

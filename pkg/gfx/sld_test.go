@@ -39,6 +39,23 @@ func TestParseSLDMainLayer(t *testing.T) {
 	}
 }
 
+func TestParseSLDCompactFrameHeader(t *testing.T) {
+	file, err := ParseSLD(syntheticCompactHeaderSLD())
+	if err != nil {
+		t.Fatalf("ParseSLD: %v", err)
+	}
+	if len(file.Frames) != 1 {
+		t.Fatalf("frames = %d, want 1", len(file.Frames))
+	}
+	frame := file.Frames[0]
+	if frame.Width != 4 || frame.Height != 4 || frame.HotspotX != 2 || frame.HotspotY != 2 || frame.Type != 0x01 {
+		t.Fatalf("compact frame = %+v", frame)
+	}
+	if len(frame.Layers) != 1 || frame.Layers[0].Name != "main" || frame.Layers[0].ContentLength != 26 {
+		t.Fatalf("layers = %+v", frame.Layers)
+	}
+}
+
 func TestExportSLDMainLayerPNG(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "one.sld")
@@ -188,6 +205,27 @@ func syntheticSLD() []byte {
 		out = append(out, 0)
 	}
 	return out
+}
+
+func syntheticCompactHeaderSLD() []byte {
+	out := syntheticSLD()
+	out[10] = 0x0e
+	out[11] = 0x00
+	frameStart := 16
+	frameEnd := frameStart + 12
+	compact := []byte{
+		out[frameStart], out[frameStart+1],
+		out[frameStart+2], out[frameStart+3],
+		out[frameStart+4], out[frameStart+5],
+		out[frameStart+8],
+		out[frameStart+9],
+		out[frameStart+10], out[frameStart+11],
+	}
+	var rebuilt []byte
+	rebuilt = append(rebuilt, out[:frameStart]...)
+	rebuilt = append(rebuilt, compact...)
+	rebuilt = append(rebuilt, out[frameEnd:]...)
+	return rebuilt
 }
 
 func syntheticSLDWithOddUnknownLayer() []byte {

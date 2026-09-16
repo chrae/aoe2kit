@@ -4576,6 +4576,253 @@ type Validation struct {
 func Validate(frames []Frame) Validation
 ```
 
+## aoe2kit/pkg/geotrace
+
+```go
+package geotrace // import "aoe2kit/pkg/geotrace"
+
+
+FUNCTIONS
+
+func BuildDiamondLongitudeWrapTriggers(gridSize int, players []int, bandWidth int) []scenario.TriggerRecipe
+func BuildEastWestWrapTriggers(gridSize int, players []int) []scenario.TriggerRecipe
+func BuildRecipe(report Report) scenario.Recipe
+func BuildSailDemoUnits(gridSize int) []scenario.UnitRecipe
+
+TYPES
+
+type BBox struct {
+	MinLat float64 `json:"min_lat"`
+	MinLon float64 `json:"min_lon"`
+	MaxLat float64 `json:"max_lat"`
+	MaxLon float64 `json:"max_lon"`
+}
+
+type Cell struct {
+	X                    int             `json:"x"`
+	Y                    int             `json:"y"`
+	Lat                  float64         `json:"lat"`
+	Lon                  float64         `json:"lon"`
+	OutsideTrace         bool            `json:"outside_trace,omitempty"`
+	Elevation            float64         `json:"elevation_m"`
+	Land                 *bool           `json:"land,omitempty"`
+	InlandWater          bool            `json:"inland_water,omitempty"`
+	WaterbodyName        string          `json:"waterbody_name,omitempty"`
+	LandcoverClass       int             `json:"landcover_class,omitempty"`
+	LandcoverKey         string          `json:"landcover_key,omitempty"`
+	LandcoverClassGLC    int             `json:"landcover_class_glc,omitempty"`
+	LandcoverKeyGLC      string          `json:"landcover_key_glc,omitempty"`
+	LandcoverFraction    float64         `json:"landcover_fraction,omitempty"`
+	LandcoverHistogram   []LandcoverStat `json:"landcover_histogram,omitempty"`
+	SpeciesUnitConsts    []int           `json:"species_unit_consts,omitempty"`
+	DistanceToShoreTiles float64         `json:"distance_to_shore_tiles,omitempty"`
+	ClimateZone          string          `json:"climate_zone,omitempty"`
+	ElevationBand        string          `json:"elevation_band,omitempty"`
+	Standing             string          `json:"standing"`
+	TerrainID            int             `json:"terrain_id"`
+	Road                 bool            `json:"road,omitempty"`
+	Roadside             bool            `json:"roadside,omitempty"`
+	WaterBuffer          bool            `json:"water_buffer,omitempty"`
+	KeyWestCauseway      bool            `json:"key_west_causeway,omitempty"`
+	Border               bool            `json:"border,omitempty"`
+	ShoreCrossfadeBand   string          `json:"shore_crossfade_band,omitempty"`
+	ShoreTerrainID       int             `json:"shore_terrain_id,omitempty"`
+	TerrainConfidence    string          `json:"terrain_confidence,omitempty"`
+	TerrainProportions   []TerrainWeight `json:"terrain_proportions,omitempty"`
+	Reason               string          `json:"reason"`
+}
+
+type FeltMapping struct {
+	Schema                      string                                        `json:"schema"`
+	ConfidenceLadder            []string                                      `json:"confidence_ladder"`
+	WaterByDistanceToShore      WaterDistanceMapping                          `json:"water_by_distance_to_shore"`
+	LandByClimateAndBand        map[string]map[string]FeltTerrainChoice       `json:"-"`
+	RawLandByClimateAndBand     map[string]json.RawMessage                    `json:"land_by_climate_and_band"`
+	LandcoverClassMapping       *LandcoverClassMapping                        `json:"landcover_class_mapping,omitempty"`
+	SpeciesForClusterScatter    map[string]map[string][]SpeciesRecommendation `json:"-"`
+	RawSpeciesForClusterScatter map[string]json.RawMessage                    `json:"species_for_cluster_scatter"`
+	LandcoverSpeciesByClass     map[string]map[string][]SpeciesRecommendation `json:"-"`
+	RawLandcoverSpeciesByClass  map[string]json.RawMessage                    `json:"landcover_species_by_class"`
+	SpeciesResolutions          []SpeciesResolution                           `json:"-"`
+}
+
+type FeltTerrainChoice struct {
+	Proportions      []TerrainWeight                    `json:"proportions"`
+	Confidence       string                             `json:"confidence"`
+	Reason           string                             `json:"reason"`
+	Note             string                             `json:"note,omitempty"`
+	SpeciesByClimate map[string][]SpeciesRecommendation `json:"species_by_climate,omitempty"`
+	WetlandCandidate *FeltTerrainChoice                 `json:"wetland_candidate,omitempty"`
+}
+
+type LandcoverClassMapping struct {
+	ByClass map[string]FeltTerrainChoice `json:"by_class"`
+}
+
+type LandcoverSample struct {
+	Valid     bool
+	Class     int
+	Key       string
+	GLCClass  int
+	GLCKey    string
+	Fraction  float64
+	Histogram []LandcoverStat
+}
+
+type LandcoverStat struct {
+	Class  int     `json:"class"`
+	Key    string  `json:"key"`
+	Weight float64 `json:"weight"`
+}
+
+type Options struct {
+	BBox                BBox
+	GridSize            int
+	Provider            string
+	LandmaskProvider    string
+	LandmaskPath        string
+	InlandWaterProvider string
+	InlandWaterPath     string
+	LandcoverProvider   string
+	LandcoverCacheDir   string
+	LandcoverPath       string
+	LandcoverDir        string
+	ClimateZone         string
+	FeltMappingPath     string
+	Orient              string
+	TargetWaterFraction float64
+	SeamWaterColumns    int
+	FloraDensity        float64
+	LandFaunaDensity    float64
+	FishDensity         float64
+	ShoreFishDensity    float64
+	OceanFishDensity    float64
+	ShoreBandWidth      float64
+	WaterBandWidth      float64
+	RoadsProvider       string
+	RoadsPath           string
+	RoadsCacheDir       string
+	RoadSimplifyTiles   float64
+	AdminBorders        bool
+	Client              *http.Client
+}
+
+type PlacementGuard struct {
+	Policy                 string         `json:"policy"`
+	Evidence               string         `json:"evidence"`
+	UnbuildableTerrainIDs  []int          `json:"unbuildable_terrain_ids"`
+	UnbuildableCells       map[int]int    `json:"unbuildable_cells,omitempty"`
+	CandidateCellsFiltered int            `json:"candidate_cells_filtered,omitempty"`
+	AllowedTerrainPrunes   map[string]int `json:"allowed_terrain_prunes,omitempty"`
+}
+
+type ProjectionSelfCheck struct {
+	DueEastScreenDX  float64 `json:"due_east_screen_dx"`
+	DueEastScreenDY  float64 `json:"due_east_screen_dy"`
+	DueNorthScreenDX float64 `json:"due_north_screen_dx"`
+	DueNorthScreenDY float64 `json:"due_north_screen_dy"`
+}
+
+type Report struct {
+	BBox                  BBox                 `json:"bbox"`
+	OverlayBBox           BBox                 `json:"overlay_bbox,omitempty"`
+	GridSize              int                  `json:"grid_size"`
+	Provider              string               `json:"provider"`
+	LandmaskProvider      string               `json:"landmask_provider,omitempty"`
+	InlandWaterProvider   string               `json:"inland_water_provider,omitempty"`
+	LandcoverProvider     string               `json:"landcover_provider,omitempty"`
+	FeltMappingSchema     string               `json:"felt_mapping_schema,omitempty"`
+	ClimateZone           string               `json:"climate_zone,omitempty"`
+	Orient                string               `json:"orient"`
+	ApproxTileMeters      float64              `json:"approx_tile_meters"`
+	CoastlineConfidence   string               `json:"coastline_confidence"`
+	CoastlineReason       string               `json:"coastline_reason"`
+	StandingLadder        []string             `json:"standing_ladder"`
+	Warnings              []string             `json:"warnings,omitempty"`
+	Cells                 []Cell               `json:"cells"`
+	TerrainCounts         map[int]int          `json:"terrain_counts"`
+	LandcoverCounts       map[string]int       `json:"landcover_counts,omitempty"`
+	LandcoverGLCCounts    map[string]int       `json:"landcover_glc_counts,omitempty"`
+	SpeciesResolutions    []SpeciesResolution  `json:"species_resolutions,omitempty"`
+	LandCells             int                  `json:"land_cells"`
+	WaterCells            int                  `json:"water_cells"`
+	LandFraction          float64              `json:"land_fraction"`
+	WaterFraction         float64              `json:"water_fraction"`
+	TargetWaterFraction   float64              `json:"target_water_fraction,omitempty"`
+	LandEmphasisApplied   bool                 `json:"land_emphasis_applied,omitempty"`
+	FloraDensity          float64              `json:"flora_density,omitempty"`
+	LandFaunaDensity      float64              `json:"land_fauna_density,omitempty"`
+	FishDensity           float64              `json:"fish_density,omitempty"`
+	ShoreFishDensity      float64              `json:"shore_fish_density,omitempty"`
+	OceanFishDensity      float64              `json:"ocean_fish_density,omitempty"`
+	ShoreBandWidth        float64              `json:"shore_band_width,omitempty"`
+	WaterBandWidth        float64              `json:"water_band_width,omitempty"`
+	ShoreCrossfadeCells   int                  `json:"shore_crossfade_cells,omitempty"`
+	ShoreCrossfadeCounts  map[string]int       `json:"shore_crossfade_counts,omitempty"`
+	ShoreTerrainCounts    map[int]int          `json:"shore_terrain_counts,omitempty"`
+	UnbuildableTerrainIDs []int                `json:"unbuildable_terrain_ids,omitempty"`
+	UnbuildableCells      int                  `json:"unbuildable_cells,omitempty"`
+	PlacementGuard        *PlacementGuard      `json:"placement_guard,omitempty"`
+	RoadsProvider         string               `json:"roads_provider,omitempty"`
+	RoadWayCount          int                  `json:"road_way_count,omitempty"`
+	RoadVertexCountRaw    int                  `json:"road_vertex_count_raw,omitempty"`
+	RoadVertexCount       int                  `json:"road_vertex_count,omitempty"`
+	RoadSimplifyTiles     float64              `json:"road_simplify_tiles,omitempty"`
+	RoadCells             int                  `json:"road_cells,omitempty"`
+	RoadsideCells         int                  `json:"roadside_cells,omitempty"`
+	WaterBufferCells      int                  `json:"water_buffer_cells,omitempty"`
+	KeyWestCausewayCells  int                  `json:"key_west_causeway_cells,omitempty"`
+	BorderCells           int                  `json:"border_cells,omitempty"`
+	BorderWayCount        int                  `json:"border_way_count,omitempty"`
+	RoadCellsNorthOf31    int                  `json:"road_cells_north_of_31,omitempty"`
+	BorderCellsNorthOf31  int                  `json:"border_cells_north_of_31,omitempty"`
+	RoadRefs              []string             `json:"road_refs,omitempty"`
+	LandExtentXTiles      int                  `json:"land_extent_x_tiles,omitempty"`
+	LandExtentYTiles      int                  `json:"land_extent_y_tiles,omitempty"`
+	LandExtentRatio       float64              `json:"land_extent_y_to_x_ratio,omitempty"`
+	LandExtentWHRatio     float64              `json:"land_extent_w_to_h_ratio,omitempty"`
+	ScreenWHRatio         float64              `json:"estimated_screen_w_to_h_ratio,omitempty"`
+	ViewportTileWHRatio   float64              `json:"viewport_tile_w_to_h_ratio,omitempty"`
+	ViewportScreenWHRatio float64              `json:"viewport_screen_w_to_h_ratio,omitempty"`
+	PeninsulaAxisAngleDeg float64              `json:"peninsula_axis_angle_deg,omitempty"`
+	ProjectionSelfCheck   *ProjectionSelfCheck `json:"projection_self_check,omitempty"`
+	MinElevation          float64              `json:"min_elevation"`
+	MaxElevation          float64              `json:"max_elevation"`
+	MeanElevation         float64              `json:"mean_elevation"`
+	Recipe                *scenario.Recipe     `json:"recipe,omitempty"`
+}
+
+func TraceDEM(opts Options) (Report, error)
+
+type SpeciesRecommendation struct {
+	UnitConst int    `json:"c"`
+	Name      string `json:"s,omitempty"`
+	Note      string `json:"note,omitempty"`
+}
+
+type SpeciesResolution struct {
+	Name       string `json:"name"`
+	UnitConst  int    `json:"unit_const"`
+	Resolution string `json:"resolution"`
+}
+
+type TerrainWeight struct {
+	TerrainID int     `json:"t"`
+	Weight    float64 `json:"w"`
+}
+
+type WaterDistanceBucket struct {
+	MaxDistanceTiles float64                    `json:"max_dist_tiles"`
+	Confidence       string                     `json:"confidence"`
+	ByClimate        map[string][]TerrainWeight `json:"by_climate"`
+	Default          []TerrainWeight            `json:"default"`
+}
+
+type WaterDistanceMapping struct {
+	Buckets []WaterDistanceBucket `json:"buckets"`
+}
+```
+
 ## aoe2kit/pkg/gfx
 
 ```go
@@ -4604,6 +4851,7 @@ func ParseSLD(data []byte) (*SLD, error)
 type SLDExportOptions struct {
 	OutDir string
 	Limit  int
+	Stats  bool
 }
 
 type SLDExportReport struct {
@@ -4616,6 +4864,7 @@ type SLDExportReport struct {
 	ManifestPath string                 `json:"manifest_path,omitempty"`
 	ContactSheet string                 `json:"contact_sheet,omitempty"`
 	Exported     []SLDExportedFrame     `json:"exported,omitempty"`
+	Stats        []SLDFrameStats        `json:"stats,omitempty"`
 	Warnings     []string               `json:"warnings,omitempty"`
 }
 
@@ -4649,6 +4898,39 @@ type SLDFrame struct {
 	Start    int        `json:"start"`
 	End      int        `json:"end"`
 	Layers   []SLDLayer `json:"layers,omitempty"`
+}
+
+type SLDFrameBounds struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type SLDFrameStats struct {
+	FrameOrdinal   int            `json:"frame_ordinal"`
+	FrameIndex     uint16         `json:"frame_index"`
+	CanvasWidth    int            `json:"canvas_width"`
+	CanvasHeight   int            `json:"canvas_height"`
+	Bounds         SLDFrameBounds `json:"bounds"`
+	OpaquePixels   int            `json:"opaque_pixels"`
+	CanvasCoverage float64        `json:"canvas_coverage"`
+	MeanR          float64        `json:"mean_r"`
+	MeanG          float64        `json:"mean_g"`
+	MeanB          float64        `json:"mean_b"`
+	MeanSaturation float64        `json:"mean_saturation"`
+	HueBuckets     SLDHueBuckets  `json:"hue_buckets"`
+	State          string         `json:"state"`
+}
+
+type SLDHueBuckets struct {
+	Green  float64 `json:"green"`
+	Yellow float64 `json:"yellow"`
+	Red    float64 `json:"red"`
+	Brown  float64 `json:"brown"`
+	Grey   float64 `json:"grey"`
+	White  float64 `json:"white"`
+	Other  float64 `json:"other"`
 }
 
 type SLDLayer struct {
@@ -9754,6 +10036,8 @@ func (f *File) ClearString(recipe StringRecipe) error
 
 func (f *File) ClearTriggers() error
 
+func (f *File) ClusterScatterUnits(recipe UnitRecipe) ([]UnitRecipe, error)
+
 func (f *File) CopyTerrainArea(recipe MapRecipe) error
 
 func (f *File) CopyTrigger(recipe TriggerRecipe) error
@@ -9786,15 +10070,27 @@ func (f *File) Effects() EffectsReport
 
 func (f *File) EffectsWithOptions(opts EffectsOptions) EffectsReport
 
+func (f *File) ErodeTerrain(recipe MapRecipe) error
+
+func (f *File) ErodeTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask, semantic bool) error
+
 func (f *File) GuessRegions() RegionGuessReport
 
 func (f *File) Idioms() IdiomReport
+
+func (f *File) LayeredCrossfadeTerrain(recipe MapRecipe) error
+
+func (f *File) LayeredCrossfadeTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error
 
 func (f *File) Lint() LintReport
 
 func (f *File) LintWithOptions(opts LintOptions) LintReport
 
 func (f *File) MoveUnitsInArea(recipe UnitRecipe) (int, error)
+
+func (f *File) NoiseFillTerrain(recipe MapRecipe) error
+
+func (f *File) NoiseFillTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error
 
 func (f *File) PaletteUsage(palette datfile.PaletteReport) PaletteUsageReport
 
@@ -9837,6 +10133,8 @@ func (f *File) SetString(recipe StringRecipe) error
 func (f *File) SetTerrain(recipe MapRecipe) error
 
 func (f *File) SetTerrainRect(recipe MapRecipe) error
+
+func (f *File) SetTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error
 
 func (f *File) SetXS(recipe XSRecipe) error
 
@@ -9972,18 +10270,25 @@ type MapInfo struct {
 }
 
 type MapRecipe struct {
-	Op        string `json:"op"`
-	X1        int    `json:"x1"`
-	Y1        int    `json:"y1"`
-	X2        int    `json:"x2"`
-	Y2        int    `json:"y2"`
-	TargetX   *int   `json:"target_x,omitempty"`
-	TargetY   *int   `json:"target_y,omitempty"`
-	Radius    *int   `json:"radius,omitempty"`
-	Thickness *int   `json:"thickness,omitempty"`
-	TerrainID *int   `json:"terrain_id,omitempty"`
-	Elevation *int   `json:"elevation,omitempty"`
-	Layer     *int   `json:"layer,omitempty"`
+	Op         string   `json:"op"`
+	Mask       string   `json:"mask,omitempty"`
+	X1         int      `json:"x1"`
+	Y1         int      `json:"y1"`
+	X2         int      `json:"x2"`
+	Y2         int      `json:"y2"`
+	TargetX    *int     `json:"target_x,omitempty"`
+	TargetY    *int     `json:"target_y,omitempty"`
+	Radius     *int     `json:"radius,omitempty"`
+	Thickness  *int     `json:"thickness,omitempty"`
+	TerrainID  *int     `json:"terrain_id,omitempty"`
+	TerrainID2 *int     `json:"terrain_id_2,omitempty"`
+	Elevation  *int     `json:"elevation,omitempty"`
+	Layer      *int     `json:"layer,omitempty"`
+	Seed       *int     `json:"seed,omitempty"`
+	Scale      *float64 `json:"scale,omitempty"`
+	Threshold  *float64 `json:"threshold,omitempty"`
+	Iterations *int     `json:"iterations,omitempty"`
+	TerrainIDs []int    `json:"terrain_ids,omitempty"`
 }
 
 type MarkupColorTechnique struct {
@@ -9995,6 +10300,29 @@ type MarkupSummary struct {
 	ColorTags         map[string]int `json:"color_tags"`
 	VariableRefs      []string       `json:"variable_refs"`
 	VariableRefCounts map[string]int `json:"variable_ref_counts"`
+}
+
+type MaskCellRecipe struct {
+	X int `json:"x"`
+	Y int `json:"y"`
+}
+
+type MaskRecipe struct {
+	Name       string           `json:"name"`
+	Op         string           `json:"op"`
+	X1         int              `json:"x1,omitempty"`
+	Y1         int              `json:"y1,omitempty"`
+	X2         int              `json:"x2,omitempty"`
+	Y2         int              `json:"y2,omitempty"`
+	Radius     *int             `json:"radius,omitempty"`
+	TerrainIDs []int            `json:"terrain_ids,omitempty"`
+	Masks      []string         `json:"masks,omitempty"`
+	Seed       *int             `json:"seed,omitempty"`
+	Scale      *float64         `json:"scale,omitempty"`
+	Threshold  *float64         `json:"threshold,omitempty"`
+	Iterations *int             `json:"iterations,omitempty"`
+	Invert     *bool            `json:"invert,omitempty"`
+	Cells      []MaskCellRecipe `json:"cells,omitempty"`
 }
 
 type MechanicOptions struct {
@@ -10232,6 +10560,11 @@ type PlayerUnitsInfo struct {
 	Units  []UnitSummary `json:"units,omitempty"`
 }
 
+type PointRecipe struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
 type Recipe struct {
 	Scenario         *ScenarioRecipe         `json:"scenario,omitempty"`
 	XS               *XSRecipe               `json:"xs,omitempty"`
@@ -10243,6 +10576,7 @@ type Recipe struct {
 	Strings          []StringRecipe          `json:"strings,omitempty"`
 	Variables        []VariableRecipe        `json:"variables,omitempty"`
 	Triggers         []TriggerRecipe         `json:"triggers"`
+	Masks            []MaskRecipe            `json:"masks,omitempty"`
 	Units            []UnitRecipe            `json:"units,omitempty"`
 	Map              []MapRecipe             `json:"map,omitempty"`
 }
@@ -10862,34 +11196,42 @@ type UnitInfo struct {
 }
 
 type UnitRecipe struct {
-	Op                    string   `json:"op"`
-	Player                int      `json:"player"`
-	UnitConst             int      `json:"unit_const"`
-	X                     *float64 `json:"x,omitempty"`
-	Y                     *float64 `json:"y,omitempty"`
-	Z                     *float64 `json:"z,omitempty"`
-	ReferenceID           *int     `json:"reference_id,omitempty"`
-	TargetPlayer          *int     `json:"target_player,omitempty"`
-	TargetIndex           *int     `json:"target_index,omitempty"`
-	TargetCaption         string   `json:"target_caption,omitempty"`
-	TargetUnitConst       *int     `json:"target_unit_const,omitempty"`
-	TargetAreaX1          *float64 `json:"target_area_x1,omitempty"`
-	TargetAreaY1          *float64 `json:"target_area_y1,omitempty"`
-	TargetAreaX2          *float64 `json:"target_area_x2,omitempty"`
-	TargetAreaY2          *float64 `json:"target_area_y2,omitempty"`
-	TargetX               *float64 `json:"target_x,omitempty"`
-	TargetY               *float64 `json:"target_y,omitempty"`
-	OffsetX               *float64 `json:"offset_x,omitempty"`
-	OffsetY               *float64 `json:"offset_y,omitempty"`
-	ReferenceIDBase       *int     `json:"reference_id_base,omitempty"`
-	CaptionSuffix         string   `json:"caption_suffix,omitempty"`
-	SetPlayer             *int     `json:"set_player,omitempty"`
-	Status                *int     `json:"status,omitempty"`
-	Rotation              *float64 `json:"rotation,omitempty"`
-	InitialAnimationFrame *int     `json:"initial_animation_frame,omitempty"`
-	GarrisonedInID        *int     `json:"garrisoned_in_id,omitempty"`
-	CaptionStringID       *int     `json:"caption_string_id,omitempty"`
-	CaptionString         string   `json:"caption_string,omitempty"`
+	Op                    string        `json:"op"`
+	Player                int           `json:"player"`
+	UnitConst             int           `json:"unit_const"`
+	X                     *float64      `json:"x,omitempty"`
+	Y                     *float64      `json:"y,omitempty"`
+	Z                     *float64      `json:"z,omitempty"`
+	ReferenceID           *int          `json:"reference_id,omitempty"`
+	TargetPlayer          *int          `json:"target_player,omitempty"`
+	TargetIndex           *int          `json:"target_index,omitempty"`
+	TargetCaption         string        `json:"target_caption,omitempty"`
+	TargetUnitConst       *int          `json:"target_unit_const,omitempty"`
+	TargetAreaX1          *float64      `json:"target_area_x1,omitempty"`
+	TargetAreaY1          *float64      `json:"target_area_y1,omitempty"`
+	TargetAreaX2          *float64      `json:"target_area_x2,omitempty"`
+	TargetAreaY2          *float64      `json:"target_area_y2,omitempty"`
+	TargetX               *float64      `json:"target_x,omitempty"`
+	TargetY               *float64      `json:"target_y,omitempty"`
+	OffsetX               *float64      `json:"offset_x,omitempty"`
+	OffsetY               *float64      `json:"offset_y,omitempty"`
+	ReferenceIDBase       *int          `json:"reference_id_base,omitempty"`
+	Count                 *int          `json:"count,omitempty"`
+	Centers               []PointRecipe `json:"centers,omitempty"`
+	Spread                *float64      `json:"spread,omitempty"`
+	MinDistance           *float64      `json:"min_distance,omitempty"`
+	AllowedTerrainIDs     []int         `json:"allowed_terrain_ids,omitempty"`
+	Exact                 *bool         `json:"exact,omitempty"`
+	Seed                  *int          `json:"seed,omitempty"`
+	CaptionSuffix         string        `json:"caption_suffix,omitempty"`
+	SetPlayer             *int          `json:"set_player,omitempty"`
+	Status                *int          `json:"status,omitempty"`
+	Rotation              *float64      `json:"rotation,omitempty"`
+	RotationChoices       []float64     `json:"rotation_choices,omitempty"`
+	InitialAnimationFrame *int          `json:"initial_animation_frame,omitempty"`
+	GarrisonedInID        *int          `json:"garrisoned_in_id,omitempty"`
+	CaptionStringID       *int          `json:"caption_string_id,omitempty"`
+	CaptionString         string        `json:"caption_string,omitempty"`
 }
 
 type UnitSummary struct {
@@ -11533,5 +11875,45 @@ type XSFunction struct {
 func ScanFunctionSource(path, content string) []XSFunction
 
 func ScanFunctions(paths []string) ([]XSFunction, error)
+```
+
+## aoe2kit/tools/florida_compile
+
+```go
+
+```
+
+## aoe2kit/tools/oahu_compile
+
+```go
+
+```
+
+## aoe2kit/tools/terrain_felt_scrape
+
+```go
+TYPES
+
+type ManifestRow struct {
+	TerrainID          int      `json:"terrain_id"`
+	Name               string   `json:"name"`
+	Name2              string   `json:"name_2"`
+	Category           string   `json:"category"`
+	Texture            string   `json:"texture,omitempty"`
+	OverlayMask        string   `json:"overlay_mask,omitempty"`
+	Swatch             string   `json:"swatch,omitempty"`
+	Passability        *float32 `json:"passability,omitempty"`
+	PassabilityNote    string   `json:"passability_note,omitempty"`
+	RenderSource       string   `json:"render_source,omitempty"`
+	FeltDone           bool     `json:"felt_done"`
+	Note               string   `json:"note,omitempty"`
+	RemoteTextureBytes int64    `json:"remote_texture_bytes,omitempty"`
+}
+```
+
+## aoe2kit/tools/the_turning_compile
+
+```go
+
 ```
 

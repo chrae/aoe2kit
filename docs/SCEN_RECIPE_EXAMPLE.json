@@ -44,6 +44,16 @@
       "stone": 0
     }
   ],
+  "masks": [
+    {
+      "name": "organic_patch",
+      "op": "blob",
+      "x1": 38,
+      "y1": 18,
+      "radius": 6,
+      "seed": 42
+    }
+  ],
   "triggers": [
     {
       "op": "add_display_instructions",
@@ -128,6 +138,21 @@
       "x": 11.5,
       "y": 12.5,
       "caption_string": "AoE2Kit Edited Smoke Marker"
+    },
+    {
+      "op": "cluster_scatter",
+      "player": 0,
+      "unit_const": 351,
+      "count": 4,
+      "centers": [{"x": 38.5, "y": 18.5}],
+      "spread": 2.5,
+      "min_distance": 0.75,
+      "target_area_x1": 32,
+      "target_area_y1": 12,
+      "target_area_x2": 44,
+      "target_area_y2": 22,
+      "allowed_terrain_ids": [53, 58],
+      "seed": 42
     }
   ],
   "map": [
@@ -155,6 +180,48 @@
       "x2": 30,
       "y2": 24,
       "elevation": 1
+    },
+    {
+      "op": "terrain_grid",
+      "x1": 52,
+      "y1": 12,
+      "width": 2,
+      "height": 2,
+      "terrain_id": [1, 1, 2, 2],
+      "layer": [-1, 2, 1, -1],
+      "elevation": [0, 0, 0, 0]
+    },
+    {
+      "op": "noise_fill",
+      "mask": "organic_patch",
+      "x1": 32,
+      "y1": 12,
+      "x2": 44,
+      "y2": 22,
+      "terrain_id": 53,
+      "terrain_id_2": 58,
+      "seed": 42,
+      "scale": 5.5,
+      "threshold": 0.55
+    },
+    {
+      "op": "layered_crossfade",
+      "x1": 45,
+      "y1": 12,
+      "x2": 48,
+      "y2": 12,
+      "terrain_id": 1,
+      "terrain_id_2": 2
+    },
+    {
+      "op": "semantic_erode",
+      "mask": "organic_patch",
+      "x1": 32,
+      "y1": 12,
+      "x2": 44,
+      "y2": 22,
+      "iterations": 1,
+      "terrain_ids": [53, 58]
     }
   ]
 }

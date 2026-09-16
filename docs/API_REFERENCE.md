@@ -50,7 +50,7 @@ go run ./cmd/apiref --kit ./kit \
 Flags marked **required** in the tables below appear unbracketed in the tool's own
 usage line and must be supplied.
 
-Tool version `0.1.0` — 222 commands, 41 probed.
+Tool version `0.1.0` — 223 commands, 41 probed.
 
 ## Command index
 
@@ -62,6 +62,7 @@ Tool version `0.1.0` — 222 commands, 41 probed.
 - **dat** — `dat abilities`, `dat ability`, `dat ability-create`, `dat ability-delete`, `dat ability-disable`, `dat ability-patch`, `dat availability`, `dat availability-set`, `dat civ-patch`, `dat civs`, `dat codec-patch`, `dat codec-plan`, `dat command-matrix`, `dat delete`, `dat delete-plan`, `dat diff`, `dat disconnect`, `dat effect`, `dat effect-command-delete`, `dat effect-create`, `dat effect-delete`, `dat effect-disable`, `dat effect-explain`, `dat effect-patch`, `dat effects`, `dat graphic`, `dat graphic-angle-sound-delete`, `dat graphic-create`, `dat graphic-delete`, `dat graphic-delta-delete`, `dat graphic-patch`, `dat graphics`, `dat palette`, `dat patch`, `dat patch-graphic`, `dat patch-unit`, `dat plan`, `dat player-colour-create`, `dat player-colour-delete`, `dat player-colour-patch`, `dat player-colours`, `dat random-maps`, `dat refs`, `dat semantics-pack`, `dat semantics-readback`, `dat sound`, `dat sound-create`, `dat sound-delete`, `dat sound-item-delete`, `dat sound-patch`, `dat sounds`, `dat spans`, `dat sprite`, `dat tech`, `dat tech-create`, `dat tech-delete`, `dat tech-explain`, `dat tech-patch`, `dat tech-tree`, `dat tech-tree-connection-create`, `dat tech-tree-connection-delete`, `dat tech-tree-connection-patch`, `dat techs`, `dat terrain`, `dat terrain-patch`, `dat terrain-restriction-patch`, `dat terrain-restrictions`, `dat terrains`, `dat unit`, `dat unit-child-delete`, `dat unit-create`, `dat unit-delete`, `dat unit-header`, `dat unit-header-task-delete`, `dat unit-headers`, `dat units`
 - **docs** — `docs lint`
 - **fx** — `fx bind`, `fx lint`, `fx new`
+- **geo** — `geo trace-dem`
 - **gfx** — `gfx export`, `gfx info`
 - **player** — `player stats`
 - **project** — `project diff`, `project inspect`, `project lineage`, `project snapshot`
@@ -1287,13 +1288,14 @@ kit dat spans <empires*.dat>
 ### `dat sprite`
 
 ```
-kit dat sprite <file.sld> [--out dir] [--limit N] [--text]
+kit dat sprite <file.sld> [--out dir] [--limit N] [--stats] [--text]
 ```
 
 | flag | value |
 | --- | --- |
 | `--out` | `dir` |
 | `--limit` | `N` |
+| `--stats` | _(boolean)_ |
 | `--text` | _(boolean)_ |
 
 **writes output files**
@@ -1638,6 +1640,31 @@ kit fx new <name> --preset trail|explosion|aura|projectile-fire [--grid RxC] [de
 | --- | --- |
 | `--preset` | `trail|explosion|aura|projectile-fire` **(required)** |
 | `--grid` | `RxC` |
+
+**writes output files**
+
+- probe: `skipped_mutating`
+
+## geo
+
+### `geo trace-dem`
+
+```
+kit geo trace-dem [--bbox minLat,minLon,maxLat,maxLon] [--center lat,lon] [--span-km N] [--grid N] [--landmask naturalearth|geojson] [--landcover worldcover|glc-fcs30d] [--roads osm-interstate|osm-motorway|osm-major|nhpn-interstate] [--out report.json] [--recipe-out recipe.json] [--scenario-out out.aoe2scenario]
+```
+
+| flag | value |
+| --- | --- |
+| `--bbox` | `minLat,minLon,maxLat,maxLon` |
+| `--center` | `lat,lon` |
+| `--span-km` | `N` |
+| `--grid` | `N` |
+| `--landmask` | `naturalearth|geojson` |
+| `--landcover` | `worldcover|glc-fcs30d` |
+| `--roads` | `osm-interstate|osm-motorway|osm-major|nhpn-interstate` |
+| `--out` | `report.json` |
+| `--recipe-out` | `recipe.json` |
+| `--scenario-out` | `out.aoe2scenario` |
 
 **writes output files**
 

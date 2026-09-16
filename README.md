@@ -50,6 +50,7 @@ the JSON and ignore `--text`.
 | `api_schemas.json` | the full nested shape of all 678 report types |
 | `PACKAGE_API.md` | `go doc` for every package, for importing the library directly |
 | `SIDECAR.md` | the XS sidecar debug loop — assert engine state without playing |
+| `compendiums/felt/README.md` | a visual vocabulary of AoE2DE decorative art and terrain for AI-assisted scene composition |
 
 If you only read two: `CAPABILITIES.md` to see whether the kit does what you
 need, then `SIDECAR.md`, which is the technique most likely to be useful in your
@@ -186,10 +187,12 @@ pkg/datfile    .dat span/index inspection and patch engine
 pkg/datcodec   typed .dat section codec (effects, techs, civs, sounds, terrains)
 pkg/xs         XS authoring generators and the .xsdat sidecar codec
 pkg/cba        Castle Blood Automatic interpretation (domain layer, not generic truth)
+pkg/geotrace   real-map terrain tracing into scenario recipes and blank scenarios
 pkg/kit        bundle inventory, verification, packaging, portability audit
 pkg/gfx|fx|geom|aifile|modpack|campaign|ci|enginefacts   supporting domains
 
 data/engine_facts.json   the evidence ledger behind every engine claim
+compendiums/felt         decorative art + terrain felt indexes, contact sheets, and scene examples
 ```
 
 ---

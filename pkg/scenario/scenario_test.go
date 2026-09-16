@@ -3391,6 +3391,376 @@ func TestCopyTerrainAreaOverlappingUsesSourceSnapshot(t *testing.T) {
 	}
 }
 
+func TestNoiseFillTerrainDeterministic(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	a, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open A: %v", err)
+	}
+	b, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open B: %v", err)
+	}
+	terrainA := 53
+	terrainB := 58
+	seed := 77
+	scale := 3.5
+	threshold := 0.5
+	recipe := Recipe{Map: []MapRecipe{
+		{Op: "noise_fill", X1: 2, Y1: 2, X2: 12, Y2: 12, TerrainID: &terrainA, TerrainID2: &terrainB, Seed: &seed, Scale: &scale, Threshold: &threshold},
+	}}
+	plan, err := a.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan.MapTilesChanged != 121 {
+		t.Fatalf("plan map tiles changed=%d want 121", plan.MapTilesChanged)
+	}
+	if err := a.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe A: %v", err)
+	}
+	if err := b.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe B: %v", err)
+	}
+	aTiles, width, _, err := a.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles A: %v", err)
+	}
+	bTiles, _, _, err := b.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles B: %v", err)
+	}
+	countA := 0
+	countB := 0
+	for y := 2; y <= 12; y++ {
+		for x := 2; x <= 12; x++ {
+			gotA, _ := aTiles[y*width+x].intValue("terrain_id")
+			gotB, _ := bTiles[y*width+x].intValue("terrain_id")
+			if gotA != gotB {
+				t.Fatalf("noise_fill not deterministic at (%d,%d): %d != %d", x, y, gotA, gotB)
+			}
+			switch gotA {
+			case terrainA:
+				countA++
+			case terrainB:
+				countB++
+			default:
+				t.Fatalf("noise_fill terrain at (%d,%d) = %d, want %d or %d", x, y, gotA, terrainA, terrainB)
+			}
+		}
+	}
+	if countA == 0 || countB == 0 {
+		t.Fatalf("noise_fill did not use both terrains: terrainA=%d terrainB=%d", countA, countB)
+	}
+}
+
+func TestErodeTerrainSmoothsSingleton(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	base := 22
+	speck := 57
+	iterations := 1
+	recipe := Recipe{Map: []MapRecipe{
+		{Op: "set_terrain_rect", X1: 20, Y1: 20, X2: 22, Y2: 22, TerrainID: &base},
+		{Op: "set_terrain_rect", X1: 21, Y1: 21, X2: 21, Y2: 21, TerrainID: &speck},
+		{Op: "erode", X1: 20, Y1: 20, X2: 22, Y2: 22, Iterations: &iterations},
+	}}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan.MapTilesChanged != 19 {
+		t.Fatalf("plan map tiles changed=%d want 19", plan.MapTilesChanged)
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	tiles, width, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	center, _ := tiles[21*width+21].intValue("terrain_id")
+	if center != base {
+		t.Fatalf("erode center terrain=%d want %d", center, base)
+	}
+}
+
+func TestMaskAwareNoiseFill(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	base := 22
+	a := 53
+	b := 58
+	radius := 2
+	seed := 9
+	scale := 2.5
+	recipe := Recipe{
+		Masks: []MaskRecipe{{Name: "round", Op: "circle", X1: 10, Y1: 10, Radius: &radius}},
+		Map: []MapRecipe{
+			{Op: "set_terrain_rect", X1: 6, Y1: 6, X2: 14, Y2: 14, TerrainID: &base},
+			{Op: "noise_fill", Mask: "round", TerrainID: &a, TerrainID2: &b, Seed: &seed, Scale: &scale},
+		},
+	}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan.MapTilesChanged != 94 {
+		t.Fatalf("plan map tiles changed=%d want 94", plan.MapTilesChanged)
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	tiles, width, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	outside, _ := tiles[6*width+6].intValue("terrain_id")
+	if outside != base {
+		t.Fatalf("outside mask terrain=%d want base %d", outside, base)
+	}
+	insideA, insideB := 0, 0
+	for y := 8; y <= 12; y++ {
+		for x := 8; x <= 12; x++ {
+			if (x-10)*(x-10)+(y-10)*(y-10) > radius*radius {
+				continue
+			}
+			got, _ := tiles[y*width+x].intValue("terrain_id")
+			switch got {
+			case a:
+				insideA++
+			case b:
+				insideB++
+			default:
+				t.Fatalf("inside mask terrain at (%d,%d)=%d want %d or %d", x, y, got, a, b)
+			}
+		}
+	}
+	if insideA == 0 || insideB == 0 {
+		t.Fatalf("masked noise_fill did not use both terrains: a=%d b=%d", insideA, insideB)
+	}
+}
+
+func TestLayeredCrossfadeSetsBottomTerrainAndTopLayer(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	bottom := 1
+	top := 2
+	recipe := Recipe{Map: []MapRecipe{
+		{Op: "layered_crossfade", X1: 12, Y1: 13, X2: 14, Y2: 13, TerrainID: &bottom, TerrainID2: &top},
+	}}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan.MapTilesChanged != 3 {
+		t.Fatalf("plan map tiles changed=%d want 3", plan.MapTilesChanged)
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	tiles, width, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	for x := 12; x <= 14; x++ {
+		tile := tiles[13*width+x]
+		gotBottom, _ := tile.intValue("terrain_id")
+		gotTop, _ := tile.intValue("layer")
+		if gotBottom != bottom || gotTop != top {
+			t.Fatalf("tile (%d,13) bottom/top = %d/%d want %d/%d", x, gotBottom, gotTop, bottom, top)
+		}
+	}
+}
+
+func TestSemanticErodePreservesOutOfClassTiles(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	water := 22
+	land := 0
+	iterations := 1
+	recipe := Recipe{
+		Masks: []MaskRecipe{{Name: "patch", Op: "rect", X1: 30, Y1: 30, X2: 32, Y2: 32}},
+		Map: []MapRecipe{
+			{Op: "set_terrain_rect", X1: 30, Y1: 30, X2: 32, Y2: 32, TerrainID: &water},
+			{Op: "set_terrain_rect", X1: 31, Y1: 31, X2: 31, Y2: 31, TerrainID: &land},
+			{Op: "semantic_erode", Mask: "patch", Iterations: &iterations, TerrainIDs: []int{water}},
+		},
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	tiles, width, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	center, _ := tiles[31*width+31].intValue("terrain_id")
+	if center != land {
+		t.Fatalf("semantic_erode changed out-of-class center=%d want %d", center, land)
+	}
+}
+
+func TestBlobMaskClipsAtMapEdge(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	terrain := 53
+	radius := 6
+	seed := 4
+	recipe := Recipe{
+		Masks: []MaskRecipe{{Name: "edge_blob", Op: "blob", X1: 0, Y1: 0, Radius: &radius, Seed: &seed}},
+		Map:   []MapRecipe{{Op: "set_terrain_mask", Mask: "edge_blob", TerrainID: &terrain}},
+	}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan clipped blob: %v", err)
+	}
+	if plan.MapTilesChanged == 0 {
+		t.Fatalf("clipped blob plan selected no tiles")
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe clipped blob: %v", err)
+	}
+	tiles, _, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	got, _ := tiles[0].intValue("terrain_id")
+	if got != terrain {
+		t.Fatalf("corner terrain=%d want %d", got, terrain)
+	}
+}
+
+func TestClusterScatterPlacesExactCountInHabitat(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	habitat := 53
+	count := 5
+	spread := 2.0
+	minDist := 0.5
+	seed := 123
+	x1, y1, x2, y2 := 40.0, 40.0, 48.0, 48.0
+	recipe := Recipe{
+		Map: []MapRecipe{{Op: "set_terrain_rect", X1: 40, Y1: 40, X2: 48, Y2: 48, TerrainID: &habitat}},
+		Units: []UnitRecipe{{
+			Op:                "cluster_scatter",
+			Player:            0,
+			UnitConst:         351,
+			Count:             &count,
+			Centers:           []PointRecipe{{X: 44.5, Y: 44.5}},
+			Spread:            &spread,
+			MinDistance:       &minDist,
+			AllowedTerrainIDs: []int{habitat},
+			TargetAreaX1:      &x1,
+			TargetAreaY1:      &y1,
+			TargetAreaX2:      &x2,
+			TargetAreaY2:      &y2,
+			Seed:              &seed,
+		}},
+	}
+	plan, err := file.Plan(recipe)
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if plan.UnitCountAfter-plan.UnitCountBefore != count {
+		t.Fatalf("unit delta=%d want %d", plan.UnitCountAfter-plan.UnitCountBefore, count)
+	}
+	if err := file.ApplyRecipe(recipe); err != nil {
+		t.Fatalf("ApplyRecipe: %v", err)
+	}
+	matches, err := file.findUnitsInArea(UnitRecipe{TargetAreaX1: &x1, TargetAreaY1: &y1, TargetAreaX2: &x2, TargetAreaY2: &y2, TargetUnitConst: intPtr(351)})
+	if err != nil {
+		t.Fatalf("findUnitsInArea: %v", err)
+	}
+	if len(matches) != count {
+		t.Fatalf("cluster scatter placed %d unit(s), want %d", len(matches), count)
+	}
+	tiles, width, _, err := file.mapTiles()
+	if err != nil {
+		t.Fatalf("mapTiles: %v", err)
+	}
+	for _, match := range matches {
+		x, _ := match.Unit.floatValue("x")
+		y, _ := match.Unit.floatValue("y")
+		got, _ := tiles[int(math.Floor(y))*width+int(math.Floor(x))].intValue("terrain_id")
+		if got != habitat {
+			t.Fatalf("cluster unit at %.2f,%.2f on terrain %d want %d", x, y, got, habitat)
+		}
+	}
+}
+
+func TestClusterScatterExactFailure(t *testing.T) {
+	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
+	if _, err := os.Stat(input); err != nil {
+		t.Skipf("diagnostic fixture unavailable: %v", err)
+	}
+	file, err := Open(input)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	habitat := 53
+	count := 3
+	minDist := 10.0
+	x1, y1, x2, y2 := 60.0, 60.0, 60.9, 60.9
+	recipe := Recipe{
+		Map: []MapRecipe{{Op: "set_terrain_rect", X1: 60, Y1: 60, X2: 60, Y2: 60, TerrainID: &habitat}},
+		Units: []UnitRecipe{{
+			Op:                "cluster_scatter",
+			Player:            0,
+			UnitConst:         351,
+			Count:             &count,
+			Centers:           []PointRecipe{{X: 60.5, Y: 60.5}},
+			MinDistance:       &minDist,
+			AllowedTerrainIDs: []int{habitat},
+			TargetAreaX1:      &x1,
+			TargetAreaY1:      &y1,
+			TargetAreaX2:      &x2,
+			TargetAreaY2:      &y2,
+		}},
+	}
+	if err := file.ApplyRecipe(recipe); err == nil {
+		t.Fatalf("cluster_scatter exact placement unexpectedly succeeded")
+	}
+}
+
 func TestEditExistingTriggerRaw(t *testing.T) {
 	spec, err := LoadCurrentDESpec()
 	if err != nil {
@@ -6275,4 +6645,101 @@ func TestValidateMapRect(t *testing.T) {
 	if err := validateMapRect(outside, 10, 10); err == nil {
 		t.Fatal("validateMapRect accepted out-of-bounds rectangle")
 	}
+}
+
+func TestTerrainGridRecipeInlineAndGridFile(t *testing.T) {
+	data, err := BlankScenarioSeedBytes()
+	if err != nil {
+		t.Fatalf("BlankScenarioSeedBytes: %v", err)
+	}
+	file, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse blank seed: %v", err)
+	}
+	inlineJSON := []byte(`{
+		"map": [{
+			"op": "terrain_grid",
+			"x1": 3,
+			"y1": 4,
+			"width": 2,
+			"height": 2,
+			"terrain_id": [7, 8, 9, 10],
+			"layer": [-1, 11, 12, 13],
+			"elevation": [1, 2, 3, 4]
+		}]
+	}`)
+	var inline Recipe
+	if err := json.Unmarshal(inlineJSON, &inline); err != nil {
+		t.Fatalf("Unmarshal inline terrain_grid: %v", err)
+	}
+	if got := len(inline.Map[0].TerrainIDGrid); got != 4 {
+		t.Fatalf("inline TerrainIDGrid length = %d, want 4", got)
+	}
+	marshaled, err := json.Marshal(inline)
+	if err != nil {
+		t.Fatalf("Marshal inline terrain_grid: %v", err)
+	}
+	if !strings.Contains(string(marshaled), `"terrain_id":[7,8,9,10]`) || !strings.Contains(string(marshaled), `"layer":[-1,11,12,13]`) {
+		t.Fatalf("marshaled terrain_grid lost grid arrays: %s", marshaled)
+	}
+	plan, err := file.Plan(inline)
+	if err != nil {
+		t.Fatalf("Plan inline terrain_grid: %v", err)
+	}
+	if plan.MapTilesChanged != 4 {
+		t.Fatalf("inline plan MapTilesChanged = %d, want 4", plan.MapTilesChanged)
+	}
+	if err := file.ApplyRecipe(inline); err != nil {
+		t.Fatalf("ApplyRecipe inline terrain_grid: %v", err)
+	}
+
+	tmp := t.TempDir()
+	gridPath := filepath.Join(tmp, "grid.json")
+	if err := os.WriteFile(gridPath, []byte(`{"width":2,"height":1,"terrain_id":[50,51],"layer":[-1,52]}`), 0644); err != nil {
+		t.Fatalf("write grid file: %v", err)
+	}
+	recipePath := filepath.Join(tmp, "recipe.json")
+	if err := os.WriteFile(recipePath, []byte(`{"map":[{"op":"terrain_grid","x1":5,"y1":6,"grid_file":"grid.json"}]}`), 0644); err != nil {
+		t.Fatalf("write recipe file: %v", err)
+	}
+	fromFile, err := LoadRecipe(recipePath)
+	if err != nil {
+		t.Fatalf("LoadRecipe grid_file: %v", err)
+	}
+	plan, err = file.Plan(fromFile)
+	if err != nil {
+		t.Fatalf("Plan grid_file terrain_grid: %v", err)
+	}
+	if plan.MapTilesChanged != 2 {
+		t.Fatalf("grid_file plan MapTilesChanged = %d, want 2", plan.MapTilesChanged)
+	}
+	if err := file.ApplyRecipe(fromFile); err != nil {
+		t.Fatalf("ApplyRecipe grid_file terrain_grid: %v", err)
+	}
+
+	report, err := file.Terrain(TerrainOptions{IncludeTiles: true})
+	if err != nil {
+		t.Fatalf("Terrain readback: %v", err)
+	}
+	tiles := map[[2]int]TerrainTile{}
+	for _, tile := range report.Tiles {
+		tiles[[2]int{tile.X, tile.Y}] = tile
+	}
+	assertTile := func(x, y, terrainID, layer, elevation int) {
+		t.Helper()
+		tile, ok := tiles[[2]int{x, y}]
+		if !ok {
+			t.Fatalf("missing tile (%d,%d)", x, y)
+		}
+		if tile.TerrainID != terrainID || tile.Layer != layer || tile.Elevation != elevation {
+			t.Fatalf("tile (%d,%d) = terrain %d layer %d elevation %d, want terrain %d layer %d elevation %d",
+				x, y, tile.TerrainID, tile.Layer, tile.Elevation, terrainID, layer, elevation)
+		}
+	}
+	assertTile(3, 4, 7, -1, 1)
+	assertTile(4, 4, 8, 11, 2)
+	assertTile(3, 5, 9, 12, 3)
+	assertTile(4, 5, 10, 13, 4)
+	assertTile(5, 6, 50, -1, 0)
+	assertTile(6, 6, 51, 52, 0)
 }

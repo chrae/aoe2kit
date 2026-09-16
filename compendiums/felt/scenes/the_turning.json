@@ -1,0 +1,91 @@
+{
+  "title": "The Turning",
+  "author": "claude-code — a Terra/Gaia showcase composing terrain felt (52) + art felt (232) + verified rotation-addressability + the terrain<->object interaction rule",
+  "thesis": "A season sweeps across one landscape, NW->SE: alpine winter -> autumn woods -> a still summer lake -> a tropical delta. A river+lake is the spine; the land turns around it. Terrain is the mood, gaia is the life, and they are chosen TOGETHER — every tree stands on the floor that belongs to it, every water carries the depth and tint its scene needs.",
+  "map": {"size": 120, "base_terrain": 0, "note": "blank all-grass; paint the regions below onto it, then place gaia."},
+
+  "the_water_spine": {
+    "form": "A river enters top-left (NW, ~[8,8]) from a frozen alpine tarn, runs diagonally to a central LAKE (~centre [60,60], ~26 tiles across), then out bottom-right (SE, ~[112,112]) fanning into a brackish DELTA at the map edge.",
+    "depth_discipline": "Water is NEVER one tile-type. Paint concentric depth: DEEP(22) at centres/channel, MEDIUM(23) around it, SHALLOW(1) at every edge, then a 1-2 tile WET-BEACH(80) shore, then BEACH-VEGETATION(52) or grass. This gradient is the single most important craft in the piece.",
+    "tint_by_region": "Frozen tarn = ICE(35)+ICE-NAVIGABLE(26). Alpine/autumn river = clear SHALLOW(1)/MEDIUM(23)/DEEP(22). Lake = clear, a touch of AZURE(58) in the shallows. Delta = GREEN(95) then BROWN(96) then WEED(130) as it turns brackish and slow."
+  },
+
+  "regions": [
+    {"name":"Alpine Source (NW corner)","bounds":"~[0,0]-[38,38]","base_terrain":32,"seam_terrain":124,"mood":"cold, hushed, the world's roof",
+      "terrain_notes":"SNOW(32) floor, SNOW-SOFT(124) in the purest drifts, SNOW-FOREST-FLOOR(105) under the conifers. The tarn: ICE(35) with ICE-NAVIGABLE(26) at its heart, ICE-BEACH(37) rim.",
+      "gaia":[
+        {"const":1043,"n":1,"role":"edge_NW","rot":"auto","note":"snow-capped mountain (6x6), the source"},
+        {"const":1046,"n":1,"role":"edge_N","rot":"auto","note":"jagged snow peak"},
+        {"const":413,"n":10,"role":"scatter","rot":15,"note":"snow pines — snow-frame rotation"},
+        {"const":1249,"n":6,"role":"scatter","rot":"auto","note":"snow-autumn oaks (first-frost)"},
+        {"const":349,"n":5,"role":"scatter","rot":9,"note":"BARE oaks (rot 9 = winter skeleton) at the tree-line"},
+        {"const":728,"n":6,"role":"scatter_on_ice","rot":"auto","note":"ice floes on the tarn"},
+        {"const":40,"n":0,"note":"rock terrain outcrops via ROCK(40) patches, not units"}
+      ]},
+
+    {"name":"Boreal Slope (N band)","bounds":"~[20,20]-[64,52]","base_terrain":105,"seam_terrain":10,"mood":"the descent, cold giving way",
+      "terrain_notes":"SNOW-FOREST-FLOOR(105) fading to generic FOREST(10) as it warms; ROCK(40) where the river tumbles; a WATERFALL feel via a rock band + karst.",
+      "gaia":[
+        {"const":350,"n":8,"role":"scatter","rot":"auto","note":"pines"},
+        {"const":2008,"n":2,"role":"edge","rot":"auto","note":"karst spires flanking the river drop"},
+        {"const":1717,"n":4,"role":"scatter","rot":10,"note":"birch turning (autumn-gold rot)"},
+        {"const":623,"n":4,"role":"scatter","rot":"auto","note":"granite rocks along the bank"}
+      ]},
+
+    {"name":"Autumn Woods (centre-N, the river's middle)","bounds":"~[36,30]-[80,64]","base_terrain":10,"seam_terrain":100,"mood":"melancholy gold, the year turning",
+      "terrain_notes":"FOREST(10) floor with DRY-GRASS(100) clearings and DIRT(6) trodden paths to the water; MUD(76) at the wet bank.",
+      "gaia":[
+        {"const":1248,"n":8,"role":"scatter","rot":"auto","note":"autumn oaks (gold+red)"},
+        {"const":349,"n":5,"role":"scatter","rot":18,"note":"oaks at autumn-GOLD rotation (18-23)"},
+        {"const":2028,"n":3,"role":"scatter","rot":0,"note":"CRIMSON maple (rot 0 = red)"},
+        {"const":1717,"n":4,"role":"scatter","rot":14,"note":"birch autumn"},
+        {"const":2031,"n":6,"role":"carpet","rot":"auto","note":"maple-GOLD leaf litter under the oaks"},
+        {"const":2030,"n":4,"role":"carpet","rot":"auto","note":"maple-RED litter under the maples"},
+        {"const":2294,"n":1,"role":"feature","rot":"auto","note":"a Sacred Tree on the river bend — the reverent pause"},
+        {"const":1350,"n":8,"role":"waterline","rot":"auto","note":"reeds along the bank"}
+      ]},
+
+    {"name":"The Lake & its Island (centre)","bounds":"~[46,46]-[86,86]","base_terrain":0,"seam_terrain":52,"mood":"the still centre, held breath",
+      "terrain_notes":"The full water gradient: DEEP(22) centre -> MEDIUM(23) -> SHALLOW(1)/AZURE(58) rim -> WET-BEACH(80) -> BEACH-VEGETATION(52) -> GRASS2(12). A small ISLAND of GRASS2(12) at the lake's heart.",
+      "gaia":[
+        {"const":2294,"n":1,"role":"island_centre","rot":"auto","note":"a second Sacred Tree crowning the island — the map's still point"},
+        {"const":2025,"n":4,"role":"bank","rot":"auto","note":"weeping WILLOWS drooping to the water — the piece's signature"},
+        {"const":2536,"n":10,"role":"on_shallows","rot":"auto","note":"water lilies floating the azure rim"},
+        {"const":1350,"n":10,"role":"waterline","rot":"auto","note":"reed beds"},
+        {"const":2567,"n":4,"role":"scatter","rot":"auto","note":"green oaks, evergreen, framing the summer side"}
+      ]},
+
+    {"name":"Summer Meadow (E band, the sun side)","bounds":"~[70,44]-[104,84]","base_terrain":12,"seam_terrain":122,"mood":"peak life, warmth, ease",
+      "terrain_notes":"lush GRASS2(12) with GRASS-FLOWERS(122) meadows and a GRASS(0) fringe — the healthiest, most alive ground on the map.",
+      "gaia":[
+        {"const":2567,"n":6,"role":"scatter","rot":"auto","note":"lush green oaks"},
+        {"const":2017,"n":3,"role":"scatter","rot":"auto","note":"a few late peach-blossoms lingering"},
+        {"const":1054,"n":6,"role":"scatter","rot":"auto","note":"flowering/berry bushes in bloom"},
+        {"const":59,"n":4,"role":"scatter","rot":"auto","note":"forage berry bushes"},
+        {"const":1366,"n":8,"role":"scatter","rot":"auto","note":"wildflower clumps"},
+        {"const":1358,"n":10,"role":"scatter","rot":"auto","note":"green grass tufts for texture"}
+      ]},
+
+    {"name":"Tropical Delta (SE corner, the river's end)","bounds":"~[80,80]-[120,120]","base_terrain":60,"seam_terrain":55,"mood":"warm, wet, teeming, the outflow to the sea",
+      "terrain_notes":"JUNGLE-GRASS(60) and green FOREST-FLOOR(56) under the canopy; MANGROVE-FLOOR(55) where the river fans brackish; water turns GREEN(95)->BROWN(96)->WEED(130); AZURE(58) sea beyond a WHITE-BEACH(53) strand.",
+      "gaia":[
+        {"const":351,"n":6,"role":"scatter","rot":"auto","note":"palms leaning to the shore"},
+        {"const":1146,"n":6,"role":"scatter","rot":"auto","note":"rainforest canopy"},
+        {"const":414,"n":4,"role":"scatter","rot":"auto","note":"jungle trees"},
+        {"const":1144,"n":6,"role":"on_mangrove_floor","rot":"auto","note":"MANGROVES — placed ONLY on the mangrove-floor(55), roots in the brackish water (the interaction rule made visible)"},
+        {"const":1350,"n":8,"role":"waterline","rot":"auto","note":"reeds in the delta shallows"},
+        {"const":2170,"n":4,"role":"on_shore","rot":"auto","note":"oyster beds on the tidal flat"},
+        {"const":1148,"n":2,"role":"edge_sea","rot":"auto","note":"karst sea-stacks rising from the azure"},
+        {"const":2457,"n":1,"role":"on_white_beach","rot":"auto","note":"a beached whale on the strand — the far, quiet note"}
+      ]}
+  ],
+
+  "craft_rules_for_the_compiler": [
+    "SEAM every region boundary: never a hard edge. Use the seam_terrain (a transition ground) or a 2-3 tile blend band between adjacent regions (snow->snow-forest->forest; forest->dry-grass->grass2->grass-flowers; grass->beach-veg->wet-beach->water).",
+    "INTERACTION RULE is law: mangroves ONLY on mangrove-floor(55) with roots in water; reeds/lilies ONLY on shallow water; snow trees on snow-forest-floor(105); a tree's biome comes from the TREE, its floor from the terrain — pair them.",
+    "WATER DEPTH is always graded (deep->medium->shallow->wet-beach->shore). No unit sits on the wrong water (fish/lilies float, trees never in deep water).",
+    "SEASON is expressed by ROTATION where the map is engine-verified: bare oak=rot 9-11/15-17/24-26, autumn-gold oak=18-23, crimson maple=rot 0. Winter->autumn->summer trees follow the band.",
+    "RESTRAINT: a landscape breathes. Scatter loosely; let terrain and open ground carry stretches. Density rises at focal moments (the two Sacred Trees, the willowed island, the karst, the whale), falls between.",
+    "COMPOSITION: the two Sacred Trees (autumn bend + lake island) and the willowed island are the focal spine; the eye should travel the river from the cold white source to the warm azure delta."
+  ]
+}

@@ -9,7 +9,9 @@
       "id": "age",
       "category": "tool",
       "name": "Advanced Genie Editor (AGE)",
-      "authors": ["Tapsa and contributors"],
+      "authors": [
+        "Tapsa and contributors"
+      ],
       "url": "https://github.com/Tapsa/AGE",
       "license": "GPL-3.0",
       "permission": "GPL-3.0",
@@ -26,13 +28,16 @@
         "AGE remains the community reference editor for Genie DAT files.",
         "Where AoE2Kit uses AGE-shaped terminology, behavior is still verified through AoE2Kit roundtrip/readback tests and engine evidence when available.",
         "Personal thanks to Tapsa is a human action and remains owed until it is actually sent."
-      ]
+      ],
+      "credit_class": "reference"
     },
     {
       "id": "genieutils",
       "category": "tool",
       "name": "genieutils",
-      "authors": ["Tapsa and contributors"],
+      "authors": [
+        "Tapsa and contributors"
+      ],
       "url": "https://github.com/Tapsa/genieutils",
       "license": "LGPL-3.0",
       "permission": "LGPL-3.0",
@@ -46,13 +51,16 @@
       "notes": [
         "AoE2Kit does not vendor genieutils source code.",
         "The codec architecture favors explicit spans, roundtrip gates, and narrow verified writes."
-      ]
+      ],
+      "credit_class": "reference"
     },
     {
       "id": "aoc-mgz",
       "category": "tool",
       "name": "aoc-mgz",
-      "authors": ["happyleavesaoc and contributors"],
+      "authors": [
+        "happyleavesaoc and contributors"
+      ],
       "url": "https://github.com/happyleavesaoc/aoc-mgz",
       "license": "MIT",
       "permission": "MIT",
@@ -62,7 +70,8 @@
       "rung_earned": "credited",
       "thanks_status": "owed",
       "correction_state": "open_to_correction",
-      "credit": "AoE2Kit's replay work benefits from the aoc-mgz ecosystem and keeps replay claims explicit about what is parsed, inferred, or still opaque."
+      "credit": "AoE2Kit's replay work benefits from the aoc-mgz ecosystem and keeps replay claims explicit about what is parsed, inferred, or still opaque.",
+      "credit_class": "reference"
     },
     {
       "id": "aoe2de-ugc-guide",
@@ -76,13 +85,16 @@
       "rung_earned": "credited",
       "thanks_status": "owed",
       "correction_state": "open_to_correction",
-      "credit": "AoE2Kit uses the UGC Guide as a public reference point for scenario, trigger, XS, and modding concepts, then validates critical behavior against real files and engine runs."
+      "credit": "AoE2Kit uses the UGC Guide as a public reference point for scenario, trigger, XS, and modding concepts, then validates critical behavior against real files and engine runs.",
+      "credit_class": "reference"
     },
     {
       "id": "cb-front-towers",
       "category": "scenario",
       "name": "CB Front Towers OG Enhanced",
-      "authors": ["SpiRaL"],
+      "authors": [
+        "SpiRaL"
+      ],
       "url": "https://steamcommunity.com/id/theogspiral/",
       "license": "All rights reserved by the author",
       "permission": "studied for technique only; the author forbids modifying or redistributing the map without consent",
@@ -97,6 +109,66 @@
         "AoE2Kit does not vendor, modify, or redistribute CB Front Towers content. The map and its XS were studied for technique only, in keeping with the author's license.",
         "The reroll shop, button/technology rename, repeatable-technology reset, and live-panel idioms were reverse-engineered as a behavior oracle and re-implemented from scratch.",
         "Personal thanks to SpiRaL is a human action and remains owed until it is actually sent."
+      ],
+      "credit_class": "reference"
+    },
+    {
+      "id": "sekiro",
+      "category": "person",
+      "name": "Sekiro",
+      "authors": [
+        "Sekiro"
+      ],
+      "gave": "Taught the terrain-layering technique: the per-tile Genie `layer` field (base terrain = bottom, layer terrain = top; top dominates the blend), used as a top/bottom crossfade. This became the foundation of AoE2Kit's geo-trace terrain pipeline — graded coastlines, water-depth shelving, biome seams, layered political borders, dock-buildable/amphibious shores, and the hybrid-by-default terrain principle.",
+      "role": "Terrain-layering technique oracle; AoE2Kit's first active external user",
+      "relationship": "technique_oracle_and_inspiration",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "AoE2Kit's terrain-layering work — the coast crossfade, water-depth grading, layered borders, and the hybrid-by-default terrain model — was taught to the project by Sekiro, who is also AoE2Kit's first active external user. The engine-level mechanics (the `layer` field storage, top/bottom blend, and passability rule) were then verified byte-for-byte and in-engine before being built on.",
+      "notes": [
+        "Sekiro is the first designer known to actively use AoE2Kit in their own live scenarios.",
+        "The terrain-layering technique was demonstrated by Sekiro, decoded against real scenario files, and re-implemented in AoE2Kit's writer with verification.",
+        "Personal thanks to Sekiro is a human action and remains owed until it is actually sent — to be given in the next project update."
+      ],
+      "credit_class": "personal_thanks"
+    },
+    {
+      "id": "spiral",
+      "category": "person",
+      "credit_class": "personal_thanks",
+      "name": "SpiRaL",
+      "authors": [
+        "SpiRaL"
+      ],
+      "gave": "Direct personal help to the author, as a fellow AoE2 designer.",
+      "role": "Fellow AoE2 designer who has personally helped the author",
+      "relationship": "personal_help",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "SpiRaL has personally helped the author. Personal thanks is deliberate and human, and remains owed until it is actually given. (SpiRaL is also credited under Built On as the author of CB Front Towers, studied for technique.)",
+      "notes": [
+        "Personal thanks to SpiRaL is a human action and remains owed until it is actually sent."
+      ]
+    },
+    {
+      "id": "krmyth9",
+      "category": "person",
+      "credit_class": "personal_thanks",
+      "name": "krmyth9 (Myth)",
+      "authors": [
+        "krmyth9"
+      ],
+      "gave": "Direct personal help to the author, as a fellow AoE2 designer.",
+      "role": "Fellow AoE2 designer who has personally helped the author",
+      "relationship": "personal_help",
+      "rung_earned": "credited",
+      "thanks_status": "owed",
+      "correction_state": "open_to_correction",
+      "credit": "krmyth9 has personally helped the author. Personal thanks is deliberate and human, and remains owed until it is actually given.",
+      "notes": [
+        "Personal thanks to krmyth9 is a human action and remains owed until it is actually sent."
       ]
     }
   ]

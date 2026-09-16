@@ -107,6 +107,19 @@
       }
     },
     {
+      "id": "scenario.terrain_layer_bottom_controls_passability",
+      "statement": "AoE2DE terrain layering uses the tile base terrain_id as the movement-passability authority; the top layer field affects visual blending but did not override land/ship passability in the passability probe. In the Kit terrain-layer passability probe, grass-bottom/water-top allowed the scout to cross and blocked the galley, while water-bottom/grass-top blocked the scout and allowed the galley.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-15",
+      "fixture_ref": "Terrain Layer Passability Probe.aoe2scenario; in-engine run 2026-09-15; L6 grass-bottom/water-top scout crosses and galley does not, L5 water-bottom/grass-top galley crosses and scout does not",
+      "domains": ["scenario", "map", "terrain", "authoring", "pathing"],
+      "lint_rule": {
+        "target": "terrain_layer_authoring",
+        "predicate": "expecting_top_layer_to_change_passability",
+        "severity": "warning"
+      }
+    },
+    {
       "id": "scenario.type10_eyecandy_rotation_integer_index",
       "statement": "AoE2DE type-10 eyecandy units with single-frame multi-angle graphics store scenario rotation as a small integer artwork/angle index, not radians. Editor-authored references show Grass Green using 0..7 and Rock Limestone Hover using 0 and 3.",
       "tier": "engine_verified",
@@ -117,6 +130,19 @@
         "target": "scenario_unit_rotation",
         "predicate": "unit_type == 10 && frame_count == 1 && angle_count > 1 && rotation_not_integer_index",
         "severity": "warning"
+      }
+    },
+    {
+      "id": "scenario.tree_angle_variant_rotation_equals_sld_frame",
+      "statement": "For n_tree_oak_x1 / unit 349 (angle_count=42, frame_count=1, sequence_type=6), scenario rotation N renders SLD frame/visual index N with no offset or reordering. The same fixture confirmed adjacent marker units are needed for labels because Gaia decorative trees do not render caption_string in the editor.",
+      "tier": "engine_verified",
+      "verified_date": "2026-09-14",
+      "fixture_ref": "Mandala felt compendium A2K Addressability Oak Checkpoints; live photo readback 9/9 matched kit dat sprite --stats predictions; felt-compendium/addressability_fixture/ADDRESSABILITY_RESULT.md",
+      "domains": ["scenario", "dat", "graphics", "artwork", "authoring"],
+      "lint_rule": {
+        "target": "scenario_unit_rotation",
+        "predicate": "tree_angle_variant_unit && requested_visual_frame != scenario_rotation",
+        "severity": "info"
       }
     },
     {

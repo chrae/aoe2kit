@@ -318,6 +318,16 @@ references before deletion: selected-object effect lists, condition
 `unit_object` / `next_object`, and location object references are checked, and
 the write fails with the exact trigger/child/field path if a reference would
 dangle.
+`cluster_scatter` expands to normal `add_unit` rows. It places `count` copies
+near one or more `centers`, using deterministic `seed`, optional `spread`,
+`min_distance`, `target_area_*` bounds, and `allowed_terrain_ids` habitat
+filters. Exact placement is the default: if the habitat/min-distance constraints
+cannot fit all requested units, the recipe fails instead of silently spilling
+onto the wrong terrain. Set `exact:false` to allow best-effort partial
+placement. Set `rotation_choices` to a list of numeric rotation/variant values
+when the unit uses rotation as an artwork-addressing slot; scatter samples from
+that pool instead of using an arbitrary facing angle, which is useful for dense
+forests and other repeated visual variants.
 
 `set_terrain_rect` edits existing terrain tiles in an inclusive rectangle. It
 can set `terrain_id`, `elevation`, and/or `layer`; it does not resize maps.
@@ -327,6 +337,43 @@ can set `terrain_id`, `elevation`, and/or `layer`; it does not resize maps.
 accepts `thickness` with a default of 1 tile.
 `copy_terrain_area` copies an inclusive source rectangle to `target_x,target_y`,
 preserving terrain id, elevation, layer, and reserved tile bytes.
+`terrain_grid` bulk-writes a rectangular terrain grid in one pass. It accepts
+`x1,y1,width,height` (defaulting to the whole remaining map from `x1,y1`),
+row-major `terrain_id` and `layer` arrays of length `width*height`, and an
+optional row-major `elevation` array. `layer:-1` means no top layer. For large
+maps, prefer `grid_file:"path/to/grid.json"`; the grid file contains
+`{"width":N,"height":N,"terrain_id":[...],"layer":[...],"elevation":[...]}`.
+Relative `grid_file` paths are resolved next to the recipe file when loaded
+through `kit scen plan` or `kit scen patch`. This is the intended bridge for
+generators that already know every tile, such as real-map tracers.
+`layered_crossfade` is the explicit top/bottom terrain-layer primitive. It
+sets `terrain_id` as the bottom terrain and `terrain_id_2` as the top terrain
+stored in the tile `layer` field. Use paired bands with the values swapped for
+terrain seams, for example water-over-sand followed by sand-over-water. This
+encoding is structure-verified from DE editor output. Engine passability tests
+show the bottom `terrain_id` governs movement: a water-bottom/grass-top tile
+remains boat-passable and not scout-passable, while a grass-bottom/water-top
+tile remains scout-passable and not boat-passable. The top layer is therefore
+the visual blend layer, not a passability override. Dock-buildability and the
+full beach-bottom amphibious rule remain narrower engine checks.
+The optional top-level `masks` recipe array defines named terrain masks before
+map operations run. Supported mask ops are `rect`, `circle`, `blob`,
+`from_terrain_class`, `union`, `intersect`, `subtract`, `dilate`, and `erode`.
+Circle and blob masks clip safely at map edges, so landscape shapes can extend
+past the scenario boundary without making the recipe invalid. Map operations can
+then set `mask` to constrain their work to the named mask. `set_terrain_mask`
+paints an entire mask.
+`noise_fill` mottles an inclusive rectangle between `terrain_id` and
+`terrain_id_2` using deterministic value noise. Optional fields are `seed`,
+`scale` (default 8.0), and `threshold` (default 0.5). With `mask`, the fill is
+constrained to the named mask. The same recipe and seed produce the same tiles
+every time.
+`erode` runs a cellular majority pass over an inclusive rectangle. It is useful
+as a smoothing post-pass after geometric terrain strokes or noise fills.
+Optional `iterations` defaults to 1.
+`semantic_erode` is a class-aware erode pass. Provide `terrain_ids` to limit the
+pass to that terrain class so unrelated tiles, such as deep ocean or land
+outside a water class, are preserved.
 All map operations validate source and destination bounds. Paint operations can
 set `terrain_id`, `elevation`, and/or `layer`.
 

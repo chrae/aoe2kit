@@ -532,14 +532,63 @@ Current replay player-profile support:
   trigger child rows while repairing local counts and display-order arrays.
 - Unit inspection with `scen units` and unit recipes with `add_unit`,
   `edit_unit`, `copy_units_in_area`, `move_units_in_area`,
-  `edit_units_in_area`, `remove_unit`, and guarded `remove_units_in_area`,
-  maintaining the affected player section `unit_count` fields. Area copy/move
-  accepts either explicit offsets or a destination top-left `target_x,target_y`.
+  `edit_units_in_area`, `remove_unit`, guarded `remove_units_in_area`, and
+  habitat-filtered `cluster_scatter`, maintaining the affected player section
+  `unit_count` fields. Area copy/move accepts either explicit offsets or a
+  destination top-left `target_x,target_y`.
 - Map inspection with `scen map` and terrain recipes with `set_terrain_rect`,
   `set_terrain_circle`, `set_terrain_line`, `set_terrain_border`, and
   `copy_terrain_area`, changing or copying terrain tiles, elevation, and layer.
+  `terrain_grid` bulk-writes a full rectangular row-major terrain/layer grid
+  from inline arrays or a sibling `grid_file`, so external data-source
+  renderers can hand Kit one normalized tile grid instead of thousands of
+  single-tile patch ops.
+  `layered_crossfade` names the decoded DE terrain-layer convention directly:
+  `terrain_id` is the bottom terrain and `terrain_id_2` is the top terrain
+  written to the tile `layer` field. Engine pathing evidence shows bottom
+  terrain governs passability while the top layer controls the blended look.
+  Organic terrain recipes add deterministic `noise_fill` mottling and `erode`
+  smoothing so authored maps do not have to be built only from hard geometric
+  strokes.
+  Named masks (`rect`, clipped `circle`, clipped `blob`,
+  `from_terrain_class`, and boolean/morphology ops) can constrain terrain
+  painting, mask-aware `noise_fill`, `set_terrain_mask`, and class-aware
+  `semantic_erode`.
 - Position-aware terrain inspection with `scen terrain`, including per-terrain
   counts, bounds, centroids, connected components, and optional per-tile rows.
+- Real-map tracing with `geo trace-dem`: sample a DEM over a lat/lon bounding
+  box or viewport (`--center lat,lon --span-km N`) into an N x N grid,
+  classify rough AoE2 terrain, emit per-cell standing/provenance, tile-size
+  warnings, and an explicit
+  `coastline_confidence` label. DEM-only coastlines are reported as
+  approximate; `--landmask naturalearth` or `--landmask geojson
+  --landmask-file path` upgrades land/water to `from_data`. `--inland-water
+  naturalearth` adds named lake polygons. `--landcover worldcover
+  --landcover-cache dir` samples ESA WorldCover v200 through a range-cached COG
+  overview reader; `--landcover-dir dir` and `--landcover-file path` use
+  predownloaded tiles/files. Land-cover classes win over elevation-band
+  fallbacks where present, while missing tiles/no-data fall back cleanly.
+  WorldCover cells include class histograms, weak-majority mosaics blend the
+  top classes, and the emitted recipe adds land-cover masks, mask-aware
+  `noise_fill`, class-aware `semantic_erode`, and bounded habitat-gated Gaia
+  vegetation scatters. The classifier consumes an embedded felt-mapping table,
+  or `--felt-mapping path`, using per-cell land/water, distance-to-shore,
+  elevation band, climate zone (`--climate`, otherwise latitude-derived), and
+  land-cover class to choose terrain proportions with confidence labels.
+  `--orient iso-ccw-screen` is the calibrated in-game screen projection: it
+  uses the corrected `iso-ccw` handedness and pre-compensates for DE's measured
+  roughly 2:1 wide:tall minimap/tile rhombus so a square real-world region
+  reads square in game. Geo-trace is a viewport renderer: cells outside the
+  named focus are still real Earth, so the landmask decides whether neighboring
+  land, islands, or ocean exists there. `--orient iso-cw` keeps the opposite
+  handedness for calibration, and `--orient grid` preserves raw north-up
+  sampling for debugging.
+  Landmask-backed traces can emit both a scenario recipe
+  (`--recipe-out`) and a blank traced scenario (`--scenario-out`).
+  For container-sized runs, prefer a pre-fetched generalized road GeoJSON with
+  `--roads nhpn-interstate --roads-file file.geojson`, write compact reports
+  with `--omit-report-cells --omit-report-recipe`, and keep full land-cover COG
+  sampling for local machines until the raster path is memory-optimized.
 - Scenario setting recipes for controlled diagnostics: embedded XS script
   attachment (`xs.name`, inline `xs.content`, or `xs.content_file`), player slot
   active/human/AI-type edits, GlobalVictory edits (`victory.conquest_required`,

@@ -63,6 +63,7 @@ func (p PackProfile) excludes() []string {
 		return []string{"docs/**", "DEX_TASK_*.md", "AUDITS.md", "BRIEFING.md", "KIT_PARITY_ROADMAP.md"}
 	case ProfilePublic:
 		return []string{
+			"tools/**",
 			"DEX_TASK_*.md",
 			"AUDITS.md",
 			"BRIEFING.md",

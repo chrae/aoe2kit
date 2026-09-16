@@ -1,0 +1,106 @@
+{
+  "base": "<project-bundle>/Mandala Foundry (virgin).aoe2scenario",
+  "center": [106, 107],
+  "free_annulus": "radius > 80 is empty; place scenes ~radius 88, keep each scene's pieces within its radius and clear of the r<78 mandala",
+  "author": "claude-code (composition); rotations for seasonal trees from visual_variants.json (oak engine_verified)",
+  "expansion_notes": "role=center -> at anchor; ring -> evenly around anchor at ~0.5*radius; scatter -> seeded random within radius, collision-avoid, honor tile_footprint; line -> a short row through anchor; edge -> push to the far (outward) side of the scene. rot: integer = exact rotation (use it); 'auto' = free facing/variant. Keep all placements inside the map and out of the mandala (r>=80 from center).",
+  "scenes": [
+    {"name":"Grand Bazaar","anchor":[194,107],"radius":12,"mood":"living hub","pieces":[
+      {"const":1097,"n":1,"role":"center","rot":"auto","note":"ornate khan pavilion"},
+      {"const":2284,"n":3,"role":"ring","rot":"auto"},{"const":2024,"n":2,"role":"ring","rot":"auto"},
+      {"const":2535,"n":2,"role":"ring","rot":"auto"},{"const":2534,"n":1,"role":"ring","rot":"auto"},
+      {"const":1808,"n":2,"role":"scatter","rot":"auto"},{"const":2018,"n":2,"role":"scatter","rot":"auto"},
+      {"const":2519,"n":3,"role":"scatter","rot":"auto"},{"const":711,"n":2,"role":"scatter","rot":"auto"},
+      {"const":933,"n":2,"role":"scatter","rot":"auto"},{"const":1986,"n":2,"role":"scatter","rot":"auto"},
+      {"const":2491,"n":2,"role":"scatter","rot":"auto"},{"const":2523,"n":2,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Zen Garden of Still Water","anchor":[185,145],"radius":12,"mood":"rest, east-asian serenity","pieces":[
+      {"const":2007,"n":1,"role":"center","rot":"auto"},{"const":2005,"n":1,"role":"ring","rot":"auto"},
+      {"const":1201,"n":1,"role":"ring","rot":"auto"},{"const":2020,"n":1,"role":"ring","rot":"auto"},
+      {"const":2536,"n":4,"role":"scatter","rot":"auto","note":"lily pond feel"},
+      {"const":2022,"n":4,"role":"ring","rot":"auto"},{"const":2017,"n":2,"role":"scatter","rot":"auto","note":"peach blossom spring"},
+      {"const":2027,"n":1,"role":"scatter","rot":"auto"},{"const":2028,"n":1,"role":"scatter","rot":0,"note":"crimson maple"},
+      {"const":1984,"n":4,"role":"scatter","rot":"auto"},{"const":2524,"n":2,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Bone Fields","anchor":[161,176],"radius":13,"mood":"death, aftermath of slaughter","pieces":[
+      {"const":2518,"n":4,"role":"scatter","rot":"auto"},{"const":2517,"n":3,"role":"scatter","rot":"auto"},
+      {"const":710,"n":3,"role":"scatter","rot":"auto"},{"const":910,"n":2,"role":"line","rot":"auto","note":"impaled at the road"},
+      {"const":2505,"n":2,"role":"ring","rot":"auto"},{"const":858,"n":2,"role":"scatter","rot":"auto"},
+      {"const":472,"n":1,"role":"scatter","rot":"auto"},
+      {"const":1250,"n":4,"role":"scatter","rot":"auto","note":"dead trees"},{"const":1365,"n":3,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Sacred Grove","anchor":[126,193],"radius":12,"mood":"benevolent sacred, home/rest","pieces":[
+      {"const":2294,"n":1,"role":"center","rot":"auto","note":"the heart-tree on its ringed base"},
+      {"const":2306,"n":2,"role":"ring","rot":"auto"},{"const":820,"n":4,"role":"ring","rot":"auto"},
+      {"const":1567,"n":1,"role":"ring","rot":"auto"},{"const":2523,"n":2,"role":"scatter","rot":"auto"},
+      {"const":2567,"n":3,"role":"scatter","rot":"auto","note":"green oak, always lush"},
+      {"const":59,"n":2,"role":"scatter","rot":"auto"},{"const":334,"n":2,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Blood-Pyramid","anchor":[86,193],"radius":13,"mood":"mesoamerican climax, primal dread","pieces":[
+      {"const":1563,"n":1,"role":"center","rot":"auto","note":"steep pyramid as the altar"},
+      {"const":1279,"n":3,"role":"ring","rot":"auto","note":"meso statues/totems"},
+      {"const":855,"n":2,"role":"scatter","rot":"auto"},{"const":910,"n":2,"role":"scatter","rot":"auto","note":"sacrificial dread"},
+      {"const":414,"n":4,"role":"scatter","rot":"auto"},{"const":2410,"n":1,"role":"scatter","rot":"auto"},
+      {"const":304,"n":2,"role":"ring","rot":"auto","note":"braziers"},{"const":1376,"n":2,"role":"ring","rot":"auto"}]},
+
+    {"name":"Coastal Fishing Village","anchor":[51,176],"radius":13,"mood":"humble salt-and-net coast","pieces":[
+      {"const":199,"n":3,"role":"scatter","rot":"auto"},{"const":2170,"n":3,"role":"scatter","rot":"auto"},
+      {"const":1350,"n":5,"role":"scatter","rot":"auto","note":"reeds at waterline"},
+      {"const":1144,"n":3,"role":"scatter","rot":"auto","note":"mangrove"},{"const":2536,"n":2,"role":"scatter","rot":"auto"},
+      {"const":1148,"n":2,"role":"edge","rot":"auto","note":"karst sea-stacks landmark"},
+      {"const":396,"n":3,"role":"scatter","rot":"auto"},{"const":2583,"n":3,"role":"scatter","rot":"auto"},
+      {"const":933,"n":2,"role":"scatter","rot":"auto"},{"const":2457,"n":1,"role":"edge","rot":"auto","note":"beached whale, grim fortune"}]},
+
+    {"name":"Fallen Forum","anchor":[27,145],"radius":13,"mood":"rome undone, elegiac","pieces":[
+      {"const":856,"n":3,"role":"scatter","rot":"auto"},{"const":2234,"n":4,"role":"scatter","rot":"auto","note":"med ruin kit"},
+      {"const":1279,"n":3,"role":"ring","rot":"auto","note":"caesar/marble statues"},{"const":2264,"n":1,"role":"ring","rot":"auto","note":"Athena marble"},
+      {"const":1348,"n":3,"role":"line","rot":"auto","note":"italian pine avenue"},{"const":2529,"n":3,"role":"line","rot":"auto","note":"cypress avenue"},
+      {"const":2528,"n":1,"role":"center","rot":"auto","note":"antiquity fountain"},{"const":2534,"n":1,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Savanna & the Elder Baobab","anchor":[18,107],"radius":13,"mood":"wide golden africa","pieces":[
+      {"const":1052,"n":1,"role":"center","rot":"auto","note":"monumental baobab, meeting-tree"},
+      {"const":1063,"n":5,"role":"scatter","rot":"auto","note":"acacias, spaced sparse"},
+      {"const":1033,"n":3,"role":"scatter","rot":"auto","note":"dry grass"},{"const":1089,"n":2,"role":"ring","rot":"auto"},
+      {"const":1279,"n":1,"role":"ring","rot":"auto","note":"afri statue"},{"const":1091,"n":1,"role":"scatter","rot":"auto"},
+      {"const":59,"n":1,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Frozen Pass","anchor":[27,69],"radius":14,"mood":"cold peril, hard crossing","pieces":[
+      {"const":1046,"n":1,"role":"edge","rot":"auto","note":"jagged snow mountain (6x6)"},
+      {"const":1043,"n":1,"role":"edge","rot":"auto","note":"snow-capped mountain (6x6)"},
+      {"const":413,"n":5,"role":"scatter","rot":15,"note":"snow pine (snow frames)"},
+      {"const":1249,"n":3,"role":"scatter","rot":"auto","note":"snow-autumn oak"},
+      {"const":728,"n":4,"role":"scatter","rot":"auto","note":"ice floes"},
+      {"const":1250,"n":2,"role":"scatter","rot":"auto"},{"const":1836,"n":1,"role":"ring","rot":"auto","note":"half-buried chapel"}]},
+
+    {"name":"Witch-Wood","anchor":[51,38],"radius":13,"mood":"pagan folk-horror threshold","pieces":[
+      {"const":1279,"n":3,"role":"ring","rot":"auto","note":"slavic totem-heads"},{"const":2013,"n":2,"role":"ring","rot":"auto","note":"ritual standards"},
+      {"const":1250,"n":5,"role":"scatter","rot":"auto"},{"const":349,"n":3,"role":"scatter","rot":9,"note":"bare oaks"},
+      {"const":1095,"n":1,"role":"edge","rot":"auto","note":"gallows"},{"const":1365,"n":3,"role":"scatter","rot":"auto"},
+      {"const":1175,"n":2,"role":"scatter","rot":"auto"},{"const":855,"n":1,"role":"scatter","rot":"auto"}]},
+
+    {"name":"The Necropolis","anchor":[86,21],"radius":13,"mood":"nubian honored dead, solemn grandeur","pieces":[
+      {"const":1563,"n":2,"role":"ring","rot":"auto","note":"cushite pyramid field"},{"const":2287,"n":2,"role":"ring","rot":"auto","note":"meso tombs"},
+      {"const":820,"n":5,"role":"line","rot":"auto","note":"graves in rows"},{"const":2288,"n":1,"role":"center","rot":"auto","note":"fire shrine"},
+      {"const":2306,"n":1,"role":"scatter","rot":"auto"},{"const":1279,"n":1,"role":"ring","rot":"auto","note":"afri statue"},
+      {"const":1048,"n":2,"role":"edge","rot":"auto","note":"sand mesa"},{"const":1033,"n":2,"role":"scatter","rot":"auto"}]},
+
+    {"name":"Dragon-Tree Wastes","anchor":[126,21],"radius":13,"mood":"otherworld, mythic liminal","pieces":[
+      {"const":1051,"n":5,"role":"scatter","rot":"auto","note":"dracaena dragon trees"},{"const":2570,"n":3,"role":"scatter","rot":"auto","note":"monkey-puzzle"},
+      {"const":2008,"n":3,"role":"edge","rot":"auto","note":"karst spires landmark"},{"const":1048,"n":2,"role":"scatter","rot":"auto"},
+      {"const":709,"n":2,"role":"scatter","rot":"auto"},{"const":1365,"n":2,"role":"scatter","rot":"auto"}]},
+
+    {"name":"The City Rising","anchor":[161,38],"radius":13,"mood":"boomtown, ambition, the future","pieces":[
+      {"const":2527,"n":4,"role":"scatter","rot":"auto","note":"scaffolding"},{"const":2520,"n":3,"role":"scatter","rot":"auto","note":"cranes"},
+      {"const":914,"n":2,"role":"scatter","rot":"auto"},{"const":915,"n":2,"role":"scatter","rot":"auto"},
+      {"const":102,"n":2,"role":"scatter","rot":"auto"},{"const":66,"n":1,"role":"scatter","rot":"auto"},
+      {"const":2510,"n":1,"role":"ring","rot":"auto"},{"const":2501,"n":1,"role":"ring","rot":"auto"},
+      {"const":2284,"n":2,"role":"scatter","rot":"auto"},{"const":1196,"n":2,"role":"scatter","rot":"auto"},{"const":1808,"n":1,"role":"scatter","rot":"auto"}]},
+
+    {"name":"The Sunken Temple","anchor":[185,69],"radius":13,"mood":"jungle-lost hindu/khmer wonder","pieces":[
+      {"const":1778,"n":1,"role":"center","rot":"auto","note":"rekhadeul spire"},{"const":1784,"n":2,"role":"ring","rot":"auto","note":"vine-choked indian ruins"},
+      {"const":1777,"n":1,"role":"ring","rot":"auto","note":"gilded Nataraja"},{"const":2514,"n":2,"role":"scatter","rot":"auto","note":"puru ruins"},
+      {"const":1146,"n":5,"role":"scatter","rot":"auto","note":"rainforest canopy"},{"const":414,"n":3,"role":"scatter","rot":"auto"},
+      {"const":2410,"n":2,"role":"scatter","rot":"auto"},{"const":855,"n":2,"role":"scatter","rot":"auto","note":"stone heads staring up"},
+      {"const":1175,"n":2,"role":"scatter","rot":"auto"},{"const":2585,"n":1,"role":"scatter","rot":"auto","note":"howler monkey habitat"}]}
+  ]
+}

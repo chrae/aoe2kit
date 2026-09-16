@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 867,
+  "type_count": 889,
   "types": {
     "aifile.DiffChange": {
       "package": "aifile",
@@ -17069,6 +17069,1076 @@
         }
       ]
     },
+    "geotrace.BBox": {
+      "package": "geotrace",
+      "name": "BBox",
+      "fields": [
+        {
+          "name": "MinLat",
+          "json": "min_lat",
+          "go_type": "float64"
+        },
+        {
+          "name": "MinLon",
+          "json": "min_lon",
+          "go_type": "float64"
+        },
+        {
+          "name": "MaxLat",
+          "json": "max_lat",
+          "go_type": "float64"
+        },
+        {
+          "name": "MaxLon",
+          "json": "max_lon",
+          "go_type": "float64"
+        }
+      ]
+    },
+    "geotrace.Cell": {
+      "package": "geotrace",
+      "name": "Cell",
+      "fields": [
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "int"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "int"
+        },
+        {
+          "name": "Lat",
+          "json": "lat",
+          "go_type": "float64"
+        },
+        {
+          "name": "Lon",
+          "json": "lon",
+          "go_type": "float64"
+        },
+        {
+          "name": "OutsideTrace",
+          "json": "outside_trace",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "Elevation",
+          "json": "elevation_m",
+          "go_type": "float64"
+        },
+        {
+          "name": "Land",
+          "json": "land",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "InlandWater",
+          "json": "inland_water",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "WaterbodyName",
+          "json": "waterbody_name",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "LandcoverClass",
+          "json": "landcover_class",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "LandcoverKey",
+          "json": "landcover_key",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "LandcoverClassGLC",
+          "json": "landcover_class_glc",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "LandcoverKeyGLC",
+          "json": "landcover_key_glc",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "LandcoverFraction",
+          "json": "landcover_fraction",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "LandcoverHistogram",
+          "json": "landcover_histogram",
+          "go_type": "[]LandcoverStat",
+          "ref": "geotrace.LandcoverStat",
+          "optional": true
+        },
+        {
+          "name": "SpeciesUnitConsts",
+          "json": "species_unit_consts",
+          "go_type": "[]int",
+          "optional": true
+        },
+        {
+          "name": "DistanceToShoreTiles",
+          "json": "distance_to_shore_tiles",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ClimateZone",
+          "json": "climate_zone",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ElevationBand",
+          "json": "elevation_band",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Standing",
+          "json": "standing",
+          "go_type": "string"
+        },
+        {
+          "name": "TerrainID",
+          "json": "terrain_id",
+          "go_type": "int"
+        },
+        {
+          "name": "Road",
+          "json": "road",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "Roadside",
+          "json": "roadside",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "WaterBuffer",
+          "json": "water_buffer",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "KeyWestCauseway",
+          "json": "key_west_causeway",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "Border",
+          "json": "border",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "ShoreCrossfadeBand",
+          "json": "shore_crossfade_band",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ShoreTerrainID",
+          "json": "shore_terrain_id",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "TerrainConfidence",
+          "json": "terrain_confidence",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "TerrainProportions",
+          "json": "terrain_proportions",
+          "go_type": "[]TerrainWeight",
+          "ref": "geotrace.TerrainWeight",
+          "optional": true
+        },
+        {
+          "name": "Reason",
+          "json": "reason",
+          "go_type": "string"
+        }
+      ]
+    },
+    "geotrace.FeltMapping": {
+      "package": "geotrace",
+      "name": "FeltMapping",
+      "fields": [
+        {
+          "name": "Schema",
+          "json": "schema",
+          "go_type": "string"
+        },
+        {
+          "name": "ConfidenceLadder",
+          "json": "confidence_ladder",
+          "go_type": "[]string"
+        },
+        {
+          "name": "WaterByDistanceToShore",
+          "json": "water_by_distance_to_shore",
+          "go_type": "WaterDistanceMapping",
+          "ref": "geotrace.WaterDistanceMapping"
+        },
+        {
+          "name": "LandByClimateAndBand",
+          "json": "-",
+          "go_type": "map[string]map[string]FeltTerrainChoice",
+          "ref": "geotrace.FeltTerrainChoice"
+        },
+        {
+          "name": "RawLandByClimateAndBand",
+          "json": "land_by_climate_and_band",
+          "go_type": "map[string]json.RawMessage"
+        },
+        {
+          "name": "LandcoverClassMapping",
+          "json": "landcover_class_mapping",
+          "go_type": "*LandcoverClassMapping",
+          "ref": "geotrace.LandcoverClassMapping",
+          "optional": true
+        },
+        {
+          "name": "SpeciesForClusterScatter",
+          "json": "-",
+          "go_type": "map[string]map[string][]SpeciesRecommendation",
+          "ref": "geotrace.SpeciesRecommendation"
+        },
+        {
+          "name": "RawSpeciesForClusterScatter",
+          "json": "species_for_cluster_scatter",
+          "go_type": "map[string]json.RawMessage"
+        },
+        {
+          "name": "LandcoverSpeciesByClass",
+          "json": "-",
+          "go_type": "map[string]map[string][]SpeciesRecommendation",
+          "ref": "geotrace.SpeciesRecommendation"
+        },
+        {
+          "name": "RawLandcoverSpeciesByClass",
+          "json": "landcover_species_by_class",
+          "go_type": "map[string]json.RawMessage"
+        },
+        {
+          "name": "SpeciesResolutions",
+          "json": "-",
+          "go_type": "[]SpeciesResolution",
+          "ref": "geotrace.SpeciesResolution"
+        }
+      ]
+    },
+    "geotrace.FeltTerrainChoice": {
+      "package": "geotrace",
+      "name": "FeltTerrainChoice",
+      "fields": [
+        {
+          "name": "Proportions",
+          "json": "proportions",
+          "go_type": "[]TerrainWeight",
+          "ref": "geotrace.TerrainWeight"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "Reason",
+          "json": "reason",
+          "go_type": "string"
+        },
+        {
+          "name": "Note",
+          "json": "note",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "SpeciesByClimate",
+          "json": "species_by_climate",
+          "go_type": "map[string][]SpeciesRecommendation",
+          "ref": "geotrace.SpeciesRecommendation",
+          "optional": true
+        },
+        {
+          "name": "WetlandCandidate",
+          "json": "wetland_candidate",
+          "go_type": "*FeltTerrainChoice",
+          "ref": "geotrace.FeltTerrainChoice",
+          "optional": true
+        }
+      ]
+    },
+    "geotrace.LandcoverClassMapping": {
+      "package": "geotrace",
+      "name": "LandcoverClassMapping",
+      "fields": [
+        {
+          "name": "ByClass",
+          "json": "by_class",
+          "go_type": "map[string]FeltTerrainChoice",
+          "ref": "geotrace.FeltTerrainChoice"
+        }
+      ]
+    },
+    "geotrace.LandcoverSample": {
+      "package": "geotrace",
+      "name": "LandcoverSample",
+      "fields": [
+        {
+          "name": "Valid",
+          "go_type": "bool"
+        },
+        {
+          "name": "Class",
+          "go_type": "int"
+        },
+        {
+          "name": "Key",
+          "go_type": "string"
+        },
+        {
+          "name": "GLCClass",
+          "go_type": "int"
+        },
+        {
+          "name": "GLCKey",
+          "go_type": "string"
+        },
+        {
+          "name": "Fraction",
+          "go_type": "float64"
+        },
+        {
+          "name": "Histogram",
+          "go_type": "[]LandcoverStat",
+          "ref": "geotrace.LandcoverStat"
+        }
+      ]
+    },
+    "geotrace.LandcoverStat": {
+      "package": "geotrace",
+      "name": "LandcoverStat",
+      "fields": [
+        {
+          "name": "Class",
+          "json": "class",
+          "go_type": "int"
+        },
+        {
+          "name": "Key",
+          "json": "key",
+          "go_type": "string"
+        },
+        {
+          "name": "Weight",
+          "json": "weight",
+          "go_type": "float64"
+        }
+      ]
+    },
+    "geotrace.Options": {
+      "package": "geotrace",
+      "name": "Options",
+      "fields": [
+        {
+          "name": "BBox",
+          "go_type": "BBox",
+          "ref": "geotrace.BBox"
+        },
+        {
+          "name": "GridSize",
+          "go_type": "int"
+        },
+        {
+          "name": "Provider",
+          "go_type": "string"
+        },
+        {
+          "name": "LandmaskProvider",
+          "go_type": "string"
+        },
+        {
+          "name": "LandmaskPath",
+          "go_type": "string"
+        },
+        {
+          "name": "InlandWaterProvider",
+          "go_type": "string"
+        },
+        {
+          "name": "InlandWaterPath",
+          "go_type": "string"
+        },
+        {
+          "name": "LandcoverProvider",
+          "go_type": "string"
+        },
+        {
+          "name": "LandcoverCacheDir",
+          "go_type": "string"
+        },
+        {
+          "name": "LandcoverPath",
+          "go_type": "string"
+        },
+        {
+          "name": "LandcoverDir",
+          "go_type": "string"
+        },
+        {
+          "name": "ClimateZone",
+          "go_type": "string"
+        },
+        {
+          "name": "FeltMappingPath",
+          "go_type": "string"
+        },
+        {
+          "name": "Orient",
+          "go_type": "string"
+        },
+        {
+          "name": "TargetWaterFraction",
+          "go_type": "float64"
+        },
+        {
+          "name": "SeamWaterColumns",
+          "go_type": "int"
+        },
+        {
+          "name": "FloraDensity",
+          "go_type": "float64"
+        },
+        {
+          "name": "LandFaunaDensity",
+          "go_type": "float64"
+        },
+        {
+          "name": "FishDensity",
+          "go_type": "float64"
+        },
+        {
+          "name": "ShoreFishDensity",
+          "go_type": "float64"
+        },
+        {
+          "name": "OceanFishDensity",
+          "go_type": "float64"
+        },
+        {
+          "name": "ShoreBandWidth",
+          "go_type": "float64"
+        },
+        {
+          "name": "WaterBandWidth",
+          "go_type": "float64"
+        },
+        {
+          "name": "RoadsProvider",
+          "go_type": "string"
+        },
+        {
+          "name": "RoadsPath",
+          "go_type": "string"
+        },
+        {
+          "name": "RoadsCacheDir",
+          "go_type": "string"
+        },
+        {
+          "name": "RoadSimplifyTiles",
+          "go_type": "float64"
+        },
+        {
+          "name": "AdminBorders",
+          "go_type": "bool"
+        },
+        {
+          "name": "Client",
+          "go_type": "*http.Client"
+        }
+      ]
+    },
+    "geotrace.PlacementGuard": {
+      "package": "geotrace",
+      "name": "PlacementGuard",
+      "fields": [
+        {
+          "name": "Policy",
+          "json": "policy",
+          "go_type": "string"
+        },
+        {
+          "name": "Evidence",
+          "json": "evidence",
+          "go_type": "string"
+        },
+        {
+          "name": "UnbuildableTerrainIDs",
+          "json": "unbuildable_terrain_ids",
+          "go_type": "[]int"
+        },
+        {
+          "name": "UnbuildableCells",
+          "json": "unbuildable_cells",
+          "go_type": "map[int]int",
+          "optional": true
+        },
+        {
+          "name": "CandidateCellsFiltered",
+          "json": "candidate_cells_filtered",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "AllowedTerrainPrunes",
+          "json": "allowed_terrain_prunes",
+          "go_type": "map[string]int",
+          "optional": true
+        }
+      ]
+    },
+    "geotrace.ProjectionSelfCheck": {
+      "package": "geotrace",
+      "name": "ProjectionSelfCheck",
+      "fields": [
+        {
+          "name": "DueEastScreenDX",
+          "json": "due_east_screen_dx",
+          "go_type": "float64"
+        },
+        {
+          "name": "DueEastScreenDY",
+          "json": "due_east_screen_dy",
+          "go_type": "float64"
+        },
+        {
+          "name": "DueNorthScreenDX",
+          "json": "due_north_screen_dx",
+          "go_type": "float64"
+        },
+        {
+          "name": "DueNorthScreenDY",
+          "json": "due_north_screen_dy",
+          "go_type": "float64"
+        }
+      ]
+    },
+    "geotrace.Report": {
+      "package": "geotrace",
+      "name": "Report",
+      "fields": [
+        {
+          "name": "BBox",
+          "json": "bbox",
+          "go_type": "BBox",
+          "ref": "geotrace.BBox"
+        },
+        {
+          "name": "OverlayBBox",
+          "json": "overlay_bbox",
+          "go_type": "BBox",
+          "ref": "geotrace.BBox",
+          "optional": true
+        },
+        {
+          "name": "GridSize",
+          "json": "grid_size",
+          "go_type": "int"
+        },
+        {
+          "name": "Provider",
+          "json": "provider",
+          "go_type": "string"
+        },
+        {
+          "name": "LandmaskProvider",
+          "json": "landmask_provider",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "InlandWaterProvider",
+          "json": "inland_water_provider",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "LandcoverProvider",
+          "json": "landcover_provider",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "FeltMappingSchema",
+          "json": "felt_mapping_schema",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ClimateZone",
+          "json": "climate_zone",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Orient",
+          "json": "orient",
+          "go_type": "string"
+        },
+        {
+          "name": "ApproxTileMeters",
+          "json": "approx_tile_meters",
+          "go_type": "float64"
+        },
+        {
+          "name": "CoastlineConfidence",
+          "json": "coastline_confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "CoastlineReason",
+          "json": "coastline_reason",
+          "go_type": "string"
+        },
+        {
+          "name": "StandingLadder",
+          "json": "standing_ladder",
+          "go_type": "[]string"
+        },
+        {
+          "name": "Warnings",
+          "json": "warnings",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "Cells",
+          "json": "cells",
+          "go_type": "[]Cell",
+          "ref": "geotrace.Cell"
+        },
+        {
+          "name": "TerrainCounts",
+          "json": "terrain_counts",
+          "go_type": "map[int]int"
+        },
+        {
+          "name": "LandcoverCounts",
+          "json": "landcover_counts",
+          "go_type": "map[string]int",
+          "optional": true
+        },
+        {
+          "name": "LandcoverGLCCounts",
+          "json": "landcover_glc_counts",
+          "go_type": "map[string]int",
+          "optional": true
+        },
+        {
+          "name": "SpeciesResolutions",
+          "json": "species_resolutions",
+          "go_type": "[]SpeciesResolution",
+          "ref": "geotrace.SpeciesResolution",
+          "optional": true
+        },
+        {
+          "name": "LandCells",
+          "json": "land_cells",
+          "go_type": "int"
+        },
+        {
+          "name": "WaterCells",
+          "json": "water_cells",
+          "go_type": "int"
+        },
+        {
+          "name": "LandFraction",
+          "json": "land_fraction",
+          "go_type": "float64"
+        },
+        {
+          "name": "WaterFraction",
+          "json": "water_fraction",
+          "go_type": "float64"
+        },
+        {
+          "name": "TargetWaterFraction",
+          "json": "target_water_fraction",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "LandEmphasisApplied",
+          "json": "land_emphasis_applied",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "FloraDensity",
+          "json": "flora_density",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "LandFaunaDensity",
+          "json": "land_fauna_density",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "FishDensity",
+          "json": "fish_density",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ShoreFishDensity",
+          "json": "shore_fish_density",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "OceanFishDensity",
+          "json": "ocean_fish_density",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ShoreBandWidth",
+          "json": "shore_band_width",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "WaterBandWidth",
+          "json": "water_band_width",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ShoreCrossfadeCells",
+          "json": "shore_crossfade_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "ShoreCrossfadeCounts",
+          "json": "shore_crossfade_counts",
+          "go_type": "map[string]int",
+          "optional": true
+        },
+        {
+          "name": "ShoreTerrainCounts",
+          "json": "shore_terrain_counts",
+          "go_type": "map[int]int",
+          "optional": true
+        },
+        {
+          "name": "UnbuildableTerrainIDs",
+          "json": "unbuildable_terrain_ids",
+          "go_type": "[]int",
+          "optional": true
+        },
+        {
+          "name": "UnbuildableCells",
+          "json": "unbuildable_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "PlacementGuard",
+          "json": "placement_guard",
+          "go_type": "*PlacementGuard",
+          "ref": "geotrace.PlacementGuard",
+          "optional": true
+        },
+        {
+          "name": "RoadsProvider",
+          "json": "roads_provider",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "RoadWayCount",
+          "json": "road_way_count",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadVertexCountRaw",
+          "json": "road_vertex_count_raw",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadVertexCount",
+          "json": "road_vertex_count",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadSimplifyTiles",
+          "json": "road_simplify_tiles",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "RoadCells",
+          "json": "road_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadsideCells",
+          "json": "roadside_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "WaterBufferCells",
+          "json": "water_buffer_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "KeyWestCausewayCells",
+          "json": "key_west_causeway_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "BorderCells",
+          "json": "border_cells",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "BorderWayCount",
+          "json": "border_way_count",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadCellsNorthOf31",
+          "json": "road_cells_north_of_31",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "BorderCellsNorthOf31",
+          "json": "border_cells_north_of_31",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "RoadRefs",
+          "json": "road_refs",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "LandExtentXTiles",
+          "json": "land_extent_x_tiles",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "LandExtentYTiles",
+          "json": "land_extent_y_tiles",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "LandExtentRatio",
+          "json": "land_extent_y_to_x_ratio",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "LandExtentWHRatio",
+          "json": "land_extent_w_to_h_ratio",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ScreenWHRatio",
+          "json": "estimated_screen_w_to_h_ratio",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ViewportTileWHRatio",
+          "json": "viewport_tile_w_to_h_ratio",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ViewportScreenWHRatio",
+          "json": "viewport_screen_w_to_h_ratio",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "PeninsulaAxisAngleDeg",
+          "json": "peninsula_axis_angle_deg",
+          "go_type": "float64",
+          "optional": true
+        },
+        {
+          "name": "ProjectionSelfCheck",
+          "json": "projection_self_check",
+          "go_type": "*ProjectionSelfCheck",
+          "ref": "geotrace.ProjectionSelfCheck",
+          "optional": true
+        },
+        {
+          "name": "MinElevation",
+          "json": "min_elevation",
+          "go_type": "float64"
+        },
+        {
+          "name": "MaxElevation",
+          "json": "max_elevation",
+          "go_type": "float64"
+        },
+        {
+          "name": "MeanElevation",
+          "json": "mean_elevation",
+          "go_type": "float64"
+        },
+        {
+          "name": "Recipe",
+          "json": "recipe",
+          "go_type": "*scenario.Recipe",
+          "ref": "scenario.Recipe",
+          "optional": true
+        }
+      ]
+    },
+    "geotrace.SpeciesRecommendation": {
+      "package": "geotrace",
+      "name": "SpeciesRecommendation",
+      "fields": [
+        {
+          "name": "UnitConst",
+          "json": "c",
+          "go_type": "int"
+        },
+        {
+          "name": "Name",
+          "json": "s",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Note",
+          "json": "note",
+          "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "geotrace.SpeciesResolution": {
+      "package": "geotrace",
+      "name": "SpeciesResolution",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "UnitConst",
+          "json": "unit_const",
+          "go_type": "int"
+        },
+        {
+          "name": "Resolution",
+          "json": "resolution",
+          "go_type": "string"
+        }
+      ]
+    },
+    "geotrace.TerrainWeight": {
+      "package": "geotrace",
+      "name": "TerrainWeight",
+      "fields": [
+        {
+          "name": "TerrainID",
+          "json": "t",
+          "go_type": "int"
+        },
+        {
+          "name": "Weight",
+          "json": "w",
+          "go_type": "float64"
+        }
+      ]
+    },
+    "geotrace.WaterDistanceBucket": {
+      "package": "geotrace",
+      "name": "WaterDistanceBucket",
+      "fields": [
+        {
+          "name": "MaxDistanceTiles",
+          "json": "max_dist_tiles",
+          "go_type": "float64"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "ByClimate",
+          "json": "by_climate",
+          "go_type": "map[string][]TerrainWeight",
+          "ref": "geotrace.TerrainWeight"
+        },
+        {
+          "name": "Default",
+          "json": "default",
+          "go_type": "[]TerrainWeight",
+          "ref": "geotrace.TerrainWeight"
+        }
+      ]
+    },
+    "geotrace.WaterDistanceMapping": {
+      "package": "geotrace",
+      "name": "WaterDistanceMapping",
+      "fields": [
+        {
+          "name": "Buckets",
+          "json": "buckets",
+          "go_type": "[]WaterDistanceBucket",
+          "ref": "geotrace.WaterDistanceBucket"
+        }
+      ]
+    },
     "gfx.SLD": {
       "package": "gfx",
       "name": "SLD",
@@ -17108,6 +18178,10 @@
         {
           "name": "Limit",
           "go_type": "int"
+        },
+        {
+          "name": "Stats",
+          "go_type": "bool"
         }
       ]
     },
@@ -17163,6 +18237,13 @@
           "json": "exported",
           "go_type": "[]SLDExportedFrame",
           "ref": "gfx.SLDExportedFrame",
+          "optional": true
+        },
+        {
+          "name": "Stats",
+          "json": "stats",
+          "go_type": "[]SLDFrameStats",
+          "ref": "gfx.SLDFrameStats",
           "optional": true
         },
         {
@@ -17304,6 +18385,146 @@
           "go_type": "[]SLDLayer",
           "ref": "gfx.SLDLayer",
           "optional": true
+        }
+      ]
+    },
+    "gfx.SLDFrameBounds": {
+      "package": "gfx",
+      "name": "SLDFrameBounds",
+      "fields": [
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "int"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "int"
+        },
+        {
+          "name": "Width",
+          "json": "width",
+          "go_type": "int"
+        },
+        {
+          "name": "Height",
+          "json": "height",
+          "go_type": "int"
+        }
+      ]
+    },
+    "gfx.SLDFrameStats": {
+      "package": "gfx",
+      "name": "SLDFrameStats",
+      "fields": [
+        {
+          "name": "FrameOrdinal",
+          "json": "frame_ordinal",
+          "go_type": "int"
+        },
+        {
+          "name": "FrameIndex",
+          "json": "frame_index",
+          "go_type": "uint16"
+        },
+        {
+          "name": "CanvasWidth",
+          "json": "canvas_width",
+          "go_type": "int"
+        },
+        {
+          "name": "CanvasHeight",
+          "json": "canvas_height",
+          "go_type": "int"
+        },
+        {
+          "name": "Bounds",
+          "json": "bounds",
+          "go_type": "SLDFrameBounds",
+          "ref": "gfx.SLDFrameBounds"
+        },
+        {
+          "name": "OpaquePixels",
+          "json": "opaque_pixels",
+          "go_type": "int"
+        },
+        {
+          "name": "CanvasCoverage",
+          "json": "canvas_coverage",
+          "go_type": "float64"
+        },
+        {
+          "name": "MeanR",
+          "json": "mean_r",
+          "go_type": "float64"
+        },
+        {
+          "name": "MeanG",
+          "json": "mean_g",
+          "go_type": "float64"
+        },
+        {
+          "name": "MeanB",
+          "json": "mean_b",
+          "go_type": "float64"
+        },
+        {
+          "name": "MeanSaturation",
+          "json": "mean_saturation",
+          "go_type": "float64"
+        },
+        {
+          "name": "HueBuckets",
+          "json": "hue_buckets",
+          "go_type": "SLDHueBuckets",
+          "ref": "gfx.SLDHueBuckets"
+        },
+        {
+          "name": "State",
+          "json": "state",
+          "go_type": "string"
+        }
+      ]
+    },
+    "gfx.SLDHueBuckets": {
+      "package": "gfx",
+      "name": "SLDHueBuckets",
+      "fields": [
+        {
+          "name": "Green",
+          "json": "green",
+          "go_type": "float64"
+        },
+        {
+          "name": "Yellow",
+          "json": "yellow",
+          "go_type": "float64"
+        },
+        {
+          "name": "Red",
+          "json": "red",
+          "go_type": "float64"
+        },
+        {
+          "name": "Brown",
+          "json": "brown",
+          "go_type": "float64"
+        },
+        {
+          "name": "Grey",
+          "json": "grey",
+          "go_type": "float64"
+        },
+        {
+          "name": "White",
+          "json": "white",
+          "go_type": "float64"
+        },
+        {
+          "name": "Other",
+          "json": "other",
+          "go_type": "float64"
         }
       ]
     },
@@ -39305,6 +40526,12 @@
           "go_type": "string"
         },
         {
+          "name": "Mask",
+          "json": "mask",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "X1",
           "json": "x1",
           "go_type": "int"
@@ -39355,6 +40582,12 @@
           "optional": true
         },
         {
+          "name": "TerrainID2",
+          "json": "terrain_id_2",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
           "name": "Elevation",
           "json": "elevation",
           "go_type": "*int",
@@ -39364,6 +40597,36 @@
           "name": "Layer",
           "json": "layer",
           "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Seed",
+          "json": "seed",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Scale",
+          "json": "scale",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "Threshold",
+          "json": "threshold",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "Iterations",
+          "json": "iterations",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "TerrainIDs",
+          "json": "terrain_ids",
+          "go_type": "[]int",
           "optional": true
         }
       ]
@@ -39403,6 +40666,117 @@
           "name": "VariableRefCounts",
           "json": "variable_ref_counts",
           "go_type": "map[string]int"
+        }
+      ]
+    },
+    "scenario.MaskCellRecipe": {
+      "package": "scenario",
+      "name": "MaskCellRecipe",
+      "fields": [
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "int"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "int"
+        }
+      ]
+    },
+    "scenario.MaskRecipe": {
+      "package": "scenario",
+      "name": "MaskRecipe",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Op",
+          "json": "op",
+          "go_type": "string"
+        },
+        {
+          "name": "X1",
+          "json": "x1",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Y1",
+          "json": "y1",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "X2",
+          "json": "x2",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Y2",
+          "json": "y2",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Radius",
+          "json": "radius",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "TerrainIDs",
+          "json": "terrain_ids",
+          "go_type": "[]int",
+          "optional": true
+        },
+        {
+          "name": "Masks",
+          "json": "masks",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "Seed",
+          "json": "seed",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Scale",
+          "json": "scale",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "Threshold",
+          "json": "threshold",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "Iterations",
+          "json": "iterations",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Invert",
+          "json": "invert",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "Cells",
+          "json": "cells",
+          "go_type": "[]MaskCellRecipe",
+          "ref": "scenario.MaskCellRecipe",
+          "optional": true
         }
       ]
     },
@@ -40384,6 +41758,22 @@
         }
       ]
     },
+    "scenario.PointRecipe": {
+      "package": "scenario",
+      "name": "PointRecipe",
+      "fields": [
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "float64"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "float64"
+        }
+      ]
+    },
     "scenario.Recipe": {
       "package": "scenario",
       "name": "Recipe",
@@ -40456,6 +41846,13 @@
           "json": "triggers",
           "go_type": "[]TriggerRecipe",
           "ref": "scenario.TriggerRecipe"
+        },
+        {
+          "name": "Masks",
+          "json": "masks",
+          "go_type": "[]MaskRecipe",
+          "ref": "scenario.MaskRecipe",
+          "optional": true
         },
         {
           "name": "Units",
@@ -43137,6 +44534,49 @@
           "optional": true
         },
         {
+          "name": "Count",
+          "json": "count",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Centers",
+          "json": "centers",
+          "go_type": "[]PointRecipe",
+          "ref": "scenario.PointRecipe",
+          "optional": true
+        },
+        {
+          "name": "Spread",
+          "json": "spread",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "MinDistance",
+          "json": "min_distance",
+          "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "AllowedTerrainIDs",
+          "json": "allowed_terrain_ids",
+          "go_type": "[]int",
+          "optional": true
+        },
+        {
+          "name": "Exact",
+          "json": "exact",
+          "go_type": "*bool",
+          "optional": true
+        },
+        {
+          "name": "Seed",
+          "json": "seed",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
           "name": "CaptionSuffix",
           "json": "caption_suffix",
           "go_type": "string",
@@ -43158,6 +44598,12 @@
           "name": "Rotation",
           "json": "rotation",
           "go_type": "*float64",
+          "optional": true
+        },
+        {
+          "name": "RotationChoices",
+          "json": "rotation_choices",
+          "go_type": "[]float64",
           "optional": true
         },
         {

@@ -8,7 +8,9 @@ This notice is generated from `data/credits.json`, the credit source of truth. I
 
 Attribution is abundant and automatic. Personal thanks is scarce, deliberate, and human. The ledger keeps unpaid gratitude visible instead of pretending it has been paid.
 
-## References
+## Built On
+
+Published work studied, built on, or used as a reference. Attribution is abundant and automatic.
 
 ### Advanced Genie Editor (AGE)
 
@@ -98,4 +100,55 @@ Notes:
 - AoE2Kit does not vendor, modify, or redistribute CB Front Towers content. The map and its XS were studied for technique only, in keeping with the author's license.
 - The reroll shop, button/technology rename, repeatable-technology reset, and live-panel idioms were reverse-engineered as a behavior oracle and re-implemented from scratch.
 - Personal thanks to SpiRaL is a human action and remains owed until it is actually sent.
+
+## Personal Thanks
+
+Individual people who have directly, personally helped the author. Scarce, deliberate, and human.
+
+### Sekiro
+
+- Authors: Sekiro
+- Gave: Taught the terrain-layering technique: the per-tile Genie `layer` field (base terrain = bottom, layer terrain = top; top dominates the blend), used as a top/bottom crossfade. This became the foundation of AoE2Kit's geo-trace terrain pipeline — graded coastlines, water-depth shelving, biome seams, layered political borders, dock-buildable/amphibious shores, and the hybrid-by-default terrain principle.
+- Role: Terrain-layering technique oracle; AoE2Kit's first active external user
+- Relationship: technique_oracle_and_inspiration
+- Rung earned: credited
+- Thanks status: owed
+- Correction state: open_to_correction
+
+AoE2Kit's terrain-layering work — the coast crossfade, water-depth grading, layered borders, and the hybrid-by-default terrain model — was taught to the project by Sekiro, who is also AoE2Kit's first active external user. The engine-level mechanics (the `layer` field storage, top/bottom blend, and passability rule) were then verified byte-for-byte and in-engine before being built on.
+
+Notes:
+- Sekiro is the first designer known to actively use AoE2Kit in their own live scenarios.
+- The terrain-layering technique was demonstrated by Sekiro, decoded against real scenario files, and re-implemented in AoE2Kit's writer with verification.
+- Personal thanks to Sekiro is a human action and remains owed until it is actually sent — to be given in the next project update.
+
+### SpiRaL
+
+- Authors: SpiRaL
+- Gave: Direct personal help to the author, as a fellow AoE2 designer.
+- Role: Fellow AoE2 designer who has personally helped the author
+- Relationship: personal_help
+- Rung earned: credited
+- Thanks status: owed
+- Correction state: open_to_correction
+
+SpiRaL has personally helped the author. Personal thanks is deliberate and human, and remains owed until it is actually given. (SpiRaL is also credited under Built On as the author of CB Front Towers, studied for technique.)
+
+Notes:
+- Personal thanks to SpiRaL is a human action and remains owed until it is actually sent.
+
+### krmyth9 (Myth)
+
+- Authors: krmyth9
+- Gave: Direct personal help to the author, as a fellow AoE2 designer.
+- Role: Fellow AoE2 designer who has personally helped the author
+- Relationship: personal_help
+- Rung earned: credited
+- Thanks status: owed
+- Correction state: open_to_correction
+
+krmyth9 has personally helped the author. Personal thanks is deliberate and human, and remains owed until it is actually given.
+
+Notes:
+- Personal thanks to krmyth9 is a human action and remains owed until it is actually sent.
 
