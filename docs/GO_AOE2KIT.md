@@ -941,6 +941,11 @@ Current replay and fingerprint support:
   the snapshot. Large snapshots are skipped with a warning, not parsed into
   object models. Malformed body framing returns a report with
   `ends_cleanly=false` and an offset; file/header errors fail the command.
+  The older materializing sync API now preflights plain and zipped inputs:
+  body bytes times a conservative 256 expansion factor must fit 512 MiB, and
+  inflated header bytes must fit 64 MiB. This is a rejection guardrail, not an
+  RSS guarantee. Large inputs fail early with a `replay health` recommendation;
+  `--limit` does not bypass the guard because it does not bound eager parsing.
 - `kit replay sync` surfaces the op=2 heartbeat: per-sync time deltas,
   delta-shape histogram, periodic checksum payloads, and conservative
   per-player state deltas between checksum samples. DECODED SEMANTICS: the DE

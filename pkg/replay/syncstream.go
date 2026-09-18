@@ -124,6 +124,9 @@ type SyncOptions struct {
 }
 
 func BuildSyncStream(path string, opts SyncOptions) (*SyncReport, error) {
+	if err := checkSyncBudget(path); err != nil {
+		return nil, err
+	}
 	data, err := ReadRecordBytes(path)
 	if err != nil {
 		return nil, err

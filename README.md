@@ -37,6 +37,18 @@ Four commands that show the range:
 Output is JSON by default; `--text` renders it for humans. Agents should parse
 the JSON and ignore `--text`.
 
+Investigating a recording from a game that lagged, froze, or crashed?
+
+```sh
+./kit replay health game.aoe2record --text
+```
+
+This low-memory report shows where the recording ends, how object and command
+counts changed, and chat mentioning problems. It does not claim to know what
+caused a crash. Unzip recordings first. Start here instead of `replay sync`
+for long games; the detailed sync command rejects inputs above its conservative
+memory budget before loading them.
+
 ---
 
 ## The documents
