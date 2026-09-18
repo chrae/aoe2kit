@@ -269,6 +269,7 @@ Replay:
 ./kit replay camera path/to/replay.zip --text
 ./kit replay camera path/to/replay.zip --limit 0 --tail 4
 ./kit replay sync path/to/replay.zip --text --checksums
+./kit replay health path/to/game.aoe2record --window 5m --text
 ./kit replay sync path/to/replay.zip --raw-words --json
 ./kit replay checksum-phase path/to/replay.zip --word 9 --player 1 --text
 ./kit replay checksum-phase path/to/replay.zip --all-words --text
@@ -915,6 +916,31 @@ Current replay and fingerprint support:
   honest candidate layer (`structure_verified_lifecycle_candidate_not_runtime_unit_type_proof`):
   large near-spawn selections are counted as overmatched and are not typed.
 - `kit replay postgame` decodes the DE op=6 reverse-block tail when present.
+- `kit replay health <record> [--window 5m] [--text|--json] [--out path]`
+  provides bounded-memory recording triage in a single body pass. Unzip archives
+  first. JSON schema: `aoe2kit.replay.health.v1`. Reports end framing and last
+  sync/action/chat/resign anchors, per-window action/chat/flare counts, and the
+  last checksum sample in each window (null when absent). Object counts use
+  decoded **word 6**, not the unit-type/instance-ID sums in words 2/10.
+  Peak objects considers every checksum; first/last 30-minute slopes are
+  least-squares fits over the retained window samples. Final partial windows
+  normalize action rate by observed simulation time, not the full window.
+  The largest end-player counts include their sample timestamp, which can
+  precede EOF. Chat keyword signals reuse the initial-backlog classifier;
+  backlog is excluded from signals and the last-game-chat anchor, but raw
+  window chat counts include it.
+  Clean framing is **not** a clean game-exit or crash-cause claim. Simulation
+  time cannot measure client freezes. Header stated duration is null:
+  the existing decoder has no independent duration field. Trigger graph
+  inspection is skipped and runtime fire counts are null, because embedded
+  trigger definitions do not record their executions.
+  Safety caps: 10,000 windows (increase `--window` if needed), 1 MiB per
+  action/chat payload, 10,000 rows / 4 MiB each for early chat and retained
+  signals. Capped chat degrades with warnings; incomplete early chat signals
+  are withheld. Header inflation validation stops at 64 MiB without retaining
+  the snapshot. Large snapshots are skipped with a warning, not parsed into
+  object models. Malformed body framing returns a report with
+  `ends_cleanly=false` and an offset; file/header errors fail the command.
 - `kit replay sync` surfaces the op=2 heartbeat: per-sync time deltas,
   delta-shape histogram, periodic checksum payloads, and conservative
   per-player state deltas between checksum samples. DECODED SEMANTICS: the DE

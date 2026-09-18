@@ -243,6 +243,7 @@
         "postgame",
         "camera",
         "viewlock",
+        "health",
         "sync",
         "sync-log",
         "checksum-phase",

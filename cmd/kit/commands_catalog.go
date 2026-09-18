@@ -193,6 +193,7 @@ var commandCatalog = []CommandSpec{
 	{Name: "replay spawns", Usage: "kit replay spawns <file.aoe2record> [--text]", Trait: TraitReadOnly, Input: "replay"},
 	{Name: "replay story", Usage: "kit replay story <file.aoe2record> [--context context.json] [--text|--brief]", Trait: TraitReadOnly, Input: "replay"},
 	{Name: "replay sync", Usage: "kit replay sync <file.aoe2record> [--checksums] [--raw-words] [--limit N] [--text|--json]", Trait: TraitReadOnly, Input: "replay"},
+	{Name: "replay health", Usage: "kit replay health <file.aoe2record> [--window 5m] [--text|--json] [--out path]", Trait: TraitReadOnly, Input: "replay"},
 	{Name: "replay sync-log", Usage: "kit replay sync-log <p0-sync.txt> [--replay file.aoe2record] [--limit N] [--text|--json]", Trait: TraitReadOnly, Input: "other"},
 	{Name: "replay telemetry", Usage: "kit replay telemetry <file-or-folder> [--context context.json] [--schema telemetry.json] [--text]", Trait: TraitReadOnly, Input: "other"},
 	{Name: "replay trigger-neighborhood", Usage: "kit replay trigger-neighborhood <file.aoe2record|zip> --trigger N [--depth N] [--limit N] [--text]", Trait: TraitReadOnly, Input: "replay"},

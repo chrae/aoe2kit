@@ -415,7 +415,16 @@ func decodeShortFlarePayload(data []byte) (FeedbackEvent, bool) {
 	return FeedbackEvent{X: float64(x), Y: float64(y), Targets: targets}, true
 }
 
-func readReplayAction(reader *bytes.Reader) (int, []byte, int, error) {
+type replayBodyReader interface {
+	io.Reader
+	io.ReaderAt
+	io.Seeker
+	io.ByteReader
+	Len() int
+	Size() int64
+}
+
+func readReplayAction(reader replayBodyReader) (int, []byte, int, error) {
 	length, err := readU32(reader)
 	if err != nil {
 		return 0, nil, 0, err
@@ -441,7 +450,7 @@ func readReplayAction(reader *bytes.Reader) (int, []byte, int, error) {
 	return int(actionID), payload, int(sequence), nil
 }
 
-func skipReplaySaveChapter(reader *bytes.Reader, bodyLength int) error {
+func skipReplaySaveChapter(reader replayBodyReader, bodyLength int) error {
 	if _, err := reader.Seek(-4, io.SeekCurrent); err != nil {
 		return err
 	}
@@ -460,7 +469,7 @@ func skipReplaySaveChapter(reader *bytes.Reader, bodyLength int) error {
 	return skipN(reader, target-pos-8)
 }
 
-func readReplaySync(reader *bytes.Reader) (uint32, error) {
+func readReplaySync(reader replayBodyReader) (uint32, error) {
 	increment, err := readU32(reader)
 	if err != nil {
 		return 0, err
@@ -499,7 +508,7 @@ func readReplaySync(reader *bytes.Reader) (uint32, error) {
 	return increment, nil
 }
 
-func readReplayMeta(reader *bytes.Reader) error {
+func readReplayMeta(reader replayBodyReader) error {
 	first, err := readU32(reader)
 	if err != nil {
 		return err
@@ -546,7 +555,7 @@ type startSkipResult struct {
 	SkippedBytes int
 }
 
-func skipStart(reader *bytes.Reader) (startSkipResult, error) {
+func skipStart(reader replayBodyReader) (startSkipResult, error) {
 	for _, skip := range []int{16, 20, 24, 28, 32} {
 		if plausibleNextOperation(reader, skip) {
 			return startSkipResult{SkippedBytes: skip}, skipN(reader, skip)
@@ -556,7 +565,7 @@ func skipStart(reader *bytes.Reader) (startSkipResult, error) {
 	return startSkipResult{Terminal: true, SkippedBytes: remaining}, skipN(reader, remaining)
 }
 
-func plausibleNextOperation(reader *bytes.Reader, skip int) bool {
+func plausibleNextOperation(reader replayBodyReader, skip int) bool {
 	if skip < 0 || skip+4 > reader.Len() {
 		return false
 	}
@@ -599,7 +608,7 @@ func plausibleNextOperation(reader *bytes.Reader, skip int) bool {
 	}
 }
 
-func peekU32(reader *bytes.Reader, rel int) (uint32, bool) {
+func peekU32(reader replayBodyReader, rel int) (uint32, bool) {
 	if rel < 0 || rel+4 > reader.Len() {
 		return 0, false
 	}
@@ -611,7 +620,7 @@ func peekU32(reader *bytes.Reader, rel int) (uint32, bool) {
 	return binary.LittleEndian.Uint32(buf[:]), true
 }
 
-func readU32(reader *bytes.Reader) (uint32, error) {
+func readU32(reader replayBodyReader) (uint32, error) {
 	var buf [4]byte
 	if _, err := io.ReadFull(reader, buf[:]); err != nil {
 		return 0, err
@@ -619,7 +628,7 @@ func readU32(reader *bytes.Reader) (uint32, error) {
 	return binary.LittleEndian.Uint32(buf[:]), nil
 }
 
-func skipN(reader *bytes.Reader, n int) error {
+func skipN(reader replayBodyReader, n int) error {
 	if n < 0 {
 		return fmt.Errorf("negative skip %d", n)
 	}

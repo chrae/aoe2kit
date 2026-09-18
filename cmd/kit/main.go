@@ -8324,6 +8324,56 @@ func runReplay(args []string) {
 		} else {
 			printJSON(report)
 		}
+	case "health":
+		checkReplayArg(args[1])
+		opts := replay.HealthOptions{}
+		textOut, outPath := false, ""
+		for i := 2; i < len(args); i++ {
+			switch args[i] {
+			case "--text":
+				textOut = true
+			case "--json":
+				textOut = false
+			case "--window", "--out":
+				flag := args[i]
+				i++
+				if i >= len(args) {
+					die("kit replay health", fmt.Errorf("%s needs a value", flag))
+				}
+				if flag == "--out" {
+					outPath = args[i]
+				} else {
+					d, err := time.ParseDuration(args[i])
+					if err != nil || d < time.Second {
+						die("kit replay health", fmt.Errorf("--window needs a duration of at least 1s"))
+					}
+					opts.Window = d
+				}
+			default:
+				die("kit replay health", fmt.Errorf("unknown option %q", args[i]))
+			}
+		}
+		report, err := replay.BuildHealth(args[1], opts)
+		if err != nil {
+			die("kit replay health", err)
+		}
+		out := os.Stdout
+		if outPath != "" {
+			out, err = os.Create(outPath)
+			if err != nil {
+				die("kit replay health", err)
+			}
+			defer out.Close()
+		}
+		if textOut {
+			replay.WriteHealthText(out, report)
+		} else {
+			enc := json.NewEncoder(out)
+			enc.SetIndent("", "  ")
+			if err := enc.Encode(report); err != nil {
+				die("kit replay health", err)
+			}
+		}
 	case "sync":
 		checkReplayArg(args[1])
 		opts := replay.SyncOptions{}
@@ -20484,6 +20534,7 @@ func usage() {
   kit replay lifecycle <file.aoe2record> [--text]
   kit replay postgame <file.aoe2record> [--text]
   kit replay sync <file.aoe2record> [--checksums] [--raw-words] [--limit N] [--text|--json]
+  kit replay health <file.aoe2record> [--window 5m] [--text|--json] [--out path]
   kit replay sync-log <p0-sync.txt> [--replay file.aoe2record] [--limit N] [--text|--json]
   kit replay checksum-phase <file.aoe2record> [--word N|--all-words] [--player N] [--text|--json]
   kit replay checksum-probe <file.aoe2record> [--preset v6-playground-helper|v7-checksum-calibration] [--player N] [--object-count-delta N] [--unit-type-sum-delta N] [--object-id-sum-delta N] [--state-sum-delta N] [--carry-sum-delta N] [--digest-delta N] [--limit N] [--text|--json]
