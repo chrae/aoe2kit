@@ -59,7 +59,7 @@ func ExportSQLite(datPath, outPath string) error {
 		return rollback(err)
 	}
 
-	columns := append([]string{"civ_index", "unit_index", "unit_id", "type", "name", "class", "class_name", "record_start", "record_end"}, fields...)
+	columns := append([]string{"civ_index", "unit_index", "unit_id", "type", "string_id", "string_id_2", "name", "class", "class_name", "record_start", "record_end"}, fields...)
 	quoted := make([]string, len(columns))
 	placeholders := make([]string, len(columns))
 	for i, column := range columns {
@@ -102,7 +102,7 @@ func ExportSQLite(datPath, outPath string) error {
 			if err != nil {
 				return rollback(fmt.Errorf("civ %d unit %d (%s): %w", civ.Index, unit.Index, unit.Name, err))
 			}
-			values := []any{civ.Index, unit.Index, unit.ID, unit.Type, unit.Name, unit.Class, unit.ClassName, unit.RecordStart, unit.RecordEnd}
+			values := []any{civ.Index, unit.Index, unit.ID, unit.Type, unit.StringID, unit.StringID2, unit.Name, unit.Class, unit.ClassName, unit.RecordStart, unit.RecordEnd}
 			for _, field := range fields {
 				value, ok := full[field]
 				if !ok {
@@ -159,7 +159,7 @@ CREATE TABLE unit_armours(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL
 	if err != nil {
 		return err
 	}
-	createUnits := `CREATE TABLE units(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,unit_id INTEGER NOT NULL,type INTEGER NOT NULL,name TEXT NOT NULL,class INTEGER NOT NULL,class_name TEXT NOT NULL,record_start INTEGER NOT NULL,record_end INTEGER NOT NULL`
+	createUnits := `CREATE TABLE units(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,unit_id INTEGER NOT NULL,type INTEGER NOT NULL,string_id INTEGER NOT NULL,string_id_2 INTEGER NOT NULL,name TEXT NOT NULL,class INTEGER NOT NULL,class_name TEXT NOT NULL,record_start INTEGER NOT NULL,record_end INTEGER NOT NULL`
 	if len(columns) > 0 {
 		createUnits += "," + strings.Join(columns, ",")
 	}

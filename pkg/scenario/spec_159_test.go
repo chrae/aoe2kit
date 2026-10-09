@@ -134,6 +134,7 @@ func TestScenarioOfficialCorpusOptIn(t *testing.T) {
 func TestScenario159PlayerVictoryConditionRepeatFixture(t *testing.T) {
 	for _, name := range []string{"Clean v159.8.aoe2scenario", "Clean v159.9.aoe2scenario"} {
 		path := filepath.Join("testdata", name)
+		requireFixture(t, path)
 		file, err := Open(path)
 		if err != nil {
 			t.Fatalf("open %s: %v", path, err)
@@ -152,6 +153,7 @@ func TestScenario159PlayerVictoryConditionRepeatFixture(t *testing.T) {
 func TestScenario159ConditionLayoutFixtures(t *testing.T) {
 	for _, name := range []string{"RyanScratch AB2.aoe2scenario", "Clean v159.12.aoe2scenario"} {
 		path := filepath.Join("testdata", name)
+		requireFixture(t, path)
 		file, err := Open(path)
 		if err != nil {
 			t.Fatalf("open %s: %v", path, err)

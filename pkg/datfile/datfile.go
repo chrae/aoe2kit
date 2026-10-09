@@ -353,7 +353,10 @@ type UnitSummary struct {
 	Present            bool              `json:"present"`
 	Type               int               `json:"type"`
 	ID                 int16             `json:"id"`
+	StringID           int32             `json:"string_id"`
+	StringID2          int32             `json:"string_id_2"`
 	Name               string            `json:"name"`
+	DisplayName        string            `json:"display_name,omitempty"`
 	Class              int16             `json:"class"`
 	ClassName          string            `json:"class_name,omitempty"`
 	HitPoints          int16             `json:"hit_points"`
@@ -409,6 +412,8 @@ type UnitSummary struct {
 
 type UnitFieldSpans struct {
 	ID                 Span `json:"id"`
+	StringID           Span `json:"string_id"`
+	StringID2          Span `json:"string_id_2"`
 	Class              Span `json:"class"`
 	HitPoints          Span `json:"hit_points"`
 	LineOfSight        Span `json:"line_of_sight"`
@@ -6632,9 +6637,18 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 		return UnitSummary{}, err
 	}
 	unit.FieldSpans.ID = Span{Name: "id", Start: start, End: c.off}
-	if err := c.skip(4 + 4); err != nil {
+	start = c.off
+	unit.StringID, err = c.i32()
+	if err != nil {
 		return UnitSummary{}, err
 	}
+	unit.FieldSpans.StringID = Span{Name: "string_id", Start: start, End: c.off}
+	start = c.off
+	unit.StringID2, err = c.i32()
+	if err != nil {
+		return UnitSummary{}, err
+	}
+	unit.FieldSpans.StringID2 = Span{Name: "string_id_2", Start: start, End: c.off}
 	start = c.off
 	unit.Class, err = c.i16()
 	if err != nil {

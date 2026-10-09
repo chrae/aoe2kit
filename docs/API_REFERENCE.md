@@ -50,7 +50,7 @@ go run ./cmd/apiref --kit ./kit \
 Flags marked **required** in the tables below appear unbracketed in the tool's own
 usage line and must be supplied.
 
-Tool version `0.1.0` — 245 commands, 18 probed.
+Tool version `0.1.0` — 247 commands, 18 probed.
 
 ## Command index
 
@@ -71,7 +71,7 @@ Tool version `0.1.0` — 245 commands, 18 probed.
 - **replay** — `replay actions`, `replay ai-manifest`, `replay camera`, `replay carrier`, `replay chat`, `replay checksum-phase`, `replay checksum-probe`, `replay combat`, `replay corpus`, `replay coverage`, `replay datamod-check`, `replay deaths`, `replay diff-state`, `replay diff-triggers`, `replay effective-data`, `replay effective-units`, `replay events`, `replay feedback`, `replay fetch`, `replay frontier`, `replay header-anchors`, `replay health`, `replay inbox`, `replay info`, `replay issues`, `replay lifecycle`, `replay object-shapes`, `replay object-state`, `replay objects`, `replay opaque-clusters`, `replay opaque-spans`, `replay opaque-target`, `replay player-events`, `replay player-profile`, `replay player-series`, `replay playtest`, `replay postgame`, `replay postgame-corpus`, `replay scan-value`, `replay sidecar-sync`, `replay spawns`, `replay story`, `replay sync`, `replay sync-log`, `replay telemetry`, `replay trigger-neighborhood`, `replay triggers`, `replay unknowns`, `replay viewlock`, `replay xs-telemetry`
 - **roadmap** — `roadmap crud`, `roadmap dark`, `roadmap rwd`
 - **rpg** — `rpg custom-store`, `rpg shop-demo`
-- **scen** — `scen analyze`, `scen audit-player-coverage`, `scen blank`, `scen bytediff`, `scen coverage`, `scen delete`, `scen delete-plan`, `scen deploycheck`, `scen describe`, `scen diff`, `scen diff-effects`, `scen diff-triggers`, `scen disconnect`, `scen dump-body`, `scen effects`, `scen field`, `scen glossary`, `scen idioms`, `scen import-triggers`, `scen lint`, `scen mechanic`, `scen palette-usage`, `scen patch`, `scen plan`, `scen refs`, `scen settings`, `scen shop-catalog`, `scen smoke`, `scen smoke-recipe`, `scen strings`, `scen terrain`, `scen trigger-flow`, `scen trigger-neighborhood`, `scen triggers`, `scen units`, `scen write-check`, `scen xs`, `scen xs attach`, `scen xs compare`, `scen xs deploy`, `scen xs embed`, `scen xs extract`
+- **scen** — `scen analyze`, `scen audit-player-coverage`, `scen blank`, `scen bytediff`, `scen coverage`, `scen delete`, `scen delete-plan`, `scen deploycheck`, `scen describe`, `scen diff`, `scen diff-effects`, `scen diff-series`, `scen diff-triggers`, `scen disconnect`, `scen dump-body`, `scen effects`, `scen field`, `scen glossary`, `scen idioms`, `scen import-triggers`, `scen lint`, `scen mechanic`, `scen palette-usage`, `scen patch`, `scen plan`, `scen refs`, `scen settings`, `scen shop-catalog`, `scen smoke`, `scen smoke-recipe`, `scen strings`, `scen terrain`, `scen trigger-flow`, `scen trigger-neighborhood`, `scen triggers`, `scen units`, `scen watch`, `scen write-check`, `scen xs`, `scen xs attach`, `scen xs compare`, `scen xs deploy`, `scen xs embed`, `scen xs extract`
 - **swatch** — `swatch patterns`
 - **xs** — `xs bridge`, `xs datagen`, `xs harness`, `xs inspect`, `xs shims`
 - **xsdat** — `xsdat decode`
@@ -1606,7 +1606,7 @@ kit dat unit-headers <empires*.dat> [--limit N|--all] [--json]
 ### `dat units`
 
 ```
-kit dat units <empires*.dat> [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--json]
+kit dat units <empires*.dat> [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--game-dir D] [--json]
 ```
 
 | flag | value |
@@ -1616,6 +1616,7 @@ kit dat units <empires*.dat> [--civ N] [--id N] [--name TEXT|--name-contains TEX
 | `--name` | `TEXT|--name-contains` |
 | `--class` | `building|unit|creatable` |
 | `--limit` | `N|--all` |
+| `--game-dir` | `D` |
 | `--json` | _(boolean)_ |
 
 - probe: `skipped_no_fixture`
@@ -2870,6 +2871,19 @@ kit scen diff-effects <before.aoe2scenario> <after.aoe2scenario> --where EFFECT 
 - probe: `requires_additional_input`
 - note: required --where must be supplied by the caller
 
+### `scen diff-series`
+
+```
+kit scen diff-series <files...|directory> [--all-fields] [--game-dir D] [--text|--json]
+```
+
+| flag | value |
+| --- | --- |
+| `--all-fields` | _(boolean)_ |
+| `--game-dir` | `D` |
+
+- probe: `not_probed`
+
 ### `scen diff-triggers`
 
 ```
@@ -3206,6 +3220,21 @@ kit scen units <file.aoe2scenario> [--named]
 | `--named` | _(boolean)_ |
 
 - probe: `skipped_no_fixture`
+
+### `scen watch`
+
+```
+kit scen watch <file.aoe2scenario> [--snapshot-dir D] [--interval 1s] [--once] [--game-dir D]
+```
+
+| flag | value |
+| --- | --- |
+| `--snapshot-dir` | `D` |
+| `--interval` | `1s` |
+| `--once` | _(boolean)_ |
+| `--game-dir` | `D` |
+
+- probe: `not_probed`
 
 ### `scen write-check`
 

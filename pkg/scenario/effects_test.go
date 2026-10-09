@@ -1,6 +1,7 @@
 package scenario
 
 import (
+	"aoe2kit/pkg/gamestrings"
 	"aoe2kit/pkg/testfixtures"
 	"os"
 	"testing"
@@ -81,6 +82,16 @@ func TestEffectTypeNamesIncludeModernDEIDs(t *testing.T) {
 		if got := EffectTypeName(id); got != want {
 			t.Fatalf("EffectTypeName(%d) = %q, want %q", id, got, want)
 		}
+	}
+}
+
+func TestRuntimeNamesOverrideEffectFallback(t *testing.T) {
+	names := &RuntimeNames{Strings: gamestrings.Table{Values: map[int]string{11550 + 523: "Agoge Hoplite Aura Enabled"}}}
+	if got := names.effect(523); got != "Agoge Hoplite Aura Enabled" {
+		t.Fatalf("runtime effect name = %q", got)
+	}
+	if got := names.effect(1); got != EffectTypeName(1) {
+		t.Fatalf("fallback effect name = %q, want %q", got, EffectTypeName(1))
 	}
 }
 

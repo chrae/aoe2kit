@@ -1988,6 +1988,8 @@ type UnitRow struct {
 	Index              int
 	Type               int
 	ID                 int16
+	StringID           int32
+	StringID2          int32
 	Name               string
 	Class              int16
 	ClassName          string
@@ -4195,6 +4197,8 @@ func CreateUnit(compressed []byte, recipe UnitCreateRecipe) ([]byte, UnitCreateR
 
 type UnitFieldSpans struct {
 	ID                 Span `json:"id"`
+	StringID           Span `json:"string_id"`
+	StringID2          Span `json:"string_id_2"`
 	Class              Span `json:"class"`
 	HitPoints          Span `json:"hit_points"`
 	LineOfSight        Span `json:"line_of_sight"`
@@ -4335,7 +4339,10 @@ type UnitSummary struct {
 	Present            bool              `json:"present"`
 	Type               int               `json:"type"`
 	ID                 int16             `json:"id"`
+	StringID           int32             `json:"string_id"`
+	StringID2          int32             `json:"string_id_2"`
 	Name               string            `json:"name"`
+	DisplayName        string            `json:"display_name,omitempty"`
 	Class              int16             `json:"class"`
 	ClassName          string            `json:"class_name,omitempty"`
 	HitPoints          int16             `json:"hit_points"`
@@ -10354,6 +10361,11 @@ func VariableContainsDisconnectRecipeFile(path string, text string) ([]int, Refe
 func VariableDisconnectRecipeFile(path string, variableID int) (ReferenceReport, Recipe, error)
 func VariableNameDisconnectRecipeFile(path string, name string) (int, ReferenceReport, Recipe, error)
 func VariablePrefixDisconnectRecipeFile(path string, prefix string) ([]int, ReferenceReport, Recipe, error)
+func WatchLocal(path string, opts WatchOptions, emit func(WatchEvent) error) error
+    WatchLocal observes one local scenario file. It uses a portable stat-based
+    loop so Kit has no OS-specific or remote-machine dependency. Callers can
+    select Once for a single snapshot in scripts and tests.
+
 func XSCarrierContent(message string) string
 func DecodeBackgroundImageNode(data []byte) (*parsedNode, int, error)
     DecodeBackgroundImageNode owns the image frame. Empty editor images are a
@@ -10560,6 +10572,22 @@ type ComparedByteSpan struct {
 	End   int `json:"end"`
 }
 
+type ConditionEditorSchema struct {
+	Type          int               `json:"type"`
+	Name          string            `json:"name"`
+	VisibleFields []string          `json:"visible_fields"`
+	RevealedBy    map[string]string `json:"revealed_by,omitempty"`
+}
+    ConditionEditorSchema describes the fields shown by the DE scenario editor
+    when a condition is first created.
+
+func ConditionEditorSchemaForType(conditionType int) (ConditionEditorSchema, bool)
+    ConditionEditorSchemaForType returns the observed default-state editor
+    schema for a condition type.
+
+func ConditionEditorSchemas() []ConditionEditorSchema
+    ConditionEditorSchemas returns all observed condition schemas in type order.
+
 type ConditionRecipe struct {
 	Op                             string `json:"op"`
 	Timer                          *int   `json:"timer,omitempty"`
@@ -10585,12 +10613,14 @@ type ConditionRecipe struct {
 }
 
 type ConditionSummary struct {
-	TriggerIndex   int            `json:"trigger_index,omitempty"`
-	TriggerName    string         `json:"trigger_name,omitempty"`
-	ConditionIndex int            `json:"condition_index,omitempty"`
-	Type           int            `json:"type"`
-	TypeName       string         `json:"type_name"`
-	KnownFields    map[string]any `json:"known_fields,omitempty"`
+	TriggerIndex           int               `json:"trigger_index,omitempty"`
+	TriggerName            string            `json:"trigger_name,omitempty"`
+	ConditionIndex         int               `json:"condition_index,omitempty"`
+	Type                   int               `json:"type"`
+	TypeName               string            `json:"type_name"`
+	EditorFields           []string          `json:"editor_fields,omitempty"`
+	EditorFieldsRevealedBy map[string]string `json:"editor_fields_revealed_by,omitempty"`
+	KnownFields            map[string]any    `json:"known_fields,omitempty"`
 }
 
 type CoverageCorpusError struct {
@@ -10627,6 +10657,8 @@ type CoverageCorpusSpan struct {
 	Bytes             int      `json:"bytes"`
 	Occurrences       int      `json:"occurrences"`
 	Files             int      `json:"files"`
+	DistinctValues    int      `json:"distinct_values"`
+	Variance          string   `json:"variance"`
 	SHA256            []string `json:"sha256"`
 	NonZeroBytes      []int    `json:"nonzero_bytes"`
 	MinTriggerCount   int      `json:"min_trigger_count"`
@@ -10673,6 +10705,7 @@ type CreateKillLoopTechnique struct {
 
 type DarkSpan struct {
 	Path         string `json:"path"`
+	Label        string `json:"label,omitempty"`
 	Start        int    `json:"start"`
 	End          int    `json:"end"`
 	Bytes        int    `json:"bytes"`
@@ -10800,7 +10833,8 @@ type DiffChange struct {
 }
 
 type DiffOptions struct {
-	AllFields bool
+	AllFields    bool
+	RuntimeNames *RuntimeNames `json:"-"`
 }
 
 type DiffReport struct {
@@ -10809,6 +10843,9 @@ type DiffReport struct {
 	Same    bool                 `json:"same"`
 	Changes []DiffChange         `json:"changes"`
 	Fields  []StructureFieldDiff `json:"fields,omitempty"`
+	// RawFields contains opaque and editor-save fields that are deliberately
+	// kept out of the semantic change list, but must never disappear silently.
+	RawFields []StructureFieldDiff `json:"raw_fields,omitempty"`
 }
 
 func Diff(before, after *File) DiffReport
@@ -10816,6 +10853,29 @@ func Diff(before, after *File) DiffReport
 func DiffFiles(beforePath, afterPath string) (DiffReport, error)
 
 func DiffFilesWithOptions(beforePath, afterPath string, opts DiffOptions) (DiffReport, error)
+
+func DiffWithOptions(before, after *File, opts DiffOptions) DiffReport
+
+type DiffSeriesOptions struct {
+	AllFields    bool
+	RuntimeNames *RuntimeNames `json:"-"`
+}
+
+type DiffSeriesReport struct {
+	Files []string         `json:"files"`
+	Steps []DiffSeriesStep `json:"steps,omitempty"`
+}
+
+func DiffSeries(input []string, opts DiffSeriesOptions) (DiffSeriesReport, error)
+    DiffSeries expands one local directory or uses the supplied paths in order.
+    It performs no remote discovery and never mutates the inputs.
+
+type DiffSeriesStep struct {
+	Index  int        `json:"index"`
+	Before string     `json:"before"`
+	After  string     `json:"after"`
+	Diff   DiffReport `json:"diff"`
+}
 
 type DiplomacyLayout struct {
 	Stances       [][]uint32
@@ -10875,6 +10935,39 @@ type EconomySignal struct {
 	Evidence   string `json:"evidence,omitempty"`
 }
 
+type EditorCoverageReport struct {
+	Path         string               `json:"path,omitempty"`
+	Version      string               `json:"version"`
+	Verification string               `json:"verification"`
+	Effects      []EditorTypeCoverage `json:"effects"`
+	Conditions   []EditorTypeCoverage `json:"conditions"`
+}
+    EditorCoverageReport separates editor observations from byte evidence.
+    The editor field tables describe controls; they do not, by themselves,
+    prove a control's byte mapping.
+
+func EditorCoverageFile(path string) (EditorCoverageReport, error)
+    EditorCoverageFile reports the editor schemas against one scenario. A field
+    is not called byte-mapped merely because its record parsed: only the type's
+    structural presence is established here. Calibration evidence that binds a
+    particular control to a byte belongs in the field decoder or a diff test.
+
+type EditorFieldCoverage struct {
+	Name       string `json:"name"`
+	RevealedBy string `json:"revealed_by,omitempty"`
+	Status     string `json:"status"`
+	Evidence   string `json:"evidence"`
+}
+
+type EditorTypeCoverage struct {
+	Type              int                   `json:"type"`
+	Name              string                `json:"name"`
+	Occurrences       int                   `json:"occurrences"`
+	ByteEvidence      string                `json:"byte_evidence"`
+	EditorFields      []EditorFieldCoverage `json:"editor_fields"`
+	KnownParserFields []string              `json:"known_parser_fields,omitempty"`
+}
+
 type EffectDiffItem struct {
 	Ordinal       int                         `json:"ordinal"`
 	BeforeTrigger int                         `json:"before_trigger"`
@@ -10906,6 +10999,24 @@ func DiffEffectsFile(beforePath, afterPath string, opts EffectWhereOptions) (Eff
     control-oriented diagnostic: trigger/effect indexes are reported, but field
     drift is the primary result because two authors may organize triggers
     differently while expressing the same mechanic.
+
+type EffectEditorSchema struct {
+	Type          int               `json:"type"`
+	Name          string            `json:"name"`
+	VisibleFields []string          `json:"visible_fields"`
+	RevealedBy    map[string]string `json:"revealed_by,omitempty"`
+	Offered       bool              `json:"offered"`
+}
+    EffectEditorSchema describes the fields shown by the DE scenario editor when
+    an effect is first created. Some controls reveal additional fields after Set
+    Area, Set Objects, or Set Location is used.
+
+func EffectEditorSchemaForType(effectType int) (EffectEditorSchema, bool)
+    EffectEditorSchemaForType returns the observed default-state editor schema
+    for an effect type. The returned slice is independent of the package table.
+
+func EffectEditorSchemas() []EffectEditorSchema
+    EffectEditorSchemas returns all observed effect schemas in type order.
 
 type EffectFieldDelta struct {
 	Before any `json:"before,omitempty"`
@@ -10984,37 +11095,39 @@ type EffectRecipe struct {
 }
 
 type EffectSummary struct {
-	TriggerIndex      int            `json:"trigger_index,omitempty"`
-	TriggerName       string         `json:"trigger_name,omitempty"`
-	EffectIndex       int            `json:"effect_index,omitempty"`
-	Type              int            `json:"type"`
-	TypeName          string         `json:"type_name"`
-	UnitConst         int            `json:"unit_const,omitempty"`
-	SourcePlayer      int            `json:"source_player,omitempty"`
-	TargetPlayer      int            `json:"target_player,omitempty"`
-	Location          []int          `json:"location,omitempty"`
-	Area              []int          `json:"area,omitempty"`
-	TargetTrigger     int            `json:"target_trigger,omitempty"`
-	StringID          int            `json:"string_id,omitempty"`
-	Text              string         `json:"text,omitempty"`
-	DisplayTime       int            `json:"display_time,omitempty"`
-	TimeUnit          int            `json:"time_unit,omitempty"`
-	TimerID           int            `json:"timer_id,omitempty"`
-	ResetTimer        int            `json:"reset_timer,omitempty"`
-	Sound             string         `json:"sound,omitempty"`
-	Variable          int            `json:"variable,omitempty"`
-	Variable2         int            `json:"variable2,omitempty"`
-	Operation         int            `json:"operation,omitempty"`
-	Quantity          int            `json:"quantity,omitempty"`
-	QuantityFloat     float64        `json:"quantity_float,omitempty"`
-	Technology        int            `json:"technology,omitempty"`
-	Diplomacy         int            `json:"diplomacy,omitempty"`
-	Resource          int            `json:"resource,omitempty"`
-	ResourceQuantity  int            `json:"resource_quantity,omitempty"`
-	ObjectAttribute   int            `json:"object_attribute,omitempty"`
-	SelectedObjectIDs []int          `json:"selected_object_ids,omitempty"`
-	RawFields         []int          `json:"raw_fields,omitempty"`
-	KnownFields       map[string]any `json:"known_fields,omitempty"`
+	TriggerIndex           int               `json:"trigger_index,omitempty"`
+	TriggerName            string            `json:"trigger_name,omitempty"`
+	EffectIndex            int               `json:"effect_index,omitempty"`
+	Type                   int               `json:"type"`
+	TypeName               string            `json:"type_name"`
+	UnitConst              int               `json:"unit_const,omitempty"`
+	SourcePlayer           int               `json:"source_player,omitempty"`
+	TargetPlayer           int               `json:"target_player,omitempty"`
+	Location               []int             `json:"location,omitempty"`
+	Area                   []int             `json:"area,omitempty"`
+	TargetTrigger          int               `json:"target_trigger,omitempty"`
+	StringID               int               `json:"string_id,omitempty"`
+	Text                   string            `json:"text,omitempty"`
+	DisplayTime            int               `json:"display_time,omitempty"`
+	TimeUnit               int               `json:"time_unit,omitempty"`
+	TimerID                int               `json:"timer_id,omitempty"`
+	ResetTimer             int               `json:"reset_timer,omitempty"`
+	Sound                  string            `json:"sound,omitempty"`
+	Variable               int               `json:"variable,omitempty"`
+	Variable2              int               `json:"variable2,omitempty"`
+	Operation              int               `json:"operation,omitempty"`
+	Quantity               int               `json:"quantity,omitempty"`
+	QuantityFloat          float64           `json:"quantity_float,omitempty"`
+	Technology             int               `json:"technology,omitempty"`
+	Diplomacy              int               `json:"diplomacy,omitempty"`
+	Resource               int               `json:"resource,omitempty"`
+	ResourceQuantity       int               `json:"resource_quantity,omitempty"`
+	ObjectAttribute        int               `json:"object_attribute,omitempty"`
+	SelectedObjectIDs      []int             `json:"selected_object_ids,omitempty"`
+	RawFields              []int             `json:"raw_fields,omitempty"`
+	KnownFields            map[string]any    `json:"known_fields,omitempty"`
+	EditorFields           []string          `json:"editor_fields,omitempty"`
+	EditorFieldsRevealedBy map[string]string `json:"editor_fields_revealed_by,omitempty"`
 }
 
 type EffectTextEntry struct {
@@ -11088,6 +11201,7 @@ func EffectsCensusWithOptions(data []byte, opts EffectsCensusOptions) (EffectsCe
 
 type EffectsOptions struct {
 	IncludeRawFields bool
+	RuntimeNames     *RuntimeNames
 }
 
 type EffectsReport struct {
@@ -11224,6 +11338,8 @@ func (f *File) Describe(opts DescribeOptions) Description
 func (f *File) DumpTriggersWithConditions() ([]TriggerConditionDump, error)
     DumpTriggersWithConditions walks trigger_data and decodes every condition's
     known fields alongside the existing effect summaries.
+
+func (f *File) DumpTriggersWithConditionsWithOptions(opts TriggerConditionsOptions) ([]TriggerConditionDump, error)
 
 func (f *File) EditTrigger(recipe TriggerRecipe) error
 
@@ -12105,6 +12221,25 @@ type ResourceRecipe struct {
 	TradeGoods *int `json:"trade_goods,omitempty"`
 }
 
+type RuntimeNames struct {
+	Strings gamestrings.Table
+}
+    RuntimeNames provides optional names from the user's installed game.
+    A nil table means callers should use Kit's compatibility fallback names.
+
+func (n *RuntimeNames) AttributeName(id int) string
+    AttributeName resolves a resource/attribute id using the game's table.
+
+func (n *RuntimeNames) ConditionName(id int) string
+    ConditionName resolves a condition type using runtime strings.
+
+func (n *RuntimeNames) EffectName(id int) string
+    EffectName resolves an effect type using runtime strings, then Kit's
+    compatibility vocabulary.
+
+func (n *RuntimeNames) ObjectGroupName(id int) string
+    ObjectGroupName resolves a unit-class id using the game's table.
+
 type ScenarioDataSet struct {
 	Status     string `json:"status"`
 	Source     string `json:"source"`
@@ -12548,8 +12683,9 @@ type TriggerConditionDump struct {
     conditions, which TriggerInfo summarizes away.
 
 type TriggerConditionsOptions struct {
-	Limit            int `json:"limit,omitempty"`
-	MaxInflatedBytes int `json:"max_inflated_bytes,omitempty"`
+	Limit            int           `json:"limit,omitempty"`
+	MaxInflatedBytes int           `json:"max_inflated_bytes,omitempty"`
+	RuntimeNames     *RuntimeNames `json:"-"`
 }
 
 type TriggerConditionsReport struct {
@@ -12894,6 +13030,20 @@ type VictoryRecipe struct {
 	Mode                           *int `json:"mode,omitempty"`
 	RequiredScoreForScoreVictory   *int `json:"required_score_for_score_victory,omitempty"`
 	TimeForTimedGameIn10thsOfAYear *int `json:"time_for_timed_game_in_10ths_of_a_year,omitempty"`
+}
+
+type WatchEvent struct {
+	Source   string      `json:"source"`
+	Snapshot string      `json:"snapshot"`
+	Previous string      `json:"previous,omitempty"`
+	Diff     *DiffReport `json:"diff,omitempty"`
+}
+
+type WatchOptions struct {
+	SnapshotDir string
+	Interval    time.Duration
+	Once        bool
+	Diff        DiffOptions
 }
 
 type WatermarkSignal struct {

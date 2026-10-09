@@ -284,7 +284,7 @@
     },
     {
       "name": "kit scen",
-      "summary": "current AoE2DE .aoe2scenario inspection, settings/strings/effects/references/delete-plans/glossary/idioms/analyze, trigger intelligence, structural byte-coverage accounting with explicit dark spans, describe, lint, embedded/deployed XS census, deploy-tree XS preflight, scenario and trigger-graph diffing, path-aligned field queries, filtered effect payload inspection and control-vs-control effect diffs, raw inflated-body dumping and byte-level diffing for byte-map calibration, region-context guessing, position-aware terrain inspection, DAT-backed art-palette usage, blank-root scenario creation with optional Outpost dummy starters, trigger/unit/map recipe patching, generic train-token shop-catalog recipe generation, raw-preserving trigger import with reference remapping, direct plan-gated scenario deletes, direct trigger/unit/variable/string reference disconnects, composed write-checks, and canonical editor-smoke recipe generation/application",
+      "summary": "current AoE2DE .aoe2scenario inspection, settings/strings/effects/references/delete-plans/glossary/idioms/analyze, trigger intelligence, structural byte-coverage accounting with explicit dark spans, editor-schema calibration coverage, describe, lint, embedded/deployed XS census, deploy-tree XS preflight, scenario and trigger-graph diffing, ordered local scenario series diffing and watching, path-aligned field queries, filtered effect payload inspection and control-vs-control effect diffs, raw inflated-body dumping and byte-level diffing for byte-map calibration, region-context guessing, position-aware terrain inspection, DAT-backed art-palette usage, blank-root scenario creation with optional Outpost dummy starters, trigger/unit/map recipe patching, generic train-token shop-catalog recipe generation, raw-preserving trigger import with reference remapping, direct plan-gated scenario deletes, direct trigger/unit/variable/string reference disconnects, composed write-checks, and canonical editor-smoke recipe generation/application",
       "subcommands": [
         "blank",
         "info",
@@ -299,6 +299,8 @@
         "disconnect",
         "effects",
         "diff-effects",
+        "diff-series",
+        "watch",
         "glossary",
         "idioms",
         "analyze",
@@ -313,6 +315,7 @@
         "palette-usage",
         "regions",
         "coverage",
+        "editor-coverage",
         "verify",
         "lint",
         "xs",

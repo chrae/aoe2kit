@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 992,
+  "type_count": 1004,
   "types": {
     "aifile.DiffChange": {
       "package": "aifile",
@@ -5923,6 +5923,14 @@
         {
           "name": "ID",
           "go_type": "int16"
+        },
+        {
+          "name": "StringID",
+          "go_type": "int32"
+        },
+        {
+          "name": "StringID2",
+          "go_type": "int32"
         },
         {
           "name": "Name",
@@ -15570,6 +15578,18 @@
           "ref": "datfile.Span"
         },
         {
+          "name": "StringID",
+          "json": "string_id",
+          "go_type": "Span",
+          "ref": "datfile.Span"
+        },
+        {
+          "name": "StringID2",
+          "json": "string_id_2",
+          "go_type": "Span",
+          "ref": "datfile.Span"
+        },
+        {
           "name": "Class",
           "json": "class",
           "go_type": "Span",
@@ -16298,9 +16318,25 @@
           "go_type": "int16"
         },
         {
+          "name": "StringID",
+          "json": "string_id",
+          "go_type": "int32"
+        },
+        {
+          "name": "StringID2",
+          "json": "string_id_2",
+          "go_type": "int32"
+        },
+        {
           "name": "Name",
           "json": "name",
           "go_type": "string"
+        },
+        {
+          "name": "DisplayName",
+          "json": "display_name",
+          "go_type": "string",
+          "optional": true
         },
         {
           "name": "Class",
@@ -18167,6 +18203,21 @@
           "name": "After",
           "json": "after",
           "go_type": "int"
+        }
+      ]
+    },
+    "gamestrings.Table": {
+      "package": "gamestrings",
+      "name": "Table",
+      "doc": "Table is a best-effort view of the game's integer string table.",
+      "fields": [
+        {
+          "name": "Path",
+          "go_type": "string"
+        },
+        {
+          "name": "Values",
+          "go_type": "map[int]string"
         }
       ]
     },
@@ -40779,6 +40830,34 @@
         }
       ]
     },
+    "scenario.ConditionEditorSchema": {
+      "package": "scenario",
+      "name": "ConditionEditorSchema",
+      "doc": "ConditionEditorSchema describes the fields shown by the DE scenario editor when a condition is first created.",
+      "fields": [
+        {
+          "name": "Type",
+          "json": "type",
+          "go_type": "int"
+        },
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "VisibleFields",
+          "json": "visible_fields",
+          "go_type": "[]string"
+        },
+        {
+          "name": "RevealedBy",
+          "json": "revealed_by",
+          "go_type": "map[string]string",
+          "optional": true
+        }
+      ]
+    },
     "scenario.ConditionRecipe": {
       "package": "scenario",
       "name": "ConditionRecipe",
@@ -40943,6 +41022,18 @@
           "go_type": "string"
         },
         {
+          "name": "EditorFields",
+          "json": "editor_fields",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "EditorFieldsRevealedBy",
+          "json": "editor_fields_revealed_by",
+          "go_type": "map[string]string",
+          "optional": true
+        },
+        {
           "name": "KnownFields",
           "json": "known_fields",
           "go_type": "map[string]any",
@@ -41050,6 +41141,16 @@
           "name": "Files",
           "json": "files",
           "go_type": "int"
+        },
+        {
+          "name": "DistinctValues",
+          "json": "distinct_values",
+          "go_type": "int"
+        },
+        {
+          "name": "Variance",
+          "json": "variance",
+          "go_type": "string"
         },
         {
           "name": "SHA256",
@@ -41222,6 +41323,12 @@
           "name": "Path",
           "json": "path",
           "go_type": "string"
+        },
+        {
+          "name": "Label",
+          "json": "label",
+          "go_type": "string",
+          "optional": true
         },
         {
           "name": "Start",
@@ -41762,6 +41869,12 @@
         {
           "name": "AllFields",
           "go_type": "bool"
+        },
+        {
+          "name": "RuntimeNames",
+          "json": "-",
+          "go_type": "*RuntimeNames",
+          "ref": "scenario.RuntimeNames"
         }
       ]
     },
@@ -41796,6 +41909,75 @@
           "go_type": "[]StructureFieldDiff",
           "ref": "scenario.StructureFieldDiff",
           "optional": true
+        },
+        {
+          "name": "RawFields",
+          "json": "raw_fields",
+          "go_type": "[]StructureFieldDiff",
+          "ref": "scenario.StructureFieldDiff",
+          "optional": true,
+          "doc": "RawFields contains opaque and editor-save fields that are deliberately kept out of the semantic change list, but must never disappear silently."
+        }
+      ]
+    },
+    "scenario.DiffSeriesOptions": {
+      "package": "scenario",
+      "name": "DiffSeriesOptions",
+      "fields": [
+        {
+          "name": "AllFields",
+          "go_type": "bool"
+        },
+        {
+          "name": "RuntimeNames",
+          "json": "-",
+          "go_type": "*RuntimeNames",
+          "ref": "scenario.RuntimeNames"
+        }
+      ]
+    },
+    "scenario.DiffSeriesReport": {
+      "package": "scenario",
+      "name": "DiffSeriesReport",
+      "fields": [
+        {
+          "name": "Files",
+          "json": "files",
+          "go_type": "[]string"
+        },
+        {
+          "name": "Steps",
+          "json": "steps",
+          "go_type": "[]DiffSeriesStep",
+          "ref": "scenario.DiffSeriesStep",
+          "optional": true
+        }
+      ]
+    },
+    "scenario.DiffSeriesStep": {
+      "package": "scenario",
+      "name": "DiffSeriesStep",
+      "fields": [
+        {
+          "name": "Index",
+          "json": "index",
+          "go_type": "int"
+        },
+        {
+          "name": "Before",
+          "json": "before",
+          "go_type": "string"
+        },
+        {
+          "name": "After",
+          "json": "after",
+          "go_type": "string"
+        },
+        {
+          "name": "Diff",
+          "json": "diff",
+          "go_type": "DiffReport",
+          "ref": "scenario.DiffReport"
         }
       ]
     },
@@ -42034,6 +42216,106 @@
         }
       ]
     },
+    "scenario.EditorCoverageReport": {
+      "package": "scenario",
+      "name": "EditorCoverageReport",
+      "doc": "EditorCoverageReport separates editor observations from byte evidence.",
+      "fields": [
+        {
+          "name": "Path",
+          "json": "path",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Version",
+          "json": "version",
+          "go_type": "string"
+        },
+        {
+          "name": "Verification",
+          "json": "verification",
+          "go_type": "string"
+        },
+        {
+          "name": "Effects",
+          "json": "effects",
+          "go_type": "[]EditorTypeCoverage",
+          "ref": "scenario.EditorTypeCoverage"
+        },
+        {
+          "name": "Conditions",
+          "json": "conditions",
+          "go_type": "[]EditorTypeCoverage",
+          "ref": "scenario.EditorTypeCoverage"
+        }
+      ]
+    },
+    "scenario.EditorFieldCoverage": {
+      "package": "scenario",
+      "name": "EditorFieldCoverage",
+      "fields": [
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "RevealedBy",
+          "json": "revealed_by",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "string"
+        },
+        {
+          "name": "Evidence",
+          "json": "evidence",
+          "go_type": "string"
+        }
+      ]
+    },
+    "scenario.EditorTypeCoverage": {
+      "package": "scenario",
+      "name": "EditorTypeCoverage",
+      "fields": [
+        {
+          "name": "Type",
+          "json": "type",
+          "go_type": "int"
+        },
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Occurrences",
+          "json": "occurrences",
+          "go_type": "int"
+        },
+        {
+          "name": "ByteEvidence",
+          "json": "byte_evidence",
+          "go_type": "string"
+        },
+        {
+          "name": "EditorFields",
+          "json": "editor_fields",
+          "go_type": "[]EditorFieldCoverage",
+          "ref": "scenario.EditorFieldCoverage"
+        },
+        {
+          "name": "KnownParserFields",
+          "json": "known_parser_fields",
+          "go_type": "[]string",
+          "optional": true
+        }
+      ]
+    },
     "scenario.EffectDiffItem": {
       "package": "scenario",
       "name": "EffectDiffItem",
@@ -42152,6 +42434,39 @@
           "go_type": "[]EffectDiffItem",
           "ref": "scenario.EffectDiffItem",
           "optional": true
+        }
+      ]
+    },
+    "scenario.EffectEditorSchema": {
+      "package": "scenario",
+      "name": "EffectEditorSchema",
+      "doc": "EffectEditorSchema describes the fields shown by the DE scenario editor when an effect is first created.",
+      "fields": [
+        {
+          "name": "Type",
+          "json": "type",
+          "go_type": "int"
+        },
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "VisibleFields",
+          "json": "visible_fields",
+          "go_type": "[]string"
+        },
+        {
+          "name": "RevealedBy",
+          "json": "revealed_by",
+          "go_type": "map[string]string",
+          "optional": true
+        },
+        {
+          "name": "Offered",
+          "json": "offered",
+          "go_type": "bool"
         }
       ]
     },
@@ -42773,6 +43088,18 @@
           "json": "known_fields",
           "go_type": "map[string]any",
           "optional": true
+        },
+        {
+          "name": "EditorFields",
+          "json": "editor_fields",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "EditorFieldsRevealedBy",
+          "json": "editor_fields_revealed_by",
+          "go_type": "map[string]string",
+          "optional": true
         }
       ]
     },
@@ -43028,6 +43355,11 @@
         {
           "name": "IncludeRawFields",
           "go_type": "bool"
+        },
+        {
+          "name": "RuntimeNames",
+          "go_type": "*RuntimeNames",
+          "ref": "scenario.RuntimeNames"
         }
       ]
     },
@@ -45855,6 +46187,18 @@
         }
       ]
     },
+    "scenario.RuntimeNames": {
+      "package": "scenario",
+      "name": "RuntimeNames",
+      "doc": "RuntimeNames provides optional names from the user's installed game.",
+      "fields": [
+        {
+          "name": "Strings",
+          "go_type": "gamestrings.Table",
+          "ref": "gamestrings.Table"
+        }
+      ]
+    },
     "scenario.ScenarioDataSet": {
       "package": "scenario",
       "name": "ScenarioDataSet",
@@ -47545,6 +47889,12 @@
           "json": "max_inflated_bytes",
           "go_type": "int",
           "optional": true
+        },
+        {
+          "name": "RuntimeNames",
+          "json": "-",
+          "go_type": "*RuntimeNames",
+          "ref": "scenario.RuntimeNames"
         }
       ]
     },
@@ -49136,6 +49486,58 @@
           "json": "time_for_timed_game_in_10ths_of_a_year",
           "go_type": "*int",
           "optional": true
+        }
+      ]
+    },
+    "scenario.WatchEvent": {
+      "package": "scenario",
+      "name": "WatchEvent",
+      "fields": [
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string"
+        },
+        {
+          "name": "Snapshot",
+          "json": "snapshot",
+          "go_type": "string"
+        },
+        {
+          "name": "Previous",
+          "json": "previous",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Diff",
+          "json": "diff",
+          "go_type": "*DiffReport",
+          "ref": "scenario.DiffReport",
+          "optional": true
+        }
+      ]
+    },
+    "scenario.WatchOptions": {
+      "package": "scenario",
+      "name": "WatchOptions",
+      "fields": [
+        {
+          "name": "SnapshotDir",
+          "go_type": "string"
+        },
+        {
+          "name": "Interval",
+          "go_type": "time.Duration"
+        },
+        {
+          "name": "Once",
+          "go_type": "bool"
+        },
+        {
+          "name": "Diff",
+          "go_type": "DiffOptions",
+          "ref": "scenario.DiffOptions"
         }
       ]
     },

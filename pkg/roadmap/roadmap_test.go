@@ -3,6 +3,8 @@ package roadmap
 import (
 	"strings"
 	"testing"
+
+	"aoe2kit/pkg/enginefacts"
 )
 
 func TestRWDMatrixFiltersByDomain(t *testing.T) {
@@ -145,6 +147,9 @@ func TestDarkBytesTracksCurrentBacklog(t *testing.T) {
 }
 
 func TestDarkBytesSyncMatrixTracksPromotedWordSemantics(t *testing.T) {
+	if _, err := enginefacts.LoadDefault(); err != nil {
+		t.Skipf("private engine-facts ledger unavailable: %v", err)
+	}
 	report, err := DarkBytes("replay")
 	if err != nil {
 		t.Fatalf("DarkBytes returned error: %v", err)

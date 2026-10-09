@@ -3,6 +3,7 @@ package scenario
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,6 +20,9 @@ type DiffReport struct {
 	Same    bool                 `json:"same"`
 	Changes []DiffChange         `json:"changes"`
 	Fields  []StructureFieldDiff `json:"fields,omitempty"`
+	// RawFields contains opaque and editor-save fields that are deliberately
+	// kept out of the semantic change list, but must never disappear silently.
+	RawFields []StructureFieldDiff `json:"raw_fields,omitempty"`
 }
 
 type DiffChange struct {
@@ -92,6 +96,10 @@ func DiffFiles(beforePath, afterPath string) (DiffReport, error) {
 }
 
 func Diff(before, after *File) DiffReport {
+	return DiffWithOptions(before, after, DiffOptions{})
+}
+
+func DiffWithOptions(before, after *File, opts DiffOptions) DiffReport {
 	report := DiffReport{Before: before.Path, After: after.Path}
 	addChange := func(kind, field string, b, a any, detail string) {
 		report.Changes = append(report.Changes, DiffChange{Kind: kind, Field: field, Before: b, After: a, Detail: detail})
@@ -124,7 +132,7 @@ func Diff(before, after *File) DiffReport {
 		if before.Triggers.GraphSHA256 != after.Triggers.GraphSHA256 {
 			addChange("triggers", "graph_sha256", before.Triggers.GraphSHA256, after.Triggers.GraphSHA256, "")
 		}
-		diffTriggerSummaries(before.Triggers.Triggers, after.Triggers.Triggers, addChange)
+		diffTriggerSummaries(runtimeTriggerSummaries(before.Triggers.Triggers, opts.RuntimeNames), runtimeTriggerSummaries(after.Triggers.Triggers, opts.RuntimeNames), addChange)
 	}
 	if before.Units != nil && after.Units != nil {
 		if before.Units.NumberOfUnitSections != after.Units.NumberOfUnitSections {
@@ -157,8 +165,31 @@ func Diff(before, after *File) DiffReport {
 	diffDiplomacyMirrors(beforeSettings.DiplomacyMirrors, afterSettings.DiplomacyMirrors, addChange)
 	decorateDiplomacyMirrorChanges(&report)
 	diffAI(before.AI, after.AI, addChange)
+	report.RawFields = diffRawFields(before, after)
+	if len(report.Changes) == 0 && len(report.RawFields) > 0 {
+		report.Same = false
+		addChange("raw", "opaque_fields", len(report.RawFields), len(report.RawFields), "semantic parser found no named changes")
+	}
 	report.Same = len(report.Changes) == 0
 	return report
+}
+
+func runtimeTriggerSummaries(rows []TriggerSummary, names *RuntimeNames) []TriggerSummary {
+	if names == nil {
+		return rows
+	}
+	out := append([]TriggerSummary(nil), rows...)
+	for i := range out {
+		out[i].EffectData = append([]EffectSummary(nil), out[i].EffectData...)
+		for j := range out[i].EffectData {
+			out[i].EffectData[j].TypeName = names.effect(out[i].EffectData[j].Type)
+		}
+		out[i].ConditionData = append([]ConditionSummary(nil), out[i].ConditionData...)
+		for j := range out[i].ConditionData {
+			out[i].ConditionData[j].TypeName = names.condition(out[i].ConditionData[j].Type)
+		}
+	}
+	return out
 }
 
 func secondaryGameModesEqual(before, after SecondaryGameModesInfo) bool {
@@ -1260,6 +1291,8 @@ func diffTriggerSummaries(before, after []TriggerSummary, add func(kind, field s
 		if before[i].Conditions != after[i].Conditions {
 			add("triggers", prefix+".conditions", before[i].Conditions, after[i].Conditions, before[i].Name)
 		}
+		diffTriggerKnownFields(prefix, before[i].ConditionData, after[i].ConditionData, "condition", add)
+		diffTriggerKnownFields(prefix, before[i].EffectData, after[i].EffectData, "effect", add)
 	}
 	for i := limit; i < len(before); i++ {
 		add("triggers", fmt.Sprintf("trigger_%d", i), before[i].Name, nil, "removed")
@@ -1267,6 +1300,134 @@ func diffTriggerSummaries(before, after []TriggerSummary, add func(kind, field s
 	for i := limit; i < len(after); i++ {
 		add("triggers", fmt.Sprintf("trigger_%d", i), nil, after[i].Name, "added")
 	}
+}
+
+func diffTriggerKnownFields(prefix string, before, after any, kind string, add func(kind, field string, b, a any, detail string)) {
+	var beforeFields, afterFields []map[string]any
+	switch rows := before.(type) {
+	case []ConditionSummary:
+		for _, row := range rows {
+			beforeFields = append(beforeFields, row.KnownFields)
+		}
+	case []EffectSummary:
+		for _, row := range rows {
+			beforeFields = append(beforeFields, row.KnownFields)
+		}
+	}
+	switch rows := after.(type) {
+	case []ConditionSummary:
+		for _, row := range rows {
+			afterFields = append(afterFields, row.KnownFields)
+		}
+	case []EffectSummary:
+		for _, row := range rows {
+			afterFields = append(afterFields, row.KnownFields)
+		}
+	}
+	limit := len(beforeFields)
+	if len(afterFields) < limit {
+		limit = len(afterFields)
+	}
+	for i := 0; i < limit; i++ {
+		keys := make(map[string]bool)
+		for key := range beforeFields[i] {
+			keys[key] = true
+		}
+		for key := range afterFields[i] {
+			keys[key] = true
+		}
+		for key := range keys {
+			beforeValue, beforeOK := beforeFields[i][key]
+			afterValue, afterOK := afterFields[i][key]
+			if beforeOK && afterOK && reflect.DeepEqual(beforeValue, afterValue) {
+				continue
+			}
+			field := fmt.Sprintf("%s.%s_data[%d].%s", prefix, kind, i, key)
+			add("triggers", field, valueOrMissing(beforeValue, beforeOK), valueOrMissing(afterValue, afterOK), "decoded")
+		}
+	}
+}
+
+func valueOrMissing(value any, ok bool) any {
+	if !ok {
+		return nil
+	}
+	return value
+}
+
+func diffRawFields(before, after *File) []StructureFieldDiff {
+	all := diffStructureFieldsIncludingSuppressed(before, after)
+	out := make([]StructureFieldDiff, 0)
+	for _, field := range all {
+		if !isRawDiffField(field.Path) {
+			continue
+		}
+		out = append(out, field)
+	}
+	filtered := make([]StructureFieldDiff, 0, len(out))
+	for i, field := range out {
+		coveredByChild := false
+		for j, other := range out {
+			if i == j {
+				continue
+			}
+			if strings.HasPrefix(other.Path, field.Path+".") || strings.HasPrefix(other.Path, field.Path+"[") {
+				coveredByChild = true
+				break
+			}
+		}
+		if !coveredByChild {
+			filtered = append(filtered, field)
+		}
+	}
+	return filtered
+}
+
+func diffStructureFieldsIncludingSuppressed(before, after *File) []StructureFieldDiff {
+	b := collectFileFields(before)
+	a := collectFileFields(after)
+	paths := make([]string, 0, len(b)+len(a))
+	seen := make(map[string]bool, len(b)+len(a))
+	for path := range b {
+		seen[path] = true
+		paths = append(paths, path)
+	}
+	for path := range a {
+		if !seen[path] {
+			paths = append(paths, path)
+		}
+	}
+	sort.Strings(paths)
+	changes := make([]StructureFieldDiff, 0)
+	for _, path := range paths {
+		beforeField, beforeOK := b[path]
+		afterField, afterOK := a[path]
+		if beforeOK && afterOK && string(beforeField.Raw) == string(afterField.Raw) {
+			continue
+		}
+		change := StructureFieldDiff{Path: path, BeforeExists: beforeOK, AfterExists: afterOK}
+		if beforeOK {
+			change.BeforeHex = fmt.Sprintf("%x", beforeField.Raw)
+			change.BeforeValue = beforeField.Value
+			change.BeforeStart = beforeField.Start
+			change.BeforeBytes = len(beforeField.Raw)
+		}
+		if afterOK {
+			change.AfterHex = fmt.Sprintf("%x", afterField.Raw)
+			change.AfterValue = afterField.Value
+			change.AfterStart = afterField.Start
+			change.AfterBytes = len(afterField.Raw)
+		}
+		changes = append(changes, change)
+	}
+	return changes
+}
+
+func isRawDiffField(path string) bool {
+	lower := strings.ToLower(path)
+	return strings.Contains(lower, "unknown") ||
+		path == "Units.player_data_3" ||
+		suppressedSaveField(path)
 }
 
 func diffPlayers(before, after []PlayerSettings, add func(kind, field string, b, a any, detail string)) {

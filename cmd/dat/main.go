@@ -828,6 +828,8 @@ type unitListSummary struct {
 	Index        int    `json:"index"`
 	Type         int    `json:"type"`
 	ID           int16  `json:"id"`
+	StringID     int32  `json:"string_id"`
+	StringID2    int32  `json:"string_id_2"`
 	Name         string `json:"name"`
 	HitPoints    int16  `json:"hit_points"`
 	IconID       int16  `json:"icon_id"`
@@ -924,6 +926,8 @@ func compactUnits(units []datfile.UnitSummary) []unitListSummary {
 			Index:        unit.Index,
 			Type:         unit.Type,
 			ID:           unit.ID,
+			StringID:     unit.StringID,
+			StringID2:    unit.StringID2,
 			Name:         unit.Name,
 			HitPoints:    unit.HitPoints,
 			IconID:       unit.IconID,

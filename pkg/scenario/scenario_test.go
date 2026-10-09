@@ -145,6 +145,7 @@ func TestBlankScenarioSeedIntegrity(t *testing.T) {
 
 func TestWriteBlankScenarioFileMatchesEditorBlankPlayerInit(t *testing.T) {
 	editorPath := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, editorPath)
 	editor, err := Open(editorPath)
 	if err != nil {
 		t.Fatalf("Open editor blank fixture: %v", err)
@@ -170,6 +171,7 @@ func TestWriteBlankScenarioFileMatchesEditorBlankPlayerInit(t *testing.T) {
 
 func TestWriteBlankScenarioFileInflatedBodyMatchesEditorBlank(t *testing.T) {
 	editorPath := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, editorPath)
 	editor, err := Open(editorPath)
 	if err != nil {
 		t.Fatalf("Open editor blank fixture: %v", err)
@@ -194,6 +196,7 @@ func TestWriteBlankScenarioFileInflatedBodyMatchesEditorBlank(t *testing.T) {
 
 func TestEditorReferenceFixturesParseAndRebuild(t *testing.T) {
 	dir := filepath.Join("..", "..", "testdata", "editor-refs")
+	requireFixtureDir(t, dir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatalf("ReadDir editor refs: %v", err)
@@ -223,6 +226,7 @@ func TestEditorReferenceFixturesParseAndRebuild(t *testing.T) {
 
 func TestEditorReferenceObjectRotations(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "editor-refs", "I added the same object, 2 rotations.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatalf("Open object fixture: %v", err)
@@ -243,6 +247,7 @@ func TestEditorReferenceObjectRotations(t *testing.T) {
 
 func TestDiffSurfacesUnitsNumberOfPlayers(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, path)
 	before, err := Open(path)
 	if err != nil {
 		t.Fatalf("Open before: %v", err)
@@ -2917,6 +2922,7 @@ func TestEditTriggerReplaceChildrenRejectsMixedModes(t *testing.T) {
 }
 
 func TestLintTriggerRuntimeHazardsFlagsLoopingDisplay(t *testing.T) {
+	requireEngineFacts(t)
 	spec, err := LoadCurrentDESpec()
 	if err != nil {
 		t.Fatalf("LoadCurrentDESpec: %v", err)
@@ -2992,6 +2998,7 @@ func TestLintTriggerModifyAttributeRejectsZeroOperation(t *testing.T) {
 }
 
 func TestLintTriggerTextMarkupCitesEngineFacts(t *testing.T) {
+	requireEngineFacts(t)
 	spec, err := LoadCurrentDESpec()
 	if err != nil {
 		t.Fatalf("LoadCurrentDESpec: %v", err)
@@ -3223,6 +3230,7 @@ func TestDeployCheckCatchesXSNameFailures(t *testing.T) {
 }
 
 func TestDeployCheckCatchesCrossFileNonExtern(t *testing.T) {
+	requireEngineFacts(t)
 	dir := t.TempDir()
 	xsDir := filepath.Join(dir, "resources", "_common", "xs")
 	if err := os.MkdirAll(xsDir, 0o755); err != nil {
@@ -6948,6 +6956,7 @@ func TestScenarioSettingsReport(t *testing.T) {
 
 func TestScenarioSettingsExposeStartingAgeAndColor(t *testing.T) {
 	input := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, input)
 	file, err := Open(input)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
@@ -7380,6 +7389,7 @@ func TestScenarioSettingsMessagesCinematicsFixtures(t *testing.T) {
 
 func TestScenarioDiffPerUnitReferenceChanges(t *testing.T) {
 	input := filepath.Join("..", "..", "testdata", "editor-refs", "Regenerate with Grass 1 as terrain seed.aoe2scenario")
+	requireFixture(t, input)
 	file, err := Open(input)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
@@ -7445,6 +7455,7 @@ func TestScenarioDiffPerUnitReferenceChanges(t *testing.T) {
 
 func TestInflatedBodyFile(t *testing.T) {
 	input := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, input)
 	file, err := Open(input)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
@@ -7574,6 +7585,7 @@ func suppressedKind(runs []SuppressedRun, kind string) bool {
 
 func TestDiffSurfacesPlayerSettingsFields(t *testing.T) {
 	input := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, input)
 	before, err := Open(input)
 	if err != nil {
 		t.Fatalf("Open before: %v", err)

@@ -113,6 +113,33 @@ func TestCurrentDEDatParsesThroughTechTreeGolden(t *testing.T) {
 	}
 }
 
+func TestCurrentDEDatUnit1007KeepsStringIDsAndRecordAlignment(t *testing.T) {
+	path := testfixtures.Path(t, "reference_aoe2_dump/dat/empires2_x2_p1.dat")
+	idx, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(idx.Civs) == 0 || len(idx.Civs[0].Units) <= 1007 {
+		t.Fatalf("civ 0 has no unit 1007: civs=%d", len(idx.Civs))
+	}
+	unit := idx.Civs[0].Units[1007]
+	if !unit.Present {
+		t.Fatal("civ 0 unit 1007 is not present")
+	}
+	if unit.Name != "CAMAR" {
+		t.Fatalf("unit 1007 name = %q, want CAMAR", unit.Name)
+	}
+	if unit.StringID != 5134 || unit.StringID2 != 6134 {
+		t.Fatalf("unit 1007 string IDs = %d/%d, want 5134/6134", unit.StringID, unit.StringID2)
+	}
+	if unit.Class != 36 || unit.HitPoints != 55 {
+		t.Fatalf("unit 1007 class/hit points = %d/%d, want 36/55", unit.Class, unit.HitPoints)
+	}
+	if unit.FieldSpans.StringID.Len() != 4 || unit.FieldSpans.StringID2.Len() != 4 {
+		t.Fatalf("unit 1007 string ID spans = %+v, want 4-byte fields", unit.FieldSpans)
+	}
+}
+
 func TestDecodeUnitFileUsesCurrentDELayout(t *testing.T) {
 	path := testfixtures.Path(t, "reference_aoe2_dump/dat/empires2_x2_p1.dat")
 	if _, err := os.Stat(path); err != nil {
@@ -125,10 +152,13 @@ func TestDecodeUnitFileUsesCurrentDELayout(t *testing.T) {
 	if unit.Name != "OLD-ACADEMY" {
 		t.Fatalf("unit name = %q, want OLD-ACADEMY", unit.Name)
 	}
-	for _, key := range []string{"type", "id", "name", "attributes", "costs", "train_locations"} {
+	for _, key := range []string{"type", "id", "string_id", "string_id_2", "name", "attributes", "costs", "train_locations"} {
 		if _, ok := fields[key]; !ok {
 			t.Fatalf("decoded fields missing %q", key)
 		}
+	}
+	if unit.FieldSpans.StringID.Len() != 4 || unit.FieldSpans.StringID2.Len() != 4 {
+		t.Fatalf("unit name string IDs have bad spans: %+v", unit.FieldSpans)
 	}
 	if unit.FullFields == nil {
 		t.Fatal("single-unit decode did not attach full_fields")

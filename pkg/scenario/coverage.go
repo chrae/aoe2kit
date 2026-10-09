@@ -46,6 +46,7 @@ type ByteCoverage struct {
 // offsets; offsets are the identity.
 type DarkSpan struct {
 	Path         string `json:"path"`
+	Label        string `json:"label,omitempty"`
 	Start        int    `json:"start"`
 	End          int    `json:"end"`
 	Bytes        int    `json:"bytes"`
@@ -121,6 +122,7 @@ func annotateDarkSpans(sections []ByteCoverage, header, body []byte) {
 	for i := range sections {
 		for j := range sections[i].DarkSpans {
 			span := &sections[i].DarkSpans[j]
+			span.Label = darkSpanLabel(span.Path)
 			data := body
 			if sections[i].Space == "file" {
 				data = header
@@ -139,6 +141,22 @@ func annotateDarkSpans(sections []ByteCoverage, header, body []byte) {
 			}
 		}
 	}
+}
+
+func darkSpanLabel(path string) string {
+	if strings.Contains(path, ".unknown_structure_3[") {
+		return "custom_victory_condition_record_bytes"
+	}
+	if strings.HasPrefix(path, "PlayerDataTwo.ai_files[") && strings.HasSuffix(path, "].unknown") {
+		return "opaque_ai_file_prefix"
+	}
+	if path == "Triggers.unknown_bytes" {
+		return "reserved_trigger_block"
+	}
+	if path == "Triggers.unknown_bytes2" {
+		return "reserved_trigger_tail"
+	}
+	return ""
 }
 
 func coverageForNode(space, name string, node *parsedNode, bytes int) ByteCoverage {

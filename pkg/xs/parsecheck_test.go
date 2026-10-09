@@ -3,6 +3,7 @@ package xs
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -18,6 +19,9 @@ func writeChecker(t *testing.T, output string) string {
 }
 
 func TestCheckFileTreatsDiagnosticOutputAsFailure(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake checker is not portable to Windows")
+	}
 	checker := writeChecker(t, "Error: invalid expression")
 	path := filepath.Join(t.TempDir(), "runtime.xs")
 	if err := os.WriteFile(path, []byte("void main() {}\n"), 0o644); err != nil {
@@ -30,6 +34,9 @@ func TestCheckFileTreatsDiagnosticOutputAsFailure(t *testing.T) {
 }
 
 func TestCheckFilePassesCleanOutput(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shell-script fake checker is not portable to Windows")
+	}
 	checker := writeChecker(t, "Finished analysing file")
 	path := filepath.Join(t.TempDir(), "runtime.xs")
 	if err := os.WriteFile(path, []byte("void main() {}\n"), 0o644); err != nil {

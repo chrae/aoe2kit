@@ -65,17 +65,20 @@ type TriggerConditionDump struct {
 }
 
 type ConditionSummary struct {
-	TriggerIndex   int            `json:"trigger_index,omitempty"`
-	TriggerName    string         `json:"trigger_name,omitempty"`
-	ConditionIndex int            `json:"condition_index,omitempty"`
-	Type           int            `json:"type"`
-	TypeName       string         `json:"type_name"`
-	KnownFields    map[string]any `json:"known_fields,omitempty"`
+	TriggerIndex           int               `json:"trigger_index,omitempty"`
+	TriggerName            string            `json:"trigger_name,omitempty"`
+	ConditionIndex         int               `json:"condition_index,omitempty"`
+	Type                   int               `json:"type"`
+	TypeName               string            `json:"type_name"`
+	EditorFields           []string          `json:"editor_fields,omitempty"`
+	EditorFieldsRevealedBy map[string]string `json:"editor_fields_revealed_by,omitempty"`
+	KnownFields            map[string]any    `json:"known_fields,omitempty"`
 }
 
 type TriggerConditionsOptions struct {
-	Limit            int `json:"limit,omitempty"`
-	MaxInflatedBytes int `json:"max_inflated_bytes,omitempty"`
+	Limit            int           `json:"limit,omitempty"`
+	MaxInflatedBytes int           `json:"max_inflated_bytes,omitempty"`
+	RuntimeNames     *RuntimeNames `json:"-"`
 }
 
 type TriggerConditionsReport struct {
@@ -104,7 +107,7 @@ func TriggerConditionsFile(path string, opts TriggerConditionsOptions) (TriggerC
 	if err != nil {
 		return TriggerConditionsReport{}, err
 	}
-	triggers, err := file.DumpTriggersWithConditions()
+	triggers, err := file.DumpTriggersWithConditionsWithOptions(opts)
 	if err != nil {
 		return TriggerConditionsReport{}, err
 	}
@@ -128,6 +131,10 @@ func TriggerConditionsFile(path string, opts TriggerConditionsOptions) (TriggerC
 // DumpTriggersWithConditions walks trigger_data and decodes every condition's
 // known fields alongside the existing effect summaries.
 func (f *File) DumpTriggersWithConditions() ([]TriggerConditionDump, error) {
+	return f.DumpTriggersWithConditionsWithOptions(TriggerConditionsOptions{})
+}
+
+func (f *File) DumpTriggersWithConditionsWithOptions(opts TriggerConditionsOptions) ([]TriggerConditionDump, error) {
 	if f.root == nil {
 		return nil, errors.New("scenario body not parsed")
 	}
@@ -143,10 +150,10 @@ func (f *File) DumpTriggersWithConditions() ([]TriggerConditionDump, error) {
 		looping, _ := trigger.int8Value("looping")
 		dump := TriggerConditionDump{Index: i, Name: name, Enabled: enabled, Looping: looping}
 		for _, cond := range trigger.list("condition_data") {
-			dump.Conditions = append(dump.Conditions, summarizeCondition(cond))
+			dump.Conditions = append(dump.Conditions, summarizeConditionWithNames(cond, opts.RuntimeNames))
 		}
 		for j, effect := range trigger.list("effect_data") {
-			summary := summarizeEffect(effect, EffectsOptions{})
+			summary := summarizeEffect(effect, EffectsOptions{RuntimeNames: opts.RuntimeNames})
 			if op, ok := effect.intValue("operation"); ok && op != -1 {
 				if summary.KnownFields == nil {
 					summary.KnownFields = map[string]any{}
@@ -164,10 +171,20 @@ func (f *File) DumpTriggersWithConditions() ([]TriggerConditionDump, error) {
 }
 
 func summarizeCondition(cond *parsedNode) map[string]any {
+	return summarizeConditionWithNames(cond, nil)
+}
+
+func summarizeConditionWithNames(cond *parsedNode, names *RuntimeNames) map[string]any {
 	condType, _ := cond.intValue("condition_type")
 	entry := map[string]any{
 		"type":      condType,
-		"type_name": ConditionTypeName(condType),
+		"type_name": names.condition(condType),
+	}
+	if schema, ok := ConditionEditorSchemaForType(condType); ok {
+		entry["editor_fields"] = schema.VisibleFields
+		if len(schema.RevealedBy) > 0 {
+			entry["editor_fields_revealed_by"] = schema.RevealedBy
+		}
 	}
 	for _, field := range conditionFieldNames {
 		if v, ok := cond.intValue(field); ok && v != -1 {
@@ -185,6 +202,10 @@ func summarizeConditionData(cond *parsedNode) ConditionSummary {
 	summary := ConditionSummary{
 		Type:     condType,
 		TypeName: ConditionTypeName(condType),
+	}
+	if schema, ok := ConditionEditorSchemaForType(condType); ok {
+		summary.EditorFields = schema.VisibleFields
+		summary.EditorFieldsRevealedBy = schema.RevealedBy
 	}
 	for _, field := range conditionFieldNames {
 		if v, ok := cond.intValue(field); ok && v != -1 {

@@ -16,7 +16,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 type Cache struct {
 	db       *sql.DB
@@ -32,6 +32,8 @@ type UnitRow struct {
 	Index              int
 	Type               int
 	ID                 int16
+	StringID           int32
+	StringID2          int32
 	Name               string
 	Class              int16
 	ClassName          string
@@ -155,7 +157,7 @@ func (c *Cache) QueryUnits(query UnitQuery) ([]UnitRow, int, error) {
 	if err := c.db.QueryRow(countSQL, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
-	sqlText := `SELECT civ_index, unit_index, type, id, name, class, class_name, hit_points, line_of_sight,
+	sqlText := `SELECT civ_index, unit_index, type, id, string_id, string_id_2, name, class, class_name, hit_points, line_of_sight,
 collision_size_x, collision_size_y, collision_size_z, clearance_size_x, clearance_size_y, terrain_table_id,
 movement_type, obstruction_type_id, obstruction_class_id, icon_id, enabled, has_type50, has_creatable,
 record_start, record_end FROM units` + where + ` ORDER BY civ_index, unit_index`
@@ -176,7 +178,7 @@ record_start, record_end FROM units` + where + ` ORDER BY civ_index, unit_index`
 	for rows.Next() {
 		var row UnitRow
 		var hasType50, hasCreatable int
-		if err := rows.Scan(&row.CivIndex, &row.Index, &row.Type, &row.ID, &row.Name, &row.Class, &row.ClassName,
+		if err := rows.Scan(&row.CivIndex, &row.Index, &row.Type, &row.ID, &row.StringID, &row.StringID2, &row.Name, &row.Class, &row.ClassName,
 			&row.HitPoints, &row.LineOfSight, &row.CollisionSizeX, &row.CollisionSizeY, &row.CollisionSizeZ,
 			&row.ClearanceSizeX, &row.ClearanceSizeY, &row.TerrainTableID, &row.MovementType, &row.ObstructionTypeID,
 			&row.ObstructionClassID, &row.IconID, &row.Enabled, &hasType50, &hasCreatable, &row.RecordStart, &row.RecordEnd); err != nil {
@@ -313,6 +315,8 @@ CREATE TABLE units(
   unit_index INTEGER NOT NULL,
   type INTEGER NOT NULL,
   id INTEGER NOT NULL,
+  string_id INTEGER NOT NULL,
+  string_id_2 INTEGER NOT NULL,
   name TEXT NOT NULL,
   class INTEGER NOT NULL,
   class_name TEXT NOT NULL,
@@ -372,10 +376,10 @@ func insertMeta(tx *sql.Tx, hash string, idx *datfile.Index) error {
 }
 
 func insertUnits(tx *sql.Tx, idx *datfile.Index, payload []byte) error {
-	stmt, err := tx.Prepare(`INSERT INTO units(civ_index, unit_index, type, id, name, class, class_name, hit_points, line_of_sight,
+	stmt, err := tx.Prepare(`INSERT INTO units(civ_index, unit_index, type, id, string_id, string_id_2, name, class, class_name, hit_points, line_of_sight,
 collision_size_x, collision_size_y, collision_size_z, clearance_size_x, clearance_size_y, terrain_table_id,
 movement_type, obstruction_type_id, obstruction_class_id, icon_id, enabled, has_type50, has_creatable,
-record_start, record_end, unit_record) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+record_start, record_end, unit_record) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -389,7 +393,7 @@ record_start, record_end, unit_record) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
 				return fmt.Errorf("unit civ=%d id=%d has invalid record span %d..%d", unit.CivIndex, unit.Index, unit.RecordStart, unit.RecordEnd)
 			}
 			record := payload[unit.RecordStart:unit.RecordEnd]
-			if _, err := stmt.Exec(unit.CivIndex, unit.Index, unit.Type, unit.ID, unit.Name, unit.Class, unit.ClassName,
+			if _, err := stmt.Exec(unit.CivIndex, unit.Index, unit.Type, unit.ID, unit.StringID, unit.StringID2, unit.Name, unit.Class, unit.ClassName,
 				unit.HitPoints, unit.LineOfSight, unit.CollisionSizeX, unit.CollisionSizeY, unit.CollisionSizeZ,
 				unit.ClearanceSizeX, unit.ClearanceSizeY, unit.TerrainTableID, unit.MovementType, unit.ObstructionTypeID,
 				unit.ObstructionClassID, unit.IconID, unit.Enabled, boolInt(unit.Type50 != nil), boolInt(unit.Creatable != nil),

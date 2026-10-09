@@ -29,7 +29,8 @@ type StructureFieldDiff struct {
 }
 
 type DiffOptions struct {
-	AllFields bool
+	AllFields    bool
+	RuntimeNames *RuntimeNames `json:"-"`
 }
 
 type fieldSnapshot struct {
@@ -155,7 +156,7 @@ func DiffFilesWithOptions(beforePath, afterPath string, opts DiffOptions) (DiffR
 	if err != nil {
 		return DiffReport{}, fmt.Errorf("open after: %w", err)
 	}
-	report := Diff(before, after)
+	report := DiffWithOptions(before, after, opts)
 	if opts.AllFields {
 		report.Fields = diffStructureFields(before, after)
 	}

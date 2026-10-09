@@ -10,37 +10,39 @@ import (
 )
 
 type EffectSummary struct {
-	TriggerIndex      int            `json:"trigger_index,omitempty"`
-	TriggerName       string         `json:"trigger_name,omitempty"`
-	EffectIndex       int            `json:"effect_index,omitempty"`
-	Type              int            `json:"type"`
-	TypeName          string         `json:"type_name"`
-	UnitConst         int            `json:"unit_const,omitempty"`
-	SourcePlayer      int            `json:"source_player,omitempty"`
-	TargetPlayer      int            `json:"target_player,omitempty"`
-	Location          []int          `json:"location,omitempty"`
-	Area              []int          `json:"area,omitempty"`
-	TargetTrigger     int            `json:"target_trigger,omitempty"`
-	StringID          int            `json:"string_id,omitempty"`
-	Text              string         `json:"text,omitempty"`
-	DisplayTime       int            `json:"display_time,omitempty"`
-	TimeUnit          int            `json:"time_unit,omitempty"`
-	TimerID           int            `json:"timer_id,omitempty"`
-	ResetTimer        int            `json:"reset_timer,omitempty"`
-	Sound             string         `json:"sound,omitempty"`
-	Variable          int            `json:"variable,omitempty"`
-	Variable2         int            `json:"variable2,omitempty"`
-	Operation         int            `json:"operation,omitempty"`
-	Quantity          int            `json:"quantity,omitempty"`
-	QuantityFloat     float64        `json:"quantity_float,omitempty"`
-	Technology        int            `json:"technology,omitempty"`
-	Diplomacy         int            `json:"diplomacy,omitempty"`
-	Resource          int            `json:"resource,omitempty"`
-	ResourceQuantity  int            `json:"resource_quantity,omitempty"`
-	ObjectAttribute   int            `json:"object_attribute,omitempty"`
-	SelectedObjectIDs []int          `json:"selected_object_ids,omitempty"`
-	RawFields         []int          `json:"raw_fields,omitempty"`
-	KnownFields       map[string]any `json:"known_fields,omitempty"`
+	TriggerIndex           int               `json:"trigger_index,omitempty"`
+	TriggerName            string            `json:"trigger_name,omitempty"`
+	EffectIndex            int               `json:"effect_index,omitempty"`
+	Type                   int               `json:"type"`
+	TypeName               string            `json:"type_name"`
+	UnitConst              int               `json:"unit_const,omitempty"`
+	SourcePlayer           int               `json:"source_player,omitempty"`
+	TargetPlayer           int               `json:"target_player,omitempty"`
+	Location               []int             `json:"location,omitempty"`
+	Area                   []int             `json:"area,omitempty"`
+	TargetTrigger          int               `json:"target_trigger,omitempty"`
+	StringID               int               `json:"string_id,omitempty"`
+	Text                   string            `json:"text,omitempty"`
+	DisplayTime            int               `json:"display_time,omitempty"`
+	TimeUnit               int               `json:"time_unit,omitempty"`
+	TimerID                int               `json:"timer_id,omitempty"`
+	ResetTimer             int               `json:"reset_timer,omitempty"`
+	Sound                  string            `json:"sound,omitempty"`
+	Variable               int               `json:"variable,omitempty"`
+	Variable2              int               `json:"variable2,omitempty"`
+	Operation              int               `json:"operation,omitempty"`
+	Quantity               int               `json:"quantity,omitempty"`
+	QuantityFloat          float64           `json:"quantity_float,omitempty"`
+	Technology             int               `json:"technology,omitempty"`
+	Diplomacy              int               `json:"diplomacy,omitempty"`
+	Resource               int               `json:"resource,omitempty"`
+	ResourceQuantity       int               `json:"resource_quantity,omitempty"`
+	ObjectAttribute        int               `json:"object_attribute,omitempty"`
+	SelectedObjectIDs      []int             `json:"selected_object_ids,omitempty"`
+	RawFields              []int             `json:"raw_fields,omitempty"`
+	KnownFields            map[string]any    `json:"known_fields,omitempty"`
+	EditorFields           []string          `json:"editor_fields,omitempty"`
+	EditorFieldsRevealedBy map[string]string `json:"editor_fields_revealed_by,omitempty"`
 }
 
 type EffectsReport struct {
@@ -60,6 +62,7 @@ type EffectTypeBucket struct {
 
 type EffectsOptions struct {
 	IncludeRawFields bool
+	RuntimeNames     *RuntimeNames
 }
 
 type EffectsCensusOptions struct {
@@ -421,8 +424,12 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 	effectType, _ := effect.intValue("effect_type")
 	summary := EffectSummary{
 		Type:        effectType,
-		TypeName:    EffectTypeName(effectType),
+		TypeName:    opts.RuntimeNames.effect(effectType),
 		KnownFields: map[string]any{},
+	}
+	if schema, ok := EffectEditorSchemaForType(effectType); ok {
+		summary.EditorFields = schema.VisibleFields
+		summary.EditorFieldsRevealedBy = schema.RevealedBy
 	}
 	if opts.IncludeRawFields {
 		summary.RawFields = rawEffectFields(effect)
@@ -509,6 +516,9 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 		summary.ObjectAttribute = putInt("object_attribute", "object_attributes")
 		summary.Operation = putInt("operation", "operation")
 		summary.Quantity = putInt("quantity", "quantity")
+		putInt("max_units_affected", "max_units_affected")
+		putInt("object_group", "object_group")
+		putInt("object_type", "object_type")
 		summary.Area = area()
 		if len(summary.Area) > 0 {
 			summary.KnownFields["area"] = summary.Area
@@ -572,6 +582,8 @@ func summarizeEffect(effect *parsedNode, opts EffectsOptions) EffectSummary {
 		summary.ObjectAttribute = putInt("object_attribute", "object_attributes")
 		summary.Operation = putInt("operation", "operation")
 		summary.Quantity = putInt("quantity", "quantity")
+	case 50, 69:
+		putInt("ai_signal_value", "ai_signal_value")
 	case 52:
 		summary.SourcePlayer = putInt("source_player", "source_player")
 		summary.Resource = putInt("resource", "tribute_list")

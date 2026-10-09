@@ -63,6 +63,7 @@ func TestFieldLevelAuthoringRejectsMissingRequiredValues(t *testing.T) {
 
 func TestReplaceObjectMatchesEditorFixtureWhenConfigured(t *testing.T) {
 	path := filepath.Join("testdata", "replace_object_selected.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -85,6 +86,7 @@ func TestReplaceObjectMatchesEditorFixtureWhenConfigured(t *testing.T) {
 
 func TestReplaceObjectMatchesEditorAreaFixtureWhenConfigured(t *testing.T) {
 	path := filepath.Join("testdata", "replace_object_area.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)

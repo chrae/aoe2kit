@@ -36,6 +36,8 @@ type CoverageCorpusSpan struct {
 	Bytes             int      `json:"bytes"`
 	Occurrences       int      `json:"occurrences"`
 	Files             int      `json:"files"`
+	DistinctValues    int      `json:"distinct_values"`
+	Variance          string   `json:"variance"`
 	SHA256            []string `json:"sha256"`
 	NonZeroBytes      []int    `json:"nonzero_bytes"`
 	MinTriggerCount   int      `json:"min_trigger_count"`
@@ -129,6 +131,8 @@ func CoverageCorpusWithOptions(opts CoverageCorpusOptions, roots ...string) (Cov
 	}
 	for _, item := range acc {
 		item.Files = len(item.files)
+		item.DistinctValues = len(item.sha256)
+		item.Variance = coverageVariance(item.DistinctValues)
 		for value := range item.sha256 {
 			item.SHA256 = append(item.SHA256, value)
 		}
@@ -157,7 +161,31 @@ func CoverageCorpusWithOptions(opts CoverageCorpusOptions, roots ...string) (Cov
 	return report, nil
 }
 
+func coverageVariance(distinctValues int) string {
+	if distinctValues <= 1 {
+		return "constant"
+	}
+	return "variable"
+}
+
 func canonicalCoveragePath(path string) string {
+	// The modern trigger section contains one fixed-size reserved block. Keep
+	// it dark, but give corpus reports the evidence-backed structural name.
+	if path == "Triggers.unknown_bytes" {
+		return "Triggers.reserved_trigger_block"
+	}
+	if path == "Triggers.unknown_bytes2" {
+		return "Triggers.reserved_trigger_tail"
+	}
+	// These names describe structural records established by the calibration
+	// corpus. Their contents remain opaque; do not turn the labels into field
+	// claims.
+	if strings.Contains(path, ".unknown_structure_3[") {
+		path = strings.Replace(path, ".unknown_structure_3[", ".custom_victory_condition_record_bytes[", 1)
+	}
+	if strings.HasPrefix(path, "PlayerDataTwo.ai_files[") && strings.HasSuffix(path, "].unknown") {
+		path = strings.TrimSuffix(path, "].unknown") + "].opaque_ai_file_prefix"
+	}
 	var out strings.Builder
 	for i := 0; i < len(path); {
 		if path[i] != '[' {

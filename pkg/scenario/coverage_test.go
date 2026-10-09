@@ -7,6 +7,7 @@ import (
 
 func TestCoverageFileAccountsFixtureAndReportsDarkBytes(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "editor-refs", "Create scenario, do nothing, click save.aoe2scenario")
+	requireFixture(t, path)
 	report, err := CoverageFile(path)
 	if err != nil {
 		t.Fatalf("CoverageFile: %v", err)
@@ -29,6 +30,13 @@ func TestCoverageFileAccountsFixtureAndReportsDarkBytes(t *testing.T) {
 	}
 	if darkSpans == 0 {
 		t.Fatal("dark spans = 0, want field-level attribution")
+	}
+	for _, section := range report.Sections {
+		for _, span := range section.DarkSpans {
+			if span.Path == "Triggers.unknown_bytes" && span.Label != "reserved_trigger_block" {
+				t.Fatalf("reserved trigger span label = %q", span.Label)
+			}
+		}
 	}
 }
 

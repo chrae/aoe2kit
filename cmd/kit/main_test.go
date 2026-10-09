@@ -22,6 +22,28 @@ func TestParseDatGraphicsOptions(t *testing.T) {
 	}
 }
 
+func TestHumanScenarioDiffChangeUsesEditorLabels(t *testing.T) {
+	field, before, after := humanScenarioDiffChange(scenario.DiffChange{
+		Field:  "player.P4.diplomacy",
+		Before: []int{0, 3},
+		After:  []int{0, 0},
+	})
+	if field != "Player 4 diplomacy toward Player 2" || before != "Enemy (3)" || after != "Ally (0)" {
+		t.Fatalf("diplomacy diff = %q: %q -> %q", field, before, after)
+	}
+	field, before, after = humanScenarioDiffChange(scenario.DiffChange{
+		Field:  "triggers.effect.source_player",
+		Before: 0,
+		After:  3,
+	})
+	if field != "triggers.effect.source player" || before != "Gaia (0)" || after != "Player 3 (3)" {
+		t.Fatalf("player diff = %q: %q -> %q", field, before, after)
+	}
+	if got := humanScenarioDiffValue("triggers.effect.object_type", 1); got != "Other (1)" {
+		t.Fatalf("object type label = %q", got)
+	}
+}
+
 func TestScenarioXSCarrierCLIWorkflow(t *testing.T) {
 	input := testfixtures.Path(t, "save-analysis/diagnostics/Replay_Transparency_Diagnostic_v2b_flagged.aoe2scenario")
 	if _, err := os.Stat(input); err != nil {

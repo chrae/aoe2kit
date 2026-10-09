@@ -29,6 +29,7 @@ import (
 	"aoe2kit/pkg/diagnostics"
 	"aoe2kit/pkg/enginefacts"
 	"aoe2kit/pkg/fx"
+	"aoe2kit/pkg/gamestrings"
 	"aoe2kit/pkg/geom"
 	"aoe2kit/pkg/geotrace"
 	"aoe2kit/pkg/gfx"
@@ -2237,7 +2238,7 @@ func runFacts(args []string) {
 
 func runScen(args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|diff-series|watch|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|editor-coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
 	}
 	if args[0] == "blank" {
@@ -2277,7 +2278,7 @@ func runScen(args []string) {
 		return
 	}
 	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|diff-series|watch|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|editor-coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
 	}
 	switch args[0] {
@@ -2376,6 +2377,21 @@ func runScen(args []string) {
 			printJSON(report)
 		}
 		return
+	case "editor-coverage":
+		if len(args) < 2 || len(args) > 3 || (len(args) == 3 && args[2] != "--json" && args[2] != "--text") {
+			fmt.Fprintln(os.Stderr, "usage: kit scen editor-coverage <file.aoe2scenario> [--json|--text]")
+			os.Exit(2)
+		}
+		report, err := scenario.EditorCoverageFile(args[1])
+		if err != nil {
+			die("kit scen editor-coverage", err)
+		}
+		if len(args) == 3 && args[2] == "--text" {
+			printScenarioEditorCoverage(report)
+		} else {
+			printJSON(report)
+		}
+		return
 	case "info", "inspect":
 		info, err := scenarioInfoArg(args[1])
 		if err != nil {
@@ -2392,6 +2408,7 @@ func runScen(args []string) {
 		if len(args) > 2 {
 			opts := scenario.TriggerSearchOptions{}
 			conditionOpts := scenario.TriggerConditionsOptions{}
+			gameDir := ""
 			conditions := false
 			textOut := false
 			for i := 2; i < len(args); i++ {
@@ -2402,6 +2419,12 @@ func runScen(args []string) {
 					textOut = false
 				case "--conditions":
 					conditions = true
+				case "--game-dir":
+					i++
+					if i >= len(args) {
+						die("kit scen triggers", fmt.Errorf("--game-dir needs a path"))
+					}
+					gameDir = args[i]
 				case "--grep":
 					i++
 					if i >= len(args) {
@@ -2486,6 +2509,7 @@ func runScen(args []string) {
 					die("kit scen triggers", fmt.Errorf("unknown option %q", args[i]))
 				}
 			}
+			conditionOpts.RuntimeNames = loadScenarioRuntimeNames(gameDir)
 			if conditions {
 				if opts.Grep != "" || opts.EffectQuery != "" || opts.Message != "" {
 					die("kit scen triggers", fmt.Errorf("--conditions cannot be combined with --grep, --effect, or --message"))
@@ -3199,6 +3223,7 @@ func runScen(args []string) {
 		})
 	case "effects":
 		opts := scenario.EffectsOptions{}
+		gameDir := ""
 		census := false
 		where := ""
 		whereLimit := 25
@@ -3210,6 +3235,12 @@ func runScen(args []string) {
 			switch arg {
 			case "--raw":
 				opts.IncludeRawFields = true
+			case "--game-dir":
+				i++
+				if i >= len(args) {
+					die("kit scen effects", fmt.Errorf("--game-dir needs a path"))
+				}
+				gameDir = args[i]
 			case "--census":
 				census = true
 			case "--text":
@@ -3250,6 +3281,7 @@ func runScen(args []string) {
 				die("kit scen effects", fmt.Errorf("unknown option %q", arg))
 			}
 		}
+		opts.RuntimeNames = loadScenarioRuntimeNames(gameDir)
 		if where != "" {
 			whereOpts := scenario.EffectWhereOptions{Query: where, Limit: whereLimit, TriggerIndex: triggerIndex, IncludeRawFields: opts.IncludeRawFields}
 			if maxScenarioMB > 0 {
@@ -3622,7 +3654,9 @@ func runScen(args []string) {
 		}
 		textOut := false
 		allFields := false
-		for _, arg := range args[3:] {
+		gameDir := ""
+		for i := 3; i < len(args); i++ {
+			arg := args[i]
 			switch arg {
 			case "--all-fields":
 				allFields = true
@@ -3630,11 +3664,17 @@ func runScen(args []string) {
 				textOut = true
 			case "--json":
 				textOut = false
+			case "--game-dir":
+				i++
+				if i >= len(args) {
+					die("kit scen diff", fmt.Errorf("--game-dir needs a path"))
+				}
+				gameDir = args[i]
 			default:
 				die("kit scen diff", fmt.Errorf("unknown option %q", arg))
 			}
 		}
-		report, err := scenario.DiffFilesWithOptions(args[1], args[2], scenario.DiffOptions{AllFields: allFields})
+		report, err := scenario.DiffFilesWithOptions(args[1], args[2], scenario.DiffOptions{AllFields: allFields, RuntimeNames: loadScenarioRuntimeNames(gameDir)})
 		if err != nil {
 			die("kit scen diff", err)
 		}
@@ -3660,6 +3700,88 @@ func runScen(args []string) {
 			printTriggerGraphDiff(report)
 		} else {
 			printJSON(report)
+		}
+	case "diff-series":
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "usage: kit scen diff-series <files...|directory> [--all-fields] [--game-dir D] [--text|--json]")
+			os.Exit(2)
+		}
+		inputs := make([]string, 0, len(args)-1)
+		allFields := false
+		textOut := false
+		gameDir := ""
+		for i := 1; i < len(args); i++ {
+			switch args[i] {
+			case "--all-fields":
+				allFields = true
+			case "--text":
+				textOut = true
+			case "--json":
+				textOut = false
+			case "--game-dir":
+				i++
+				if i >= len(args) {
+					die("kit scen diff-series", fmt.Errorf("--game-dir needs a path"))
+				}
+				gameDir = args[i]
+			default:
+				inputs = append(inputs, args[i])
+			}
+		}
+		report, err := scenario.DiffSeries(inputs, scenario.DiffSeriesOptions{AllFields: allFields, RuntimeNames: loadScenarioRuntimeNames(gameDir)})
+		if err != nil {
+			die("kit scen diff-series", err)
+		}
+		if textOut {
+			printScenarioDiffSeries(report)
+		} else {
+			printJSON(report)
+		}
+	case "watch":
+		if len(args) < 2 {
+			fmt.Fprintln(os.Stderr, "usage: kit scen watch <file.aoe2scenario> [--snapshot-dir D] [--interval 1s] [--once] [--game-dir D]")
+			os.Exit(2)
+		}
+		watchOpts := scenario.WatchOptions{}
+		gameDir := ""
+		for i := 2; i < len(args); i++ {
+			switch args[i] {
+			case "--snapshot-dir":
+				i++
+				if i >= len(args) {
+					die("kit scen watch", fmt.Errorf("--snapshot-dir needs a path"))
+				}
+				watchOpts.SnapshotDir = args[i]
+			case "--interval":
+				i++
+				if i >= len(args) {
+					die("kit scen watch", fmt.Errorf("--interval needs a duration"))
+				}
+				value, err := time.ParseDuration(args[i])
+				if err != nil || value <= 0 {
+					die("kit scen watch", fmt.Errorf("--interval must be a positive duration"))
+				}
+				watchOpts.Interval = value
+			case "--once":
+				watchOpts.Once = true
+			case "--game-dir":
+				i++
+				if i >= len(args) {
+					die("kit scen watch", fmt.Errorf("--game-dir needs a path"))
+				}
+				gameDir = args[i]
+			case "--all-fields":
+				watchOpts.Diff.AllFields = true
+			default:
+				die("kit scen watch", fmt.Errorf("unknown option %q", args[i]))
+			}
+		}
+		watchOpts.Diff.RuntimeNames = loadScenarioRuntimeNames(gameDir)
+		if err := scenario.WatchLocal(args[1], watchOpts, func(event scenario.WatchEvent) error {
+			printJSON(event)
+			return nil
+		}); err != nil {
+			die("kit scen watch", err)
 		}
 	case "bytediff":
 		if len(args) < 3 {
@@ -3750,7 +3872,7 @@ func runScen(args []string) {
 		}
 		printJSON(report)
 	default:
-		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
+		fmt.Fprintln(os.Stderr, "usage: kit scen <blank|info|check|describe|settings|field|strings|refs|delete-plan|delete|disconnect|effects|diff-effects|diff-series|watch|glossary|idioms|analyze|triggers|trigger-neighborhood|audit-player-coverage|mechanic|trigger-flow|units|map|terrain|palette-usage|regions|coverage|editor-coverage|verify|lint|xs|deploycheck|diff|diff-triggers|bytediff|write-check|dump-body|plan|patch|shop-catalog|import-triggers|smoke|smoke-recipe> <file.aoe2scenario> [args...]")
 		os.Exit(2)
 	}
 }
@@ -4905,15 +5027,34 @@ func printScenarioDiff(report scenario.DiffReport) {
 			if change.Detail != "" {
 				detail = " (" + change.Detail + ")"
 			}
-			fmt.Printf("- %s %s: %v -> %v%s\n", change.Kind, change.Field, change.Before, change.After, detail)
+			field, before, after := humanScenarioDiffChange(change)
+			fmt.Printf("- %s %s: %s -> %s%s\n", change.Kind, field, before, after, detail)
 		}
 	}
 	if len(report.Fields) == 0 {
+		if len(report.RawFields) == 0 {
+			return
+		}
+	} else {
+		fmt.Println("field_changes:")
+		for _, field := range report.Fields {
+			fmt.Printf("- %s: %s -> %s", field.Path, field.BeforeHex, field.AfterHex)
+			if field.BeforeExists && field.AfterExists {
+				fmt.Printf(" (%v -> %v)", field.BeforeValue, field.AfterValue)
+			} else if field.BeforeExists {
+				fmt.Printf(" (%v -> <missing>)", field.BeforeValue)
+			} else {
+				fmt.Printf(" (<missing> -> %v)", field.AfterValue)
+			}
+			fmt.Println()
+		}
+	}
+	if len(report.RawFields) == 0 {
 		return
 	}
-	fmt.Println("field_changes:")
-	for _, field := range report.Fields {
-		fmt.Printf("- %s: %s -> %s", field.Path, field.BeforeHex, field.AfterHex)
+	fmt.Println("raw_field_changes:")
+	for _, field := range report.RawFields {
+		fmt.Printf("- %s: before_offset=%d bytes=%d after_offset=%d bytes=%d", field.Path, field.BeforeStart, field.BeforeBytes, field.AfterStart, field.AfterBytes)
 		if field.BeforeExists && field.AfterExists {
 			fmt.Printf(" (%v -> %v)", field.BeforeValue, field.AfterValue)
 		} else if field.BeforeExists {
@@ -4923,6 +5064,140 @@ func printScenarioDiff(report scenario.DiffReport) {
 		}
 		fmt.Println()
 	}
+}
+
+func humanScenarioDiffChange(change scenario.DiffChange) (field, before, after string) {
+	field = humanScenarioDiffField(change.Field)
+	if strings.HasSuffix(change.Field, ".diplomacy") {
+		if b, ok := change.Before.([]int); ok {
+			if a, ok := change.After.([]int); ok {
+				if target, oldValue, newValue, ok := oneChangedInt(b, a); ok {
+					field = fmt.Sprintf("%s diplomacy toward %s", strings.TrimSuffix(field, " diplomacy"), playerLabelForSlot(target))
+					return field, diplomacyLabel(oldValue), diplomacyLabel(newValue)
+				}
+			}
+		}
+	}
+	return field, humanScenarioDiffValue(change.Field, change.Before), humanScenarioDiffValue(change.Field, change.After)
+}
+
+func humanScenarioDiffField(field string) string {
+	if strings.HasPrefix(field, "player.P") {
+		var player int
+		var rest string
+		if _, err := fmt.Sscanf(field, "player.P%d.%s", &player, &rest); err == nil {
+			return fmt.Sprintf("Player %d %s", player, strings.ReplaceAll(rest, "_", " "))
+		}
+	}
+	if strings.HasPrefix(field, "units.player.P") {
+		field = strings.TrimPrefix(field, "units.player.")
+		parts := strings.Split(field, ".")
+		for i := range parts {
+			if strings.HasPrefix(parts[i], "P") {
+				var player int
+				if _, err := fmt.Sscanf(parts[i], "P%d", &player); err == nil {
+					parts[i] = fmt.Sprintf("Player %d", player)
+				}
+			}
+			parts[i] = strings.ReplaceAll(parts[i], "_", " ")
+		}
+		return strings.Join(parts, " ")
+	}
+	return strings.ReplaceAll(field, "_", " ")
+}
+
+func humanScenarioDiffValue(field string, value any) string {
+	if strings.HasSuffix(field, ".operation") || strings.HasSuffix(field, ".operation_id") {
+		if number, ok := integerDiffValue(value); ok {
+			if label, found := map[int]string{1: "Set", 2: "Add", 3: "Subtract", 4: "Multiply", 5: "Divide"}[number]; found {
+				return fmt.Sprintf("%s (%d)", label, number)
+			}
+		}
+	}
+	if strings.HasSuffix(field, ".diplomacy") || strings.Contains(field, "diplomacy_for_") {
+		if number, ok := integerDiffValue(value); ok {
+			return diplomacyLabel(number)
+		}
+	}
+	if strings.HasSuffix(field, ".source_player") || strings.HasSuffix(field, ".target_player") {
+		if number, ok := integerDiffValue(value); ok {
+			return playerLabelForEditorValue(number)
+		}
+	}
+	if strings.HasSuffix(field, ".object_type") || strings.HasSuffix(field, ".object_type2") {
+		if number, ok := integerDiffValue(value); ok {
+			if label, found := map[int]string{1: "Other", 2: "Building", 3: "Civilian", 4: "Military"}[number]; found {
+				return fmt.Sprintf("%s (%d)", label, number)
+			}
+		}
+	}
+	if field == "settings.victory.mode" {
+		if number, ok := integerDiffValue(value); ok {
+			labels := map[int]string{0: "Standard", 1: "Conquest", 2: "Score", 3: "Time Limit", 4: "Custom", 5: "Deathmatch", 6: "Secondary Game Mode"}
+			if label, found := labels[number]; found {
+				return fmt.Sprintf("%s (%d)", label, number)
+			}
+		}
+	}
+	if modes, ok := value.(scenario.SecondaryGameModesInfo); ok {
+		if len(modes.Names) == 0 {
+			return fmt.Sprintf("bits %d", modes.Bits)
+		}
+		return fmt.Sprintf("bits %d (%s)", modes.Bits, strings.Join(modes.Names, ", "))
+	}
+	return fmt.Sprintf("%v", value)
+}
+
+func integerDiffValue(value any) (int, bool) {
+	switch number := value.(type) {
+	case int:
+		return number, true
+	case int8:
+		return int(number), true
+	case int16:
+		return int(number), true
+	case int32:
+		return int(number), true
+	case int64:
+		return int(number), true
+	default:
+		return 0, false
+	}
+}
+
+func oneChangedInt(before, after []int) (index, oldValue, newValue int, ok bool) {
+	limit := len(before)
+	if len(after) < limit {
+		limit = len(after)
+	}
+	for i := 0; i < limit; i++ {
+		if before[i] != after[i] {
+			if ok {
+				return 0, 0, 0, false
+			}
+			index, oldValue, newValue, ok = i, before[i], after[i], true
+		}
+	}
+	return index, oldValue, newValue, ok
+}
+
+func playerLabelForSlot(slot int) string {
+	return fmt.Sprintf("Player %d", slot+1)
+}
+
+func playerLabelForEditorValue(value int) string {
+	if value == 0 {
+		return "Gaia (0)"
+	}
+	return fmt.Sprintf("Player %d (%d)", value, value)
+}
+
+func diplomacyLabel(value int) string {
+	labels := map[int]string{0: "Ally", 1: "Neutral", 3: "Enemy"}
+	if label, ok := labels[value]; ok {
+		return fmt.Sprintf("%s (%d)", label, value)
+	}
+	return strconv.Itoa(value)
 }
 
 func printScenarioByteDiff(report scenario.ByteDiffReport) {
@@ -6589,6 +6864,16 @@ func parseScenarioEffectTypeTarget(target string) (int, string, error) {
 	return 0, "", fmt.Errorf("unknown effect-type %q; use a numeric effect_type id or known recipe op name", target)
 }
 
+func loadScenarioRuntimeNames(gameDir string) *scenario.RuntimeNames {
+	table, err := gamestrings.LoadAuto(gameDir)
+	if err != nil {
+		// Runtime resources improve labels but are never required to parse a
+		// scenario. Keep the compatibility names/numeric IDs when unavailable.
+		return nil
+	}
+	return &scenario.RuntimeNames{Strings: table}
+}
+
 func parseScenarioConditionTypeTarget(target string) (int, string, error) {
 	target = strings.TrimSpace(target)
 	if target == "" {
@@ -6746,6 +7031,14 @@ func printScenarioEffects(report scenario.EffectsReport) {
 	fmt.Printf("verification: %s\n", report.Verification)
 	fmt.Printf("summary: version=%s total_effects=%d effect_types=%d\n", report.Version, report.Total, len(report.Types))
 	printScenarioEffectBuckets("effect_types", report.Types, len(report.Types))
+}
+
+func printScenarioDiffSeries(report scenario.DiffSeriesReport) {
+	fmt.Printf("files: %d\n", len(report.Files))
+	for _, step := range report.Steps {
+		fmt.Printf("step %d: %s -> %s\n", step.Index, step.Before, step.After)
+		printScenarioDiff(step.Diff)
+	}
 }
 
 func printScenarioEffectsCensus(report scenario.EffectsCensusReport) {
@@ -6996,7 +7289,37 @@ func printScenarioCoverage(report scenario.CoverageReport) {
 			section.Space, section.Name, section.Start, section.End, section.Bytes,
 			section.Named, section.Dark, section.Gaps, section.Status)
 		for _, span := range section.DarkSpans {
-			fmt.Printf("  dark-span %s %d..%d bytes=%d\n", span.Path, span.Start, span.End, span.Bytes)
+			label := ""
+			if span.Label != "" {
+				label = " label=" + span.Label
+			}
+			fmt.Printf("  dark-span %s %d..%d bytes=%d%s\n", span.Path, span.Start, span.End, span.Bytes, label)
+		}
+	}
+}
+
+func printScenarioEditorCoverage(report scenario.EditorCoverageReport) {
+	fmt.Printf("path: %s\nversion: %s verification=%s\n", report.Path, report.Version, report.Verification)
+	for _, group := range []struct {
+		name string
+		rows []scenario.EditorTypeCoverage
+	}{
+		{name: "effects", rows: report.Effects},
+		{name: "conditions", rows: report.Conditions},
+	} {
+		fmt.Printf("%s:\n", group.name)
+		for _, row := range group.rows {
+			fmt.Printf("- type=%d name=%q occurrences=%d byte_evidence=%s\n", row.Type, row.Name, row.Occurrences, row.ByteEvidence)
+			if len(row.KnownParserFields) > 0 {
+				fmt.Printf("  known_parser_fields=%s\n", strings.Join(row.KnownParserFields, ","))
+			}
+			for _, field := range row.EditorFields {
+				qualifier := ""
+				if field.RevealedBy != "" {
+					qualifier = " revealed_by=" + field.RevealedBy
+				}
+				fmt.Printf("  field=%q status=%s evidence=%s%s\n", field.Name, field.Status, field.Evidence, qualifier)
+			}
 		}
 	}
 }
@@ -7004,8 +7327,8 @@ func printScenarioCoverage(report scenario.CoverageReport) {
 func printScenarioCoverageCorpus(report scenario.CoverageCorpusReport) {
 	fmt.Printf("roots=%s files=%d parsed=%d errors=%d spans=%d\n", strings.Join(report.Roots, ","), report.Files, report.Parsed, len(report.Errors), len(report.Spans))
 	for _, span := range report.Spans {
-		fmt.Printf("- version=%s path=%s bytes=%d occurrences=%d files=%d hashes=%d nonzero_bytes=%v triggers=%d..%d conditions=%d..%d\n",
-			span.Version, span.Path, span.Bytes, span.Occurrences, span.Files, len(span.SHA256), span.NonZeroBytes,
+		fmt.Printf("- version=%s path=%s bytes=%d occurrences=%d files=%d variance=%s distinct_values=%d hashes=%d nonzero_bytes=%v triggers=%d..%d conditions=%d..%d\n",
+			span.Version, span.Path, span.Bytes, span.Occurrences, span.Files, span.Variance, span.DistinctValues, len(span.SHA256), span.NonZeroBytes,
 			span.MinTriggerCount, span.MaxTriggerCount, span.MinConditionCount, span.MaxConditionCount)
 	}
 	for _, item := range report.Errors {
@@ -14939,7 +15262,9 @@ func runDat(args []string) {
 		if err != nil {
 			die("kit dat", err)
 		}
+		unitNames := loadDATUnitNames(unitFilters.gameDir)
 		if report, ok, err := cachedDatUnitsReport(args[1], unitFilters); err == nil && ok {
+			applyDATUnitNames(report.Units, unitNames)
 			printJSON(report)
 			return
 		}
@@ -14954,7 +15279,7 @@ func runDat(args []string) {
 			units = units[:unitFilters.Limit]
 			truncated = true
 		}
-		printJSON(datUnitsReport{
+		report := datUnitsReport{
 			Version:       idx.Version,
 			CivCount:      len(idx.Civs),
 			Filters:       unitFilters,
@@ -14963,11 +15288,17 @@ func runDat(args []string) {
 			Truncated:     truncated,
 			ClassNote:     unitFilters.classNote(),
 			Units:         compactUnits(units),
-		})
+		}
+		applyDATUnitNames(report.Units, unitNames)
+		printJSON(report)
 	case "unit":
-		if len(args) != 4 {
-			fmt.Fprintln(os.Stderr, "usage: kit dat unit <empires*.dat> <civ_id> <unit_id>")
+		if len(args) < 4 {
+			fmt.Fprintln(os.Stderr, "usage: kit dat unit <empires*.dat> <civ_id> <unit_id> [--game-dir D]")
 			os.Exit(2)
+		}
+		gameDir, err := parseDATGameDir(args[4:])
+		if err != nil {
+			die("kit dat unit", err)
 		}
 		civID, err := strconv.Atoi(args[2])
 		if err != nil {
@@ -14979,6 +15310,7 @@ func runDat(args []string) {
 		}
 		if unit, ok, err := cachedDatUnit(args[1], civID, unitID); err == nil && ok {
 			if unit.FullFields != nil {
+				applyDATUnitName(&unit, loadDATUnitNames(gameDir))
 				printJSON(unit)
 				return
 			}
@@ -14998,6 +15330,7 @@ func runDat(args []string) {
 		if err != nil {
 			die("kit dat", err)
 		}
+		applyDATUnitName(&unit, loadDATUnitNames(gameDir))
 		printJSON(unit)
 	case "unit-create", "create-unit":
 		if len(args) < 3 {
@@ -18918,6 +19251,7 @@ type datUnitFilters struct {
 	Name         string `json:"name,omitempty"`
 	NameContains string `json:"name_contains,omitempty"`
 	Class        string `json:"class,omitempty"`
+	gameDir      string
 }
 
 type datUnitsReport struct {
@@ -19005,6 +19339,12 @@ func parseDatUnitsOptions(args []string) (datUnitFilters, error) {
 			default:
 				return filters, fmt.Errorf("--class must be building, unit, or creatable")
 			}
+		case "--game-dir":
+			if i+1 >= len(args) {
+				return filters, fmt.Errorf("--game-dir needs a path")
+			}
+			i++
+			filters.gameDir = args[i]
 		default:
 			return filters, fmt.Errorf("unknown dat units option %q", args[i])
 		}
@@ -19013,6 +19353,49 @@ func parseDatUnitsOptions(args []string) (datUnitFilters, error) {
 		return filters, fmt.Errorf("--limit must be positive")
 	}
 	return filters, nil
+}
+
+func parseDATGameDir(args []string) (string, error) {
+	var gameDir string
+	for i := 0; i < len(args); i++ {
+		if args[i] != "--game-dir" {
+			return "", fmt.Errorf("unknown kit dat unit option %q", args[i])
+		}
+		if i+1 >= len(args) {
+			return "", errors.New("--game-dir needs a path")
+		}
+		i++
+		gameDir = args[i]
+	}
+	return gameDir, nil
+}
+
+func loadDATUnitNames(gameDir string) *gamestrings.Table {
+	table, err := gamestrings.LoadAuto(gameDir)
+	if err != nil {
+		return nil
+	}
+	return &table
+}
+
+func applyDATUnitName(unit *datfile.UnitSummary, table *gamestrings.Table) {
+	if unit == nil || table == nil {
+		return
+	}
+	if name, ok := table.Lookup(int(unit.StringID)); ok {
+		unit.DisplayName = name
+	}
+}
+
+func applyDATUnitNames(units []unitListSummary, table *gamestrings.Table) {
+	if table == nil {
+		return
+	}
+	for i := range units {
+		if name, ok := table.Lookup(int(units[i].StringID)); ok {
+			units[i].DisplayName = name
+		}
+	}
 }
 
 func cachedDatUnit(datPath string, civID, unitID int) (datfile.UnitSummary, bool, error) {
@@ -19063,6 +19446,8 @@ func compactCachedUnits(rows []datcache.UnitRow) []unitListSummary {
 			Index:              row.Index,
 			Type:               row.Type,
 			ID:                 row.ID,
+			StringID:           row.StringID,
+			StringID2:          row.StringID2,
 			Name:               row.Name,
 			Class:              row.Class,
 			ClassName:          row.ClassName,
@@ -19620,7 +20005,10 @@ type unitListSummary struct {
 	Index              int     `json:"index"`
 	Type               int     `json:"type"`
 	ID                 int16   `json:"id"`
+	StringID           int32   `json:"string_id"`
+	StringID2          int32   `json:"string_id_2"`
 	Name               string  `json:"name"`
+	DisplayName        string  `json:"display_name,omitempty"`
 	Class              int16   `json:"class"`
 	ClassName          string  `json:"class_name,omitempty"`
 	HitPoints          int16   `json:"hit_points"`
@@ -19964,6 +20352,8 @@ func compactUnits(units []datfile.UnitSummary) []unitListSummary {
 			Index:              unit.Index,
 			Type:               unit.Type,
 			ID:                 unit.ID,
+			StringID:           unit.StringID,
+			StringID2:          unit.StringID2,
 			Name:               unit.Name,
 			Class:              unit.Class,
 			ClassName:          unit.ClassName,
@@ -21545,6 +21935,8 @@ func usage() {
   kit scen xs compare <file.aoe2scenario> <file.xs> [--carrier N|--trigger N] [--text|--json]
   kit scen deploycheck <file.aoe2scenario> <deploy-tree> [--text] [--include-provisional]
   kit scen diff <before.aoe2scenario> <after.aoe2scenario> [--all-fields] [--text|--json]
+  kit scen diff-series <files...|directory> [--all-fields] [--game-dir D] [--text|--json]
+  kit scen watch <file.aoe2scenario> [--snapshot-dir D] [--interval 1s] [--once] [--game-dir D]
   kit scen diff-triggers <before.aoe2scenario> <after.aoe2scenario> [--limit N] [--text|--json]
   kit scen bytediff <before.aoe2scenario> <after.aoe2scenario> [--text|--json] [--include-noise]
   kit scen write-check <before.aoe2scenario> <after.aoe2scenario> [--text|--json] [--include-provisional]
@@ -21600,7 +21992,7 @@ func usage() {
   kit dat tech-tree-connection-create <in.dat> <out.dat> <building|unit|research> <from_index> [connection flags]
   kit dat tech-tree-connection-patch <in.dat> <out.dat> <building|unit|research> <index> [connection flags]
   kit dat tech-tree-connection-delete <in.dat> <out.dat> <building|unit|research> <index>
-  kit dat units <empires*.dat> [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--json]
+  kit dat units <empires*.dat> [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--game-dir D] [--json]
   kit dat semantic-priors <empires*.dat> [--text|--json]
   kit dat sql <empires*.dat> <out.db>
   kit dat unit <empires*.dat> <civ_id> <unit_id>

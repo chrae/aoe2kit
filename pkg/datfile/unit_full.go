@@ -99,6 +99,8 @@ func DecodeUnitFields(record []byte, version string) (map[string]any, error) {
 	fields := map[string]any{
 		"type":                 unit.Type,
 		"id":                   unit.ID,
+		"string_id":            unit.StringID,
+		"string_id_2":          unit.StringID2,
 		"name":                 unit.Name,
 		"class":                unit.Class,
 		"class_name":           unit.ClassName,

@@ -1,0 +1,38 @@
+package scenario
+
+import "testing"
+
+func TestConditionEditorSchemasCoverObservedTypes(t *testing.T) {
+	rows := ConditionEditorSchemas()
+	if got, want := len(rows), 40; got != want {
+		t.Fatalf("schema rows = %d, want %d", got, want)
+	}
+	for _, conditionType := range []int{1, 20, 30, 54, 75, 80} {
+		schema, ok := ConditionEditorSchemaForType(conditionType)
+		if !ok || schema.Type != conditionType || schema.Name == "" {
+			t.Fatalf("schema %d = %#v, present=%t", conditionType, schema, ok)
+		}
+	}
+	separator, _ := ConditionEditorSchemaForType(29)
+	if len(separator.VisibleFields) != 0 {
+		t.Fatalf("separator fields = %#v, want empty", separator.VisibleFields)
+	}
+}
+
+func TestConditionSummaryIncludesEditorFields(t *testing.T) {
+	cond := &parsedNode{Fields: []*parsedNode{
+		{Name: "condition_type", Value: int32(20)},
+		{Name: "quantity", Value: int32(44)},
+	}}
+	summary := summarizeConditionData(cond)
+	if len(summary.EditorFields) != 1 || summary.EditorFields[0] != "Quantity" {
+		t.Fatalf("chance editor_fields = %#v", summary.EditorFields)
+	}
+	if got := summary.KnownFields["quantity"]; got != 44 {
+		t.Fatalf("chance quantity = %#v, want 44", got)
+	}
+	flat := summarizeCondition(cond)
+	if got, ok := flat["editor_fields"].([]string); !ok || len(got) != 1 || got[0] != "Quantity" {
+		t.Fatalf("flat chance editor_fields = %#v", flat["editor_fields"])
+	}
+}

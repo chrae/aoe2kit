@@ -9,6 +9,7 @@ import (
 
 func TestFirstSliceHeaderAndMapCodecMatchesParser(t *testing.T) {
 	path := filepath.Join("testdata", "Clean v159.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -80,6 +81,7 @@ func TestPreservationDocumentCopiesUnknownBytesVerbatim(t *testing.T) {
 
 func TestFilePreservedDocumentMatchesInflatedBody(t *testing.T) {
 	path := filepath.Join("testdata", "Clean v159.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -92,6 +94,7 @@ func TestFilePreservedDocumentMatchesInflatedBody(t *testing.T) {
 
 func TestSemanticPlayersDiplomacyVictoryUnitsAndMirrors(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "editor-refs", "I added the same object, 2 rotations.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -113,6 +116,7 @@ func TestSemanticPlayersDiplomacyVictoryUnitsAndMirrors(t *testing.T) {
 
 func TestRawTriggerCodecPreservesVariableSection(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "text", "Gaia Text Showcase.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -148,6 +152,7 @@ func TestRawTriggerCodecPreservesVariableSection(t *testing.T) {
 
 func TestPreservationWriterKeepsOriginalFileBytes(t *testing.T) {
 	path := filepath.Join("testdata", "Clean v159.aoe2scenario")
+	requireFixture(t, path)
 	file, err := Open(path)
 	if err != nil {
 		t.Fatal(err)
@@ -171,6 +176,7 @@ func TestPreservationWriterKeepsOriginalFileBytes(t *testing.T) {
 
 func TestLayoutDocumentComposesAllFirstSliceLayers(t *testing.T) {
 	path := filepath.Join("..", "..", "examples", "text", "Gaia Text Showcase.aoe2scenario")
+	requireFixture(t, path)
 	doc, err := OpenLayoutDocument(path)
 	if err != nil {
 		t.Fatal(err)

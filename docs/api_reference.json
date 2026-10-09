@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
-  "command_count": 245,
+  "command_count": 247,
   "probed_count": 18,
   "commands": [
     {
@@ -2663,7 +2663,7 @@
       ],
       "name": "dat units",
       "group": "dat",
-      "usage": "kit dat units \u003cempires*.dat\u003e [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--json]",
+      "usage": "kit dat units \u003cempires*.dat\u003e [--civ N] [--id N] [--name TEXT|--name-contains TEXT] [--class building|unit|creatable] [--limit N|--all] [--game-dir D] [--json]",
       "flags": [
         {
           "name": "--civ",
@@ -2684,6 +2684,10 @@
         {
           "name": "--limit",
           "value_hint": "N|--all"
+        },
+        {
+          "name": "--game-dir",
+          "value_hint": "D"
         },
         {
           "name": "--json"
@@ -5907,6 +5911,33 @@
     {
       "path": [
         "scen",
+        "diff-series"
+      ],
+      "name": "scen diff-series",
+      "group": "scen",
+      "usage": "kit scen diff-series \u003cfiles...|directory\u003e [--all-fields] [--game-dir D] [--text|--json]",
+      "flags": [
+        {
+          "name": "--all-fields"
+        },
+        {
+          "name": "--game-dir",
+          "value_hint": "D"
+        }
+      ],
+      "positional": [
+        "\u003cfiles...|directory\u003e",
+        "--text|--json"
+      ],
+      "mutates": false,
+      "network": false,
+      "trait": "read_only",
+      "input": "scenario",
+      "probe_status": "not_probed"
+    },
+    {
+      "path": [
+        "scen",
         "diff-triggers"
       ],
       "name": "scen diff-triggers",
@@ -6623,6 +6654,40 @@
       "trait": "read_only",
       "input": "scenario",
       "probe_status": "skipped_no_fixture"
+    },
+    {
+      "path": [
+        "scen",
+        "watch"
+      ],
+      "name": "scen watch",
+      "group": "scen",
+      "usage": "kit scen watch \u003cfile.aoe2scenario\u003e [--snapshot-dir D] [--interval 1s] [--once] [--game-dir D]",
+      "flags": [
+        {
+          "name": "--snapshot-dir",
+          "value_hint": "D"
+        },
+        {
+          "name": "--interval",
+          "value_hint": "1s"
+        },
+        {
+          "name": "--once"
+        },
+        {
+          "name": "--game-dir",
+          "value_hint": "D"
+        }
+      ],
+      "positional": [
+        "\u003cfile.aoe2scenario\u003e"
+      ],
+      "mutates": false,
+      "network": false,
+      "trait": "read_only",
+      "input": "scenario",
+      "probe_status": "not_probed"
     },
     {
       "path": [
