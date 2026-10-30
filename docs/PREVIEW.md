@@ -646,3 +646,26 @@ Kit. Until those comparisons are supplied, the legacy rows remain unverified.
 ```text
 kit preview old.aoe2scenario --sprites --rotation-model radians --game-dir game --crop 20,20,40,40 --out candidate.png
 ```
+
+### Bounded tile pyramids and pixel windows
+
+`kit preview map.aoe2scenario --tiles-dir tiles --tile-size 256 --scales 8,16,32,64`
+uses the normal rendering flags, including `--elevation`, `--sprites`, `--textures`
+and `--strict`. Each scale produces `tiles/<z>/<x>_<y>.png`; `extent.json` records
+its full frame. Small levels render whole; larger levels use bounded pixel strips.
+Tile writes are atomic. Existing valid tiles are skipped; changed extents require
+a fresh directory. When input, options or assets change, use a fresh directory:
+resume does not fingerprint those inputs. Right/bottom edge tiles are transparent
+outside the frame. `--tiles-dir` excludes `--out`, `--window`, `--crop` and minimaps.
+
+`--window x,y,width,height` renders an exact rectangle in the full image frame,
+including transparent pixels outside it. It excludes tile crops and minimaps.
+Windows preserve projection coordinates, terrain sampling, sprite phase and mood
+background. This public port intentionally excludes the optional render-session,
+asset-cache and resampling performance refactor; assets may reload between strips.
+
+`--cache-dir DIR` reuses a content-keyed compact DAT index for repeated previews.
+This render-only projection is not suitable for editing or general DAT queries.
+The initial request parses the reference DAT; subsequent requests reuse the
+projection. Missing/corrupt entries are rebuilt, and source changes select a new
+key. Prewarm on the intended host before serving latency-sensitive requests.

@@ -381,8 +381,8 @@ func renderTexturedTerrain(img *image.RGBA, tiles []Tile, s Snapshot, crop Crop,
 		return r, nil
 	}
 	transform := diamondTransform(crop.X2-crop.X1, crop.Y2-crop.Y1, float64(scale), float64(scale), "")
-	for py := 0; py < img.Bounds().Dy(); py++ {
-		for px := 0; px < img.Bounds().Dx(); px++ {
+	for py := img.Bounds().Min.Y; py < img.Bounds().Max.Y; py++ {
+		for px := img.Bounds().Min.X; px < img.Bounds().Max.X; px++ {
 			x, y := (float64(px)+.5)/float64(scale), (float64(py)+.5)/float64(scale)
 			if projection == "diamond" {
 				x, y = transform.inverse(float64(px)+.5, float64(py)+.5)

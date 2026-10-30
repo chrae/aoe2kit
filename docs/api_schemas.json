@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 1137,
+  "type_count": 1143,
   "types": {
     "aifile.CatalogueInfo": {
       "package": "aifile",
@@ -26518,6 +26518,16 @@
       "name": "Options",
       "fields": [
         {
+          "name": "Window",
+          "go_type": "*PixelWindow",
+          "ref": "preview.PixelWindow"
+        },
+        {
+          "name": "Metrics",
+          "go_type": "*RenderMetrics",
+          "ref": "preview.RenderMetrics"
+        },
+        {
           "name": "Projection",
           "go_type": "string"
         },
@@ -26666,6 +26676,33 @@
         }
       ]
     },
+    "preview.PixelWindow": {
+      "package": "preview",
+      "name": "PixelWindow",
+      "doc": "PixelWindow is a rectangle in the full image's pixel coordinate frame.",
+      "fields": [
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "int"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "int"
+        },
+        {
+          "name": "Width",
+          "json": "width",
+          "go_type": "int"
+        },
+        {
+          "name": "Height",
+          "json": "height",
+          "go_type": "int"
+        }
+      ]
+    },
     "preview.ProjectDefaults": {
       "package": "preview",
       "name": "ProjectDefaults",
@@ -26775,10 +26812,37 @@
         }
       ]
     },
+    "preview.RenderMetrics": {
+      "package": "preview",
+      "name": "RenderMetrics",
+      "doc": "RenderMetrics is an opt-in diagnostic for one synchronous render.",
+      "fields": [
+        {
+          "name": "Stages",
+          "json": "stages",
+          "go_type": "map[string]StageMetric",
+          "ref": "preview.StageMetric"
+        }
+      ]
+    },
     "preview.Report": {
       "package": "preview",
       "name": "Report",
       "fields": [
+        {
+          "name": "Extent",
+          "json": "extent",
+          "go_type": "*ImageExtent",
+          "ref": "preview.ImageExtent",
+          "optional": true
+        },
+        {
+          "name": "Window",
+          "json": "window",
+          "go_type": "*PixelWindow",
+          "ref": "preview.PixelWindow",
+          "optional": true
+        },
         {
           "name": "Crop",
           "json": "crop",
@@ -27236,6 +27300,27 @@
         }
       ]
     },
+    "preview.StageMetric": {
+      "package": "preview",
+      "name": "StageMetric",
+      "fields": [
+        {
+          "name": "Milliseconds",
+          "json": "milliseconds",
+          "go_type": "float64"
+        },
+        {
+          "name": "Operations",
+          "json": "operations",
+          "go_type": "int"
+        },
+        {
+          "name": "MaxSampledHeap",
+          "json": "max_sampled_heap_bytes",
+          "go_type": "uint64"
+        }
+      ]
+    },
     "preview.StudyOptions": {
       "package": "preview",
       "name": "StudyOptions",
@@ -27462,6 +27547,130 @@
           "name": "Elevation",
           "json": "elevation",
           "go_type": "float64"
+        }
+      ]
+    },
+    "preview.TileBatchOptions": {
+      "package": "preview",
+      "name": "TileBatchOptions",
+      "fields": [
+        {
+          "name": "Dir",
+          "go_type": "string"
+        },
+        {
+          "name": "TileSize",
+          "go_type": "int"
+        },
+        {
+          "name": "Scales",
+          "go_type": "[]int"
+        },
+        {
+          "name": "Sprites",
+          "go_type": "bool"
+        },
+        {
+          "name": "Strict",
+          "go_type": "bool"
+        },
+        {
+          "name": "Mood",
+          "go_type": "*Mood",
+          "ref": "preview.Mood"
+        },
+        {
+          "name": "MoodModel",
+          "go_type": "MoodModel",
+          "ref": "preview.MoodModel"
+        },
+        {
+          "name": "MoodSource",
+          "go_type": "string"
+        },
+        {
+          "name": "CanvasBudgetBytes",
+          "go_type": "int64"
+        }
+      ]
+    },
+    "preview.TileBatchReport": {
+      "package": "preview",
+      "name": "TileBatchReport",
+      "fields": [
+        {
+          "name": "Metrics",
+          "json": "metrics",
+          "go_type": "*RenderMetrics",
+          "ref": "preview.RenderMetrics",
+          "optional": true
+        },
+        {
+          "name": "Schema",
+          "json": "schema",
+          "go_type": "string"
+        },
+        {
+          "name": "OK",
+          "json": "ok",
+          "go_type": "bool"
+        },
+        {
+          "name": "Levels",
+          "json": "levels",
+          "go_type": "[]TileLevelExtent",
+          "ref": "preview.TileLevelExtent"
+        },
+        {
+          "name": "TileSize",
+          "json": "tile_size",
+          "go_type": "int"
+        },
+        {
+          "name": "Rendered",
+          "json": "rendered",
+          "go_type": "int"
+        },
+        {
+          "name": "Skipped",
+          "json": "skipped",
+          "go_type": "int"
+        },
+        {
+          "name": "Milliseconds",
+          "json": "milliseconds",
+          "go_type": "float64"
+        },
+        {
+          "name": "RenderModes",
+          "json": "render_modes",
+          "go_type": "map[int]string"
+        }
+      ]
+    },
+    "preview.TileLevelExtent": {
+      "package": "preview",
+      "name": "TileLevelExtent",
+      "fields": [
+        {
+          "name": "Z",
+          "json": "z",
+          "go_type": "int"
+        },
+        {
+          "name": "Scale",
+          "json": "scale",
+          "go_type": "int"
+        },
+        {
+          "name": "Width",
+          "json": "width",
+          "go_type": "int"
+        },
+        {
+          "name": "Height",
+          "json": "height",
+          "go_type": "int"
         }
       ]
     },

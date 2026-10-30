@@ -2470,6 +2470,17 @@ type UnitCreateReport struct {
 }
 
 func Open(path string) (*Index, error) {
+	return openIndex(path, true)
+}
+
+// OpenReadOnly checks the compressed input, complete record framing and coverage
+// without recompressing it to test Kit's DEFLATE writer. Use Open for editing and
+// round-trip verification; this entry point is for read-only consumers.
+func OpenReadOnly(path string) (*Index, error) {
+	return openIndex(path, false)
+}
+
+func openIndex(path string, verifyWriter bool) (*Index, error) {
 	compressed, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -2478,7 +2489,7 @@ func Open(path string) (*Index, error) {
 	if err != nil {
 		return nil, fmt.Errorf("inflate %s: %w", path, err)
 	}
-	idx, err := Parse(payload)
+	idx, err := parseIndex(payload, verifyWriter)
 	if err != nil {
 		return nil, err
 	}
@@ -5057,6 +5068,10 @@ func RoundTripPayload(payload []byte) error {
 }
 
 func Parse(payload []byte) (*Index, error) {
+	return parseIndex(payload, true)
+}
+
+func parseIndex(payload []byte, verifyWriter bool) (*Index, error) {
 	c := cursor{data: payload}
 	idx := &Index{Inflated: len(payload)}
 
@@ -5296,8 +5311,10 @@ func Parse(payload []byte) (*Index, error) {
 	if err := idx.ValidateCoverage(payload); err != nil {
 		return nil, err
 	}
-	if err := RoundTripPayload(payload); err != nil {
-		return nil, fmt.Errorf("raw deflate round trip: %w", err)
+	if verifyWriter {
+		if err := RoundTripPayload(payload); err != nil {
+			return nil, fmt.Errorf("raw deflate round trip: %w", err)
+		}
 	}
 	return idx, nil
 }

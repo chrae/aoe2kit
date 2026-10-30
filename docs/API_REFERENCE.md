@@ -263,14 +263,18 @@ kit portable-check [folder] [--profile full|handoff|sandbox|public]
 ### `preview`
 
 ```
-kit preview <scenario|replay|snapshot> --out file.png [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]
+kit preview <scenario|replay|snapshot> [--out file.png | --tiles-dir DIR --tile-size 256 --scales 8,16,32,64] [--window x,y,width,height] [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]
 ```
 
 Subcommands: `scenario`, `replay`, `snapshot`
 
 | flag | value |
 | --- | --- |
-| `--out` | `file.png` **(required)** |
+| `--out` | `file.png` |
+| `--tiles-dir` | `DIR` **(required)** |
+| `--tile-size` | `256` **(required)** |
+| `--scales` | `8,16,32,64` **(required)** |
+| `--window` | `x,y,width,height` |
 | `--minimap` | _(boolean)_ |
 | `--minimap-orientation` | `normal|transpose|flipx|flipy|rotate90|rotate180|rotate270` |
 | `--projection` | `topdown|diamond` |

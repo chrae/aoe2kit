@@ -3,6 +3,7 @@
 ## v0.4.3 - 2026-10-30
 
 ### Added and fixed
+- Render resumable tile pyramids in bounded strips and exact pixel windows, including elevation and mood grading.
 - Expand persistent DAT SQLite projections and reuse cached full-unit records.
 - Add partial reference-backed PER checks and static XS function linkage.
 - Resolve AI unit operands from read-only SQLite with independent scenario evidence.

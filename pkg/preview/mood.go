@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/color"
 	"math"
 	"os"
 	"path/filepath"
@@ -269,18 +270,28 @@ func ApplyMoodModel(img *image.RGBA, m Mood, source string, p MoodModel) (MoodRe
 }
 
 func applyMoodModel(img *image.RGBA, m Mood, source string, p MoodModel) MoodReport {
+	return applyMoodBackground(img, m, source, p, img.RGBAAt(img.Bounds().Min.X, img.Bounds().Min.Y))
+}
+
+func ApplyMoodModelBackground(img *image.RGBA, m Mood, source string, p MoodModel, background color.RGBA) (MoodReport, error) {
+	if err := p.Validate(); err != nil {
+		return MoodReport{}, err
+	}
+	return applyMoodBackground(img, m, source, p, background), nil
+}
+
+func applyMoodBackground(img *image.RGBA, m Mood, source string, p MoodModel, background color.RGBA) MoodReport {
 	b := img.Bounds()
 	if b.Empty() {
 		return MoodReport{Name: m.Name, Source: source, Rule: "empty image"}
 	}
-	o := img.PixOffset(b.Min.X, b.Min.Y)
-	bg := [3]uint8{img.Pix[o], img.Pix[o+1], img.Pix[o+2]}
+	bg := [3]uint8{background.R, background.G, background.B}
 	clamp := func(v float64) uint8 { return uint8(math.Round(255 * math.Max(0, math.Min(1, v)))) }
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
 			i := img.PixOffset(x, y)
 			pixel := img.Pix[i : i+3 : i+3]
-			if pixel[0] == bg[0] && pixel[1] == bg[1] && pixel[2] == bg[2] {
+			if img.Pix[i+3] == 0 || (pixel[0] == bg[0] && pixel[1] == bg[1] && pixel[2] == bg[2]) {
 				continue
 			}
 			g := p.grade([3]float64{float64(pixel[0]) / 255, float64(pixel[1]) / 255, float64(pixel[2]) / 255}, m)

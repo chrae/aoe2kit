@@ -93,7 +93,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 			return nil, Report{}, err
 		}
 	}
-	base, report, err := RenderFlat(s, Options{Projection: opts.Projection, Scale: opts.Scale, Layers: map[string]bool{"terrain": layerEnabled(opts.Layers, "terrain"), "elevation": layerEnabled(opts.Layers, "elevation"), "starts": false}, Crop: opts.Crop, Dat: idx, Palette: opts.Palette, Textures: opts.Textures, Elevation: opts.Elevation, StoredObjectHeights: opts.StoredObjectHeights})
+	base, report, err := RenderFlat(s, Options{Projection: opts.Projection, Scale: opts.Scale, Layers: map[string]bool{"terrain": layerEnabled(opts.Layers, "terrain"), "elevation": layerEnabled(opts.Layers, "elevation"), "starts": false}, Crop: opts.Crop, Window: opts.Window, Dat: idx, Palette: opts.Palette, Textures: opts.Textures, Elevation: opts.Elevation, StoredObjectHeights: opts.StoredObjectHeights})
 	if err != nil {
 		return nil, Report{}, err
 	}
@@ -340,7 +340,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 	}
 	hash := sha256.Sum256(base.Pix)
 	report.PixelSHA256 = hex.EncodeToString(hash[:])
-	return base, report, nil
+	return finishWindow(base, &report, opts.Window), report, nil
 }
 
 func defaultProjection(p string) string {

@@ -22287,7 +22287,7 @@ func usage() {
   kit rpg shop-demo [--out-dir DIR] [--name TEXT] [--timestamp UNIX] [--text|--json]
   kit rpg custom-store [--out-dir DIR] [--name TEXT] [--unit N] [--instances N] [--players N] [--timestamp UNIX] [--xs-check PATH] [--text|--json]
   kit font glyphs <font.ttf> [--chars TEXT] [--material N] [--rotation DEGREES] [--out FILE]
-  kit preview <scenario|replay|snapshot> --out file.png [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]
+  kit preview <scenario|replay|snapshot> [--out file.png | --tiles-dir DIR --tile-size 256 --scales 8,16,32,64] [--window x,y,width,height] [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]
   kit preview snapshot <scenario> --out file.json [--stage NAME] [--dat FILE]
   kit preview assets <scenario> [--dat FILE] [--game-dir DIR] [--crop x1,y1,x2,y2] [--missing-only] [--paths]
   kit preview calibrate-mood --manifest FILE [--game-dir DIR] [--fit --holdout MOOD] [--out FILE]

@@ -83,20 +83,11 @@ func SnapshotImageExtent(s Snapshot, scale int, projection string, elevation boo
 			return ImageExtent{}, err
 		}
 	}
-	if scale == 0 {
-		scale = 4
+	e, err := FullImageExtent(s.Width, s.Height, scale, projection)
+	if err != nil {
+		return e, err
 	}
-	if scale < 1 || scale > 128 || (projection != "" && projection != "diamond" && projection != "topdown") {
-		return ImageExtent{}, fmt.Errorf("invalid preview scale or projection")
-	}
-	projection = defaultProjection(projection)
-	w, h := s.Width*scale, s.Height*scale
-	if projection == "diamond" {
-		w, h = (s.Width+s.Height)*scale/2+1, (s.Width+s.Height)*scale/4+scale*2+1
-	}
-	x, y := mapPoint(0, 0, Crop{X2: s.Width, Y2: s.Height}, scale, projection)
-	e := ImageExtent{Width: w, Height: h, Scale: scale, Projection: projection, MapOriginX: x, MapOriginY: y}
-	pad := elevationPadding(s, Crop{X2: s.Width, Y2: s.Height}, scale, projection, elevation, stored...)
+	pad := elevationPadding(s, Crop{X2: s.Width, Y2: s.Height}, e.Scale, e.Projection, elevation, stored...)
 	e.Height += pad
 	e.MapOriginY += pad
 	return e, nil

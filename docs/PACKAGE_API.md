@@ -4078,6 +4078,12 @@ type Index struct {
 
 func Open(path string) (*Index, error)
 
+func OpenReadOnly(path string) (*Index, error)
+    OpenReadOnly checks the compressed input, complete record framing and
+    coverage without recompressing it to test Kit's DEFLATE writer. Use Open
+    for editing and round-trip verification; this entry point is for read-only
+    consumers.
+
 func Parse(payload []byte) (*Index, error)
 
 func (idx *Index) Effect(id int) (Effect, bool)
@@ -7134,6 +7140,13 @@ func CheckSpriteCompleteness(r Report) error
     CheckSpriteCompleteness ignores intentional exclusions, but not a missing,
     undecodable, unsupported, or invalid-variant sprite in the requested view.
 
+func LoadRenderIndex(datPath, cacheDir string) (*datfile.Index, error)
+    LoadRenderIndex reuses a content-keyed, render-only DAT projection when a
+    cache directory is supplied. The first request builds it with the normal
+    DAT reader; servers should prewarm it before accepting render requests.
+    The result is not a complete DAT and must never be used for editing or
+    gameplay queries.
+
 func PrepareMoodCalibration(path, gameDir string) ([]MoodFitCase, []MoodAlignment, error)
 func ReadMinimapPalette(path string) ([]color.RGBA, error)
     ReadMinimapPalette reads the game's indexed widgetui palette used by the
@@ -7418,6 +7431,10 @@ type ImageExtent struct {
     SnapshotImageExtent adds the height-field headroom to the flat image frame.
     Optional stored=true also reserves headroom for recorded object Z values.
 
+func FullImageExtent(width, height, scale int, projection string) (ImageExtent, error)
+    FullImageExtent describes the virtual canvas without allocating its pixels.
+    MapOrigin is tile coordinate (0,0), not the image's top-left origin (0,0).
+
 func SnapshotImageExtent(s Snapshot, scale int, projection string, elevation bool, stored ...bool) (ImageExtent, error)
 
 type Mood struct {
@@ -7551,6 +7568,8 @@ func ApplyMoodModel(img *image.RGBA, m Mood, source string, p MoodModel) (MoodRe
     ApplyMoodModel applies an explicitly selected calibration, including its
     assumptions in the render report. Invalid models do not mutate the image.
 
+func ApplyMoodModelBackground(img *image.RGBA, m Mood, source string, p MoodModel, background color.RGBA) (MoodReport, error)
+
 type MoodResidual struct {
 	Name      string     `json:"name"`
 	Excluded  bool       `json:"excluded,omitempty"`
@@ -7611,6 +7630,8 @@ type Object struct {
 func SortedObjects(in []Object) []Object
 
 type Options struct {
+	Window              *PixelWindow
+	Metrics             *RenderMetrics
 	Projection          string
 	Scale               int
 	Layers              map[string]bool
@@ -7647,6 +7668,14 @@ type ParticleReport struct {
     ParticleReport distinguishes an explicit DAT reference from the as-yet
     uncalibrated angle/anchor convention used to preview a static loop frame.
 
+type PixelWindow struct {
+	X      int `json:"x"`
+	Y      int `json:"y"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+    PixelWindow is a rectangle in the full image's pixel coordinate frame.
+
 type ProjectDefaults struct {
 	Dat       string `json:"dat,omitempty"`
 	GameDir   string `json:"game_dir,omitempty"`
@@ -7677,7 +7706,20 @@ type RegistrationResidual struct {
 	Holdout          bool
 }
 
+type RenderMetrics struct {
+	Stages map[string]StageMetric `json:"stages"`
+}
+    RenderMetrics is an opt-in diagnostic for one synchronous render.
+    Durations accumulate across operations. Heap values are boundary samples,
+    not RSS peaks or an attribution of all live memory to the named stage.
+
+func (m *RenderMetrics) Record(stage string, start time.Time)
+    Record permits callers to include DAT/scenario reads, grading and encoding
+    in the same report as the renderer's asset and compositing stages.
+
 type Report struct {
+	Extent             *ImageExtent          `json:"extent,omitempty"`
+	Window             *PixelWindow          `json:"window,omitempty"`
 	Crop               *Crop                 `json:"crop,omitempty"`
 	Scale              int                   `json:"scale,omitempty"`
 	Schema             string                `json:"schema"`
@@ -7815,6 +7857,12 @@ type SpriteItem struct {
 	Reason      string   `json:"reason,omitempty"`
 }
 
+type StageMetric struct {
+	Milliseconds   float64 `json:"milliseconds"`
+	Operations     int     `json:"operations"`
+	MaxSampledHeap uint64  `json:"max_sampled_heap_bytes"`
+}
+
 type StudyOptions struct {
 	Crop              *Crop
 	GaiaOnly          bool
@@ -7871,6 +7919,41 @@ type Tile struct {
 	TerrainID int     `json:"terrain_id"`
 	Layer     *int    `json:"layer,omitempty"`
 	Elevation float64 `json:"elevation"`
+}
+
+type TileBatchOptions struct {
+	Dir               string
+	TileSize          int
+	Scales            []int
+	Sprites           bool
+	Strict            bool
+	Mood              *Mood
+	MoodModel         MoodModel
+	MoodSource        string
+	CanvasBudgetBytes int64
+}
+
+type TileBatchReport struct {
+	Metrics      *RenderMetrics    `json:"metrics,omitempty"`
+	Schema       string            `json:"schema"`
+	OK           bool              `json:"ok"`
+	Levels       []TileLevelExtent `json:"levels"`
+	TileSize     int               `json:"tile_size"`
+	Rendered     int               `json:"rendered"`
+	Skipped      int               `json:"skipped"`
+	Milliseconds float64           `json:"milliseconds"`
+	RenderModes  map[int]string    `json:"render_modes"`
+}
+
+func RenderTiles(s Snapshot, opts Options, idx *datfile.Index, gameDir string, batch TileBatchOptions) (report TileBatchReport, err error)
+    RenderTiles renders each level whole when it fits the canvas budget, or in
+    bounded horizontal strips otherwise, then chops fixed-size padded tiles.
+
+type TileLevelExtent struct {
+	Z      int `json:"z"`
+	Scale  int `json:"scale"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
 }
 ```
 

@@ -74,6 +74,8 @@ type Crop struct {
 }
 
 type Options struct {
+	Window              *PixelWindow
+	Metrics             *RenderMetrics
 	Projection          string
 	Scale               int
 	Layers              map[string]bool
@@ -91,6 +93,8 @@ type Options struct {
 }
 
 type Report struct {
+	Extent             *ImageExtent          `json:"extent,omitempty"`
+	Window             *PixelWindow          `json:"window,omitempty"`
 	Crop               *Crop                 `json:"crop,omitempty"`
 	Scale              int                   `json:"scale,omitempty"`
 	Schema             string                `json:"schema"`
@@ -539,6 +543,14 @@ func validateSnapshot(s Snapshot) error {
 }
 
 func RenderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
+	img, report, err := renderFlat(s, opts)
+	if err == nil {
+		img = finishWindow(img, &report, opts.Window)
+	}
+	return img, report, err
+}
+
+func renderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
 	if err := validateSnapshot(s); err != nil {
 		return nil, Report{}, err
 	}
@@ -560,38 +572,44 @@ func RenderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
 	if opts.Crop != nil {
 		crop = *opts.Crop
 	}
+	if opts.Window != nil && opts.Crop != nil {
+		return nil, Report{}, errors.New("pixel window and tile crop are mutually exclusive")
+	}
 	if crop.X1 < 0 || crop.Y1 < 0 || crop.X2 > s.Width || crop.Y2 > s.Height || crop.X1 >= crop.X2 || crop.Y1 >= crop.Y2 {
 		return nil, Report{}, errors.New("crop must be a non-empty in-bounds tile rectangle")
 	}
-	w, h := (crop.X2-crop.X1)*scale, (crop.Y2-crop.Y1)*scale
-	if projection == "diamond" {
-		w = (crop.X2-crop.X1+crop.Y2-crop.Y1)*scale/2 + 1
-		h = (crop.X2-crop.X1+crop.Y2-crop.Y1)*scale/4 + scale*2 + 1
-	}
-	if opts.Elevation && opts.StoredObjectHeights {
-		if err := validateStoredObjectHeights(s); err != nil {
-			return nil, Report{}, err
-		}
-	}
 	if opts.Elevation {
+		if opts.StoredObjectHeights {
+			if err := validateStoredObjectHeights(s); err != nil {
+				return nil, Report{}, err
+			}
+		}
 		if err := validateHeightfield(s); err != nil {
 			return nil, Report{}, err
 		}
 	}
+	frame, _ := FullImageExtent(crop.X2-crop.X1, crop.Y2-crop.Y1, scale, projection)
 	pad := elevationPadding(s, crop, scale, projection, opts.Elevation, opts.StoredObjectHeights)
-	h += pad
-	if int64(w)*int64(h) > maxImagePixels {
+	frame.Height += pad
+	frame.MapOriginY += pad
+	w, h := frame.Width, frame.Height
+	if opts.Window == nil && int64(w)*int64(h) > maxImagePixels {
 		return nil, Report{}, fmt.Errorf("preview dimensions %dx%d exceed %d-pixel limit; crop or lower --scale", w, h, maxImagePixels)
 	}
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
-	draw.Draw(img, img.Bounds(), &image.Uniform{C: color.RGBA{R: 24, G: 27, B: 30, A: 255}}, image.Point{}, draw.Src)
-	terrain := make([]Tile, len(s.Terrain))
-	for _, t := range s.Terrain {
-		terrain[t.Y*s.Width+t.X] = t
+	bounds := image.Rect(0, 0, w, h)
+	if opts.Window != nil {
+		var err error
+		bounds, err = opts.Window.rectangle()
+		if err != nil {
+			return nil, Report{}, err
+		}
 	}
-	ground := terrain
-	if !opts.Elevation {
-		ground = nil
+	img := image.NewRGBA(bounds.Intersect(image.Rect(0, 0, w, h)))
+	draw.Draw(img, img.Bounds(), &image.Uniform{C: color.RGBA{R: 24, G: 27, B: 30, A: 255}}, image.Point{}, draw.Src)
+	terrain := heightTiles(s)
+	var ground []Tile
+	if opts.Elevation {
+		ground = terrain
 	}
 	groundOffset := func(o Object) int {
 		return pad - objectGroundLift(s, ground, o, scale, projection, opts.StoredObjectHeights)
@@ -629,7 +647,15 @@ func RenderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
 	report := Report{Schema: "aoe2kit.preview.report.v1", OK: true, Stage: s.Stage, Projection: projection, ImageWidth: w, ImageHeight: h, CountsByClass: map[string]int{}, TerrainColors: "builtin deterministic terrain-id palette"}
 	report.Fallbacks = append(report.Fallbacks, s.SourceWarnings...)
 	report.Crop, report.Scale = &crop, scale
+	extent, _ := SnapshotImageExtent(s, scale, projection, opts.Elevation, opts.StoredObjectHeights)
+	report.Extent, report.Window = &extent, opts.Window
 	report.ElevationPadding = pad
+	if opts.Elevation {
+		report.ObjectHeightMode = "inferred-terrain"
+		if opts.StoredObjectHeights {
+			report.ObjectHeightMode = "stored-z"
+		}
+	}
 	if opts.Dat != nil {
 		if len(opts.Palette) == 256 {
 			report.TerrainColors = "base terrain; DAT minimap medium-color index resolved through 256-color palette"
@@ -645,15 +671,8 @@ func RenderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
 		report.Textures = &textureReport
 		report.TerrainColors = "installed DDS textures with named layer masks; inspect textures report for assumptions and fallbacks"
 		report.ElevationMode = "flat textured surface; geometric elevation and lighting not modeled"
-		if opts.Elevation && projection == "diamond" {
-			report.ElevationMode = "experimental height field with textured terrain; geometry and lighting are candidates, not engine-verified"
-		}
 	}
 	if opts.Elevation {
-		report.ObjectHeightMode = "inferred-terrain"
-		if opts.StoredObjectHeights {
-			report.ObjectHeightMode = "stored-z"
-		}
 		report.ElevationMode = "experimental height field: scale/4 lift per stored level; max-of-four shared corners; isolated NW/NE/SE raised neighbors use level-diagonal folds with connected-ridge guard; shared-vertex lighting from central terrain gradients; inspect object_height_mode for stored Z or provisional inferred attachment; flat-position depth order; no terrain occlusion"
 		if projection != "diamond" {
 			report.ElevationMode = "topdown slope shading only; no geometric displacement"

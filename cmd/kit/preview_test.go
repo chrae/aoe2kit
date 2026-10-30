@@ -61,4 +61,8 @@ func TestPreviewDefaultsAndCropCLI(t *testing.T) {
 	if img.Bounds().Dx() != 180 || img.Bounds().Dy() != 180 {
 		t.Fatal("configured scale ignored", img.Bounds())
 	}
+	runPreview([]string{"scene.json", "--no-sprites", "--no-textures", "--no-shadows", "--no-elevation", "--tiles-dir", "tiles", "--tile-size", "256", "--scales", "8,16"})
+	if _, err := os.Stat(filepath.Join("tiles", "extent.json")); err != nil {
+		t.Fatal(err)
+	}
 }

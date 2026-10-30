@@ -3346,12 +3346,30 @@
         "preview"
       ],
       "name": "preview",
-      "usage": "kit preview \u003cscenario|replay|snapshot\u003e --out file.png [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]",
+      "usage": "kit preview \u003cscenario|replay|snapshot\u003e [--out file.png | --tiles-dir DIR --tile-size 256 --scales 8,16,32,64] [--window x,y,width,height] [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--sprites] [--dat FILE] [--palette FILE] [--game-dir DIR] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]",
       "flags": [
         {
           "name": "--out",
-          "value_hint": "file.png",
+          "value_hint": "file.png"
+        },
+        {
+          "name": "--tiles-dir",
+          "value_hint": "DIR",
           "required": true
+        },
+        {
+          "name": "--tile-size",
+          "value_hint": "256",
+          "required": true
+        },
+        {
+          "name": "--scales",
+          "value_hint": "8,16,32,64",
+          "required": true
+        },
+        {
+          "name": "--window",
+          "value_hint": "x,y,width,height"
         },
         {
           "name": "--minimap"

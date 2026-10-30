@@ -26,6 +26,7 @@ func runPreview(args []string) {
 		return
 	}
 	if len(args) == 0 {
+		fmt.Fprintln(os.Stderr, "Tile pyramids: --tiles-dir DIR --tile-size 256 --scales 8,16,32,64; pixel windows: --window x,y,width,height")
 		fmt.Fprintln(os.Stderr, "Project defaults: kit-preview.json; shortcuts: --around x,y --radius r | --fit-units ID[,ID]; --elevation experimental; --strict requires sprites; --rotation-model stored-index|radians|radians-reversed")
 		fmt.Fprintln(os.Stderr, "usage: kit preview <scenario|replay|snapshot> [--out file.png] [--minimap] [--minimap-orientation normal|transpose|flipx|flipy|rotate90|rotate180|rotate270 (default rotate270)] [--snapshot-out file.json] [--projection topdown|diamond] [--scale N] [--layers LIST] [--crop x1,y1,x2,y2] [--dat FILE] [--palette FILE] [--game-dir DIR] [--sprites] [--shadows] [--shadow-overlap max|sum] [--textures] [--terrain-repeat TILES] [--texture-repeat TILES] [--no-terrain-edges] [--mood NAME|scenario|none]")
 		os.Exit(2)
@@ -44,6 +45,12 @@ func runPreview(args []string) {
 		die("kit preview", err)
 	}
 	var outPath, snapshotPath, datPath, palettePath, gameDir, projection, minimapOrientation string
+	var tilesDir string
+	var cacheDir string
+	tileSize := 256
+	tileOptionsSet := false
+	scales := []int{8, 16, 32, 64}
+	var window *preview.PixelWindow
 	datPath, gameDir = defaults.Dat, defaults.GameDir
 	scale := 4
 	if defaults.Scale != 0 {
@@ -84,6 +91,41 @@ func runPreview(args []string) {
 		switch args[i] {
 		case "--out":
 			outPath = need()
+		case "--tiles-dir":
+			tilesDir = need()
+		case "--cache-dir":
+			cacheDir = need()
+		case "--tile-size":
+			tileOptionsSet = true
+			v, err := strconv.Atoi(need())
+			if err != nil {
+				die("kit preview", err)
+			}
+			tileSize = v
+		case "--scales":
+			tileOptionsSet = true
+			scales = nil
+			for _, value := range strings.Split(need(), ",") {
+				v, err := strconv.Atoi(value)
+				if err != nil {
+					die("kit preview", err)
+				}
+				scales = append(scales, v)
+			}
+		case "--window":
+			values := strings.Split(need(), ",")
+			if len(values) != 4 {
+				die("kit preview", fmt.Errorf("--window requires x,y,width,height"))
+			}
+			var v [4]int
+			for j, value := range values {
+				n, err := strconv.Atoi(value)
+				if err != nil {
+					die("kit preview", err)
+				}
+				v[j] = n
+			}
+			window = &preview.PixelWindow{X: v[0], Y: v[1], Width: v[2], Height: v[3]}
 		case "--snapshot-out":
 			snapshotPath = need()
 		case "--dat":
@@ -205,7 +247,7 @@ func runPreview(args []string) {
 			die("kit preview", fmt.Errorf("unknown option %q", args[i]))
 		}
 	}
-	if outPath == "" {
+	if outPath == "" && tilesDir == "" {
 		die("kit preview", fmt.Errorf("--out is required"))
 	}
 	if strict && (!sprites || minimap) {
@@ -257,6 +299,15 @@ func runPreview(args []string) {
 	if minimap && crop != nil {
 		die("kit preview", fmt.Errorf("--minimap always renders the whole map; omit --crop"))
 	}
+	if tilesDir != "" && (minimap || crop != nil || window != nil || outPath != "") {
+		die("kit preview", fmt.Errorf("--tiles-dir requires the full frame; omit --out, --window, --crop and --minimap"))
+	}
+	if tileOptionsSet && tilesDir == "" {
+		die("kit preview", fmt.Errorf("--tile-size and --scales require --tiles-dir"))
+	}
+	if window != nil && (minimap || crop != nil) {
+		die("kit preview", fmt.Errorf("--window cannot be combined with --minimap or --crop"))
+	}
 	var dat *datfile.Index
 	resolvedDir, resolveErr := gameinstall.Resolve(gameDir)
 	if gameDir != "" && resolveErr != nil {
@@ -270,7 +321,7 @@ func runPreview(args []string) {
 	}
 	if datPath != "" {
 		var err error
-		dat, err = datfile.Open(datPath)
+		dat, err = preview.LoadRenderIndex(datPath, cacheDir)
 		if err != nil {
 			die("kit preview", fmt.Errorf("load DAT: %w", err))
 		}
@@ -350,6 +401,18 @@ func runPreview(args []string) {
 	if shadows {
 		previewOpts.Shadows = &preview.ShadowOptions{Mood: renderMood, Overlap: shadowOverlap}
 	}
+	previewOpts.Window = window
+	if tilesDir != "" {
+		if sprites && (resolveErr != nil || dat == nil) {
+			die("kit preview", fmt.Errorf("sprite tiles require a game install and DAT"))
+		}
+		r, err := preview.RenderTiles(snap, previewOpts, dat, resolvedDir, preview.TileBatchOptions{Dir: tilesDir, TileSize: tileSize, Scales: scales, Sprites: sprites, Strict: strict, Mood: renderMood, MoodModel: moodModel, MoodSource: moodSource})
+		if err != nil {
+			die("kit preview", err)
+		}
+		printJSON(r)
+		return
+	}
 	var img image.Image
 	var report any
 	err = nil
@@ -389,7 +452,19 @@ func runPreview(args []string) {
 		if moodModelPath != "" {
 			source += "; explicit calibration model"
 		}
-		mr, err := preview.ApplyMoodModel(rgba, *renderMood, source, moodModel)
+		var mr preview.MoodReport
+		var err error
+		if window != nil {
+			originOpts := previewOpts
+			originOpts.Window = &preview.PixelWindow{Width: 1, Height: 1}
+			origin, _, originErr := preview.RenderFlat(snap, originOpts)
+			if originErr != nil {
+				die("kit preview", originErr)
+			}
+			mr, err = preview.ApplyMoodModelBackground(rgba, *renderMood, source, moodModel, origin.RGBAAt(0, 0))
+		} else {
+			mr, err = preview.ApplyMoodModel(rgba, *renderMood, source, moodModel)
+		}
 		if err != nil {
 			die("kit preview", err)
 		}
