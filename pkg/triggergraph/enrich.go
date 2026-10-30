@@ -338,5 +338,6 @@ var conditionTypeNames = map[int]string{
 	27: "object_visible_multiplayer",
 	28: "object_has_action",
 	29: "or",
-	30: "building_is_trading",
+	30: "multiplayer_ai_signal",
+	54: "building_is_trading",
 }

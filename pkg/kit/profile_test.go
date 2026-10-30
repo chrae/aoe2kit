@@ -102,3 +102,16 @@ func write(t *testing.T, dir, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestPublicSourceFixturesExcludeCapturedGameData(t *testing.T) {
+	for _, path := range []string{"testdata/ai/duc-micro.per", "testdata/ai/passive/resources/_common/xs/Probe.xs"} {
+		if publicReleaseForbidden(path) {
+			t.Fatalf("authored source fixture rejected: %s", path)
+		}
+	}
+	for _, path := range []string{"testdata/ai/captured.per", "testdata/ai/captured.aoe2scenario", "testdata/ai/passive/resources/_common/ai/game.dat", "testdata/capture.png"} {
+		if !publicReleaseForbidden(path) {
+			t.Fatalf("unreviewed fixture accepted: %s", path)
+		}
+	}
+}

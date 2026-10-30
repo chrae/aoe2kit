@@ -1,6 +1,7 @@
 package datfile
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"os"
@@ -12,7 +13,8 @@ import (
 
 // ExportSQLite writes a query-oriented view of every present DAT unit. Scalar
 // decoded fields become columns; variable-length attacks, armours, attributes,
-// and damage graphics are child tables. The source DAT remains untouched.
+// damage graphics, costs, and train locations are child tables. The source
+// DAT remains untouched.
 func ExportSQLite(datPath, outPath string) error {
 	compressed, err := os.ReadFile(datPath)
 	if err != nil {
@@ -49,6 +51,9 @@ func ExportSQLite(datPath, outPath string) error {
 		return rollback(err)
 	}
 	if _, err := tx.Exec(`INSERT INTO metadata(key,value) VALUES(?,?)`, "source_path", datPath); err != nil {
+		return rollback(err)
+	}
+	if _, err := tx.Exec(`INSERT INTO metadata(key,value) VALUES(?,?)`, "source_sha256", fmt.Sprintf("%x", sha256.Sum256(compressed))); err != nil {
 		return rollback(err)
 	}
 	if err := insertExportAttributeMap(tx); err != nil {
@@ -91,6 +96,21 @@ func ExportSQLite(datPath, outPath string) error {
 		return rollback(err)
 	}
 	defer armourStmt.Close()
+	damageGraphicStmt, err := tx.Prepare(`INSERT INTO unit_damage_graphics(civ_index,unit_index,row_index,graphic_id,damage_percent,flag) VALUES(?,?,?,?,?,?)`)
+	if err != nil {
+		return rollback(err)
+	}
+	defer damageGraphicStmt.Close()
+	costStmt, err := tx.Prepare(`INSERT INTO unit_costs(civ_index,unit_index,row_index,attribute_type,amount,flag,active) VALUES(?,?,?,?,?,?,?)`)
+	if err != nil {
+		return rollback(err)
+	}
+	defer costStmt.Close()
+	trainLocationStmt, err := tx.Prepare(`INSERT INTO unit_train_locations(civ_index,unit_index,row_index,train_time,train_unit_id,train_button,train_hotkey) VALUES(?,?,?,?,?,?,?)`)
+	if err != nil {
+		return rollback(err)
+	}
+	defer trainLocationStmt.Close()
 
 	for _, civ := range idx.Civs {
 		for _, unit := range civ.Units {
@@ -134,6 +154,15 @@ func ExportSQLite(datPath, outPath string) error {
 			if err := insertWeaponRows(armourStmt, civ.Index, unit.Index, full["armours"]); err != nil {
 				return rollback(err)
 			}
+			if err := insertDamageGraphicRows(damageGraphicStmt, civ.Index, unit.Index, full["damage_graphics"]); err != nil {
+				return rollback(err)
+			}
+			if err := insertCostRows(costStmt, civ.Index, unit.Index, full["costs"]); err != nil {
+				return rollback(err)
+			}
+			if err := insertTrainLocationRows(trainLocationStmt, civ.Index, unit.Index, full["train_locations"]); err != nil {
+				return rollback(err)
+			}
 		}
 	}
 	if err := tx.Commit(); err != nil {
@@ -155,7 +184,10 @@ CREATE TABLE attribute_map(attribute_id INTEGER PRIMARY KEY,attribute_name TEXT 
 CREATE TABLE unit_fields(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,field_name TEXT NOT NULL,field_value TEXT,PRIMARY KEY(civ_index,unit_index,field_name));
 CREATE TABLE unit_attributes(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,attribute_index INTEGER NOT NULL,attribute_type INTEGER NOT NULL,amount REAL NOT NULL,flag INTEGER NOT NULL,active INTEGER NOT NULL);
 CREATE TABLE unit_attacks(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,class INTEGER NOT NULL,value INTEGER NOT NULL);
-CREATE TABLE unit_armours(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,class INTEGER NOT NULL,value INTEGER NOT NULL);`)
+CREATE TABLE unit_armours(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,class INTEGER NOT NULL,value INTEGER NOT NULL);
+CREATE TABLE unit_damage_graphics(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,graphic_id INTEGER NOT NULL,damage_percent INTEGER NOT NULL,flag INTEGER NOT NULL);
+CREATE TABLE unit_costs(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,attribute_type INTEGER NOT NULL,amount INTEGER NOT NULL,flag INTEGER NOT NULL,active INTEGER NOT NULL);
+CREATE TABLE unit_train_locations(civ_index INTEGER NOT NULL,unit_index INTEGER NOT NULL,row_index INTEGER NOT NULL,train_time INTEGER NOT NULL,train_unit_id INTEGER NOT NULL,train_button INTEGER NOT NULL,train_hotkey INTEGER NOT NULL);`)
 	if err != nil {
 		return err
 	}
@@ -184,6 +216,45 @@ func insertWeaponRows(stmt *sql.Stmt, civ, unit int, value any) error {
 	}
 	for _, row := range rows {
 		if _, err := stmt.Exec(civ, unit, row["index"], row["class"], row["value"]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertDamageGraphicRows(stmt *sql.Stmt, civ, unit int, value any) error {
+	rows, ok := value.([]map[string]any)
+	if !ok {
+		return nil
+	}
+	for _, row := range rows {
+		if _, err := stmt.Exec(civ, unit, row["index"], row["graphic_id"], row["damage_percent"], row["flag"]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertCostRows(stmt *sql.Stmt, civ, unit int, value any) error {
+	rows, ok := value.([]map[string]any)
+	if !ok {
+		return nil
+	}
+	for _, row := range rows {
+		if _, err := stmt.Exec(civ, unit, row["index"], row["type"], row["amount"], row["flag"], row["active"]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func insertTrainLocationRows(stmt *sql.Stmt, civ, unit int, value any) error {
+	rows, ok := value.([]map[string]any)
+	if !ok {
+		return nil
+	}
+	for _, row := range rows {
+		if _, err := stmt.Exec(civ, unit, row["index"], row["train_time"], row["train_unit_id"], row["train_button"], row["train_hotkey"]); err != nil {
 			return err
 		}
 	}
@@ -229,6 +300,13 @@ func exportedDATFields() map[string]bool {
 	// carries every layout block.
 	for _, field := range []string{
 		"attacks", "armours",
+		"damage_graphics", "costs", "train_locations.train_time", "train_locations.train_unit_id",
+		"train_locations.train_button", "train_locations.train_hotkey", "unit_attributes",
+		"string_id", "string_id_2", "undead_graphic", "obstruction_type_id",
+		"can_be_built_on", "can_be_gathered", "hill_mode", "blast_defense_level", "search_radius", "work_rate",
+		"outline_radius_x", "outline_radius_y", "outline_radius_z", "construction_sprite", "snow_sprite", "can_burn",
+		"charge_target", "secondary_projectile_unit", "total_projectiles", "max_total_projectiles", "garrison_sprite",
+		"spawning_graphic", "upgrade_graphic", "foundation_terrain_id",
 		"hit_points", "line_of_sight", "garrison_capacity", "radius_x", "radius_y", "speed", "turn_speed",
 		"displayed_reload_time", "work_rate", "carry_capacity", "base_armor", "min_range", "frame_delay",
 		"blast_attack_level", "displayed_attack", "displayed_range", "terrain_restriction_id", "size_class",
@@ -238,7 +316,11 @@ func exportedDATFields() map[string]bool {
 		"break_off_combat", "weapon_offset_x", "weapon_offset_y", "weapon_offset_z", "displayed_armor",
 		"maximum_yaw_per_second_moving", "stationary_yaw_per_revolution_time", "maximum_yaw_per_second_stationary",
 		"spawning_graphic", "upgrade_graphic", "head_unit", "stack_unit", "transform_unit", "pile_unit",
-		"construction_unit", "salvage_unit", "transform_sound", "construction_sound", "garrison_type", "garrison_heal_rate", "garrison_repair_rate",
+		"destruction_graphic", "destruction_rubble_graphic", "researching_graphic", "research_completed_graphic",
+		"adjacent_mode", "graphics_angle", "disappears_when_built", "old_overlay_id", "building_tech_id",
+		"wwise_transform_sound_id", "wwise_construction_sound_id", "looting_table_0", "looting_table_1", "looting_table_2",
+		"looting_table_3", "looting_table_4", "looting_table_5",
+		"transform_sound", "construction_sound", "garrison_type", "garrison_heal_rate", "garrison_repair_rate",
 		"annex_unit_1", "annex_unit_1_offset_x", "annex_unit_1_offset_y", "annex_unit_2", "annex_unit_2_offset_x", "annex_unit_2_offset_y",
 		"annex_unit_3", "annex_unit_3_offset_x", "annex_unit_3_offset_y", "annex_unit_4", "annex_unit_4_offset_x", "annex_unit_4_offset_y",
 	} {
@@ -250,6 +332,41 @@ func exportedDATFields() map[string]bool {
 func exportFieldAvailable(fields map[string]bool, path string) bool {
 	if path == "" {
 		return false
+	}
+	// UGC attribute labels are not always the decoder's canonical field name.
+	// Keep these aliases explicit so coverage follows the actual exported data.
+	switch path {
+	case "radius_x":
+		return fields["collision_size_x"]
+	case "radius_y":
+		return fields["collision_size_y"]
+	case "radius_z":
+		return fields["collision_size_z"]
+	case "area_effect_level":
+		return fields["blast_defense_level"]
+	case "undead_sprite":
+		return fields["undead_graphic"]
+	case "obstruction_type":
+		return fields["obstruction_type_id"]
+	case "selection_shape":
+		return fields["obstruction_class_id"]
+	case "damage_graphics":
+		return fields["damage_graphics"]
+	case "costs":
+		return fields["costs"]
+	case "create_time":
+		return fields["train_locations.train_time"]
+	case "create_at_building":
+		return fields["train_locations.train_unit_id"]
+	case "create_button":
+		return fields["train_locations.train_button"]
+	case "hotkey_id":
+		return fields["train_locations.train_hotkey"]
+	case "on_build_make_tile":
+		return fields["foundation_terrain_id"]
+	}
+	if strings.HasPrefix(path, "unit_attributes.") {
+		return fields["unit_attributes"]
 	}
 	if strings.HasSuffix(path, ".value") {
 		return fields[strings.TrimSuffix(path, ".value")]
@@ -332,12 +449,12 @@ func UGCAttributeDATField(id int) (string, string) {
 		23: "search_radius", 32: "radius_z", 33: "can_be_built_on", 34: "on_build_make_tile", 41: "frame_delay",
 		42: "create_at_building", 43: "create_button", 44: "blast_attack_level", 45: "area_effect_level", 46: "displayed_attack",
 		47: "displayed_range", 48: "armours.value", 49: "armours.value", 50: "string_id", 51: "string_id_2",
-		53: "terrain_restriction_id", 54: "unit_level", 56: "attribute_piece", 57: "death_spawn", 58: "hotkey_id",
+		53: "terrain_restriction_id", 54: "unit_level", 56: "unit_attributes.attribute_type=56", 57: "death_spawn", 58: "hotkey_id",
 		64: "missed_missile_spread", 65: "secondary_projectile_unit", 66: "blood_unit_id", 69: "ballistics_ratio", 70: "fight_sprite",
 		71: "standing_graphic_1", 72: "standing_graphic_2", 73: "dying_graphic", 74: "undead_sprite", 75: "move_sprite",
 		76: "run_sprite", 78: "obstruction_type", 80: "selection_shape", 82: "fight_sprite", 84: "garrison_sprite",
 		85: "construction_sprite", 86: "snow_sprite", 91: "damage_graphics", 96: "train_sound", 98: "damage_sound",
-		100: "costs", 101: "create_time", 102: "max_attacks_in_volley", 108: "garrison_heal_rate", 109: "regeneration_rate",
+		100: "costs", 101: "create_time", 102: "total_projectiles", 107: "max_total_projectiles", 108: "garrison_heal_rate", 109: "unit_attributes.attribute_type=109",
 		115: "blast_damage", 119: "area_effect_specials", 145: "trailing_unit", 146: "trailing_options",
 		147: "trailing_spacing", 162: "charge_target", 163: "size_class", 197: "outline_radius_x", 198: "outline_radius_y",
 		185: "fly_mode", 186: "can_be_gathered", 187: "hill_mode",

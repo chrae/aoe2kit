@@ -160,6 +160,16 @@ func readPublicAllowlist(root string) (map[string]bool, error) {
 
 func publicReleaseForbidden(rel string) bool {
 	low := strings.ToLower(filepath.ToSlash(rel))
+	// Handwritten source-only lint fixtures; no captured game data is exempted.
+	switch low {
+	case "testdata/ai/coordination.per", "testdata/ai/duc-micro.per",
+		"testdata/ai/local-goals.per", "testdata/ai/object-data.per",
+		"testdata/ai/typo.per", "testdata/ai/undefined-duc.per",
+		"testdata/ai/passive/resources/_common/ai/probe.ai",
+		"testdata/ai/passive/resources/_common/ai/probe.per",
+		"testdata/ai/passive/resources/_common/xs/probe.xs":
+		return false
+	}
 	for _, prefix := range []string{
 		"testdata/",
 		"pkg/scenario/evidence/",

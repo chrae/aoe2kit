@@ -1,6 +1,5 @@
 {
-  "profile": "public",
-  "kit_version": "0.4.2",
-  "packed_at": "2026-10-18T01:54:59Z",
-  "generation": 6
+  "generation": 6,
+  "kit_version": "0.4.3",
+  "profile": "public"
 }

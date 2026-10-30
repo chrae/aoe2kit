@@ -589,6 +589,7 @@ type TriggerRecipe struct {
 }
 
 type EffectRecipe struct {
+	AISignalValue              *int     `json:"ai_signal_value,omitempty"`
 	Op                         string   `json:"op"`
 	Message                    string   `json:"message,omitempty"`
 	ObjectListUnitID           *int     `json:"object_list_unit_id,omitempty"`
@@ -661,6 +662,7 @@ type EffectRecipe struct {
 
 type ConditionRecipe struct {
 	Op                             string `json:"op"`
+	AISignal                       *int   `json:"ai_signal,omitempty"`
 	Timer                          *int   `json:"timer,omitempty"`
 	UnitObject                     *int   `json:"unit_object,omitempty"`
 	Quantity                       *int   `json:"quantity,omitempty"`
@@ -971,6 +973,13 @@ func (f *File) Plan(recipe Recipe) (Plan, error) {
 		plan.UnitCountAfter = f.Units.Total
 	}
 	for _, trigger := range recipe.Triggers {
+		for _, effects := range [][]EffectRecipe{trigger.Effects, trigger.ReplaceEffects} {
+			for _, effect := range effects {
+				if effect.Op == "acknowledge_ai_signal" {
+					plan.Warnings = append(plan.Warnings, "acknowledge_ai_signal is deprecated: documented to cause desyncs in multiplayer and recorded games; prefer acknowledge_multiplayer_ai_signal; engine behavior unverified")
+				}
+			}
+		}
 		enabled := false
 		if trigger.Enabled != nil {
 			enabled = *trigger.Enabled
@@ -6946,6 +6955,12 @@ func floatPtrValue(value *float64, fallback float64) float64 {
 }
 
 func effectOverrides(effect EffectRecipe) (map[string]any, error) {
+	if effect.Op == "acknowledge_ai_signal" || effect.Op == "acknowledge_multiplayer_ai_signal" {
+		if effect.AISignalValue == nil {
+			return nil, fmt.Errorf("%s requires ai_signal_value", effect.Op)
+		}
+		return map[string]any{"effect_type": effectTypeID(effect.Op), "ai_signal_value": *effect.AISignalValue, "message": "", "sound_name": "", "selected_object_ids": []any{}, "number_of_units_selected": -1}, nil
+	}
 	switch effect.Op {
 	case "change_diplomacy":
 		if effect.TargetPlayer == nil {
@@ -7725,6 +7740,18 @@ func effectTypeID(op string) int {
 
 func conditionOverrides(condition ConditionRecipe) (map[string]any, error) {
 	switch condition.Op {
+	case "ai_signal", "multiplayer_ai_signal", "ai_signal_multiplayer":
+		if condition.AISignal == nil {
+			return nil, fmt.Errorf("%s requires ai_signal", condition.Op)
+		}
+		if condition.SourcePlayer != nil || condition.TargetPlayer != nil {
+			return nil, fmt.Errorf("%s has no player selector", condition.Op)
+		}
+		typ := 12
+		if condition.Op != "ai_signal" {
+			typ = 30
+		}
+		return map[string]any{"condition_type": typ, "ai_signal": *condition.AISignal, "inverted": intValue(condition.Inverted, 0)}, nil
 	case "chance":
 		if condition.Quantity == nil {
 			return nil, fmt.Errorf("chance requires quantity")

@@ -115,6 +115,13 @@ func DecodeUnitFields(record []byte, version string) (map[string]any, error) {
 		"movement_type":        unit.MovementType,
 		"map_draw_level":       unit.MapDrawLevel,
 		"map_color":            unit.MapColor,
+		"can_be_built_on":      unit.CanBeBuiltOn,
+		"can_be_gathered":      unit.CanBeGathered,
+		"hill_mode":            unit.HillMode,
+		"blast_defense_level":  unit.BlastDefenseLevel,
+		"outline_radius_x":     unit.OutlineRadiusX,
+		"outline_radius_y":     unit.OutlineRadiusY,
+		"outline_radius_z":     unit.OutlineRadiusZ,
 		"fly_mode":             unit.FlyMode,
 		"obstruction_type_id":  unit.ObstructionTypeID,
 		"obstruction_class_id": unit.ObstructionClassID,
@@ -157,6 +164,8 @@ func DecodeUnitFields(record []byte, version string) (map[string]any, error) {
 	if unit.Action != nil {
 		fields["drop_sites"] = unit.Action.DropSites
 		fields["tasks"] = unit.Action.Tasks
+		fields["search_radius"] = unit.Action.SearchRadius
+		fields["work_rate"] = unit.Action.WorkRate
 	}
 	if unit.Type50 != nil {
 		for name, value := range map[string]any{
@@ -193,7 +202,7 @@ func DecodeUnitFields(record []byte, version string) (map[string]any, error) {
 	if unit.Creatable != nil {
 		costs := make([]map[string]any, 0, len(unit.Creatable.Costs))
 		for _, row := range unit.Creatable.Costs {
-			costs = append(costs, map[string]any{"index": row.Index, "type": row.AttributeType, "amount": row.Amount, "flag": row.Flag})
+			costs = append(costs, map[string]any{"index": row.Index, "type": row.AttributeType, "amount": row.Amount, "flag": row.Flag, "active": row.Active})
 		}
 		fields["costs"] = costs
 		locations := make([]map[string]any, 0, len(unit.Creatable.TrainLocations))
@@ -203,22 +212,47 @@ func DecodeUnitFields(record []byte, version string) (map[string]any, error) {
 		fields["train_locations"] = locations
 		fields["button_icon_id"] = unit.Creatable.ButtonIconID
 		fields["button_hotkey_action"] = unit.Creatable.ButtonHotkeyAction
+		fields["garrison_sprite"] = unit.Creatable.GarrisonGraphic
+		fields["spawning_graphic"] = unit.Creatable.SpawningGraphic
+		fields["upgrade_graphic"] = unit.Creatable.UpgradeGraphic
+		fields["charge_target"] = unit.Creatable.ChargeTarget
+		fields["secondary_projectile_unit"] = unit.Creatable.SecondaryProjectileUnit
+		fields["total_projectiles"] = unit.Creatable.TotalProjectiles
+		fields["max_total_projectiles"] = unit.Creatable.MaxTotalProjectiles
+		if len(unit.Creatable.TrainLocations) > 0 {
+			fields["create_time"] = unit.Creatable.TrainLocations[0].TrainTime
+			fields["create_at_building"] = unit.Creatable.TrainLocations[0].TrainUnitID
+			fields["create_button"] = unit.Creatable.TrainLocations[0].TrainButton
+		}
 	}
 	if unit.Building != nil {
-		fields["spawning_graphic"] = unit.Building.SpawningGraphic
-		fields["upgrade_graphic"] = unit.Building.UpgradeGraphic
+		fields["construction_sprite"] = unit.Building.ConstructionGraphicID
+		fields["snow_sprite"] = unit.Building.SnowGraphicID
+		fields["destruction_graphic"] = unit.Building.DestructionGraphicID
+		fields["destruction_rubble_graphic"] = unit.Building.DestructionRubbleGraphicID
+		fields["researching_graphic"] = unit.Building.ResearchingGraphic
+		fields["research_completed_graphic"] = unit.Building.ResearchCompletedGraphic
+		fields["adjacent_mode"] = unit.Building.AdjacentMode
+		fields["graphics_angle"] = unit.Building.GraphicsAngle
+		fields["disappears_when_built"] = unit.Building.DisappearsWhenBuilt
+		fields["foundation_terrain_id"] = unit.Building.FoundationTerrainID
+		fields["old_overlay_id"] = unit.Building.OldOverlayID
+		fields["building_tech_id"] = unit.Building.TechID
+		fields["can_burn"] = unit.Building.CanBurn
 		fields["stack_unit"] = unit.Building.StackUnit
 		fields["head_unit"] = unit.Building.HeadUnit
 		fields["transform_unit"] = unit.Building.TransformUnit
 		fields["pile_unit"] = unit.Building.PileUnit
-		fields["construction_unit"] = unit.Building.ConstructionUnit
-		fields["salvage_unit"] = unit.Building.SalvageUnit
 		fields["transform_sound"] = unit.Building.TransformSound
 		fields["construction_sound"] = unit.Building.ConstructionSound
 		fields["garrison_type"] = unit.Building.GarrisonType
 		fields["garrison_heal_rate"] = unit.Building.GarrisonHealRate
 		fields["garrison_repair_rate"] = unit.Building.GarrisonRepairRate
-		fields["salvage_attributes"] = unit.Building.SalvageAttributes
+		fields["wwise_transform_sound_id"] = unit.Building.WwiseTransformSoundID
+		fields["wwise_construction_sound_id"] = unit.Building.WwiseConstructionSoundID
+		for i, value := range unit.Building.LootingTable {
+			fields[fmt.Sprintf("looting_table_%d", i)] = value
+		}
 		links := make([]map[string]any, 0, len(unit.Building.LinkedBuildings))
 		for _, row := range unit.Building.LinkedBuildings {
 			links = append(links, map[string]any{"index": row.Index, "unit_id": row.UnitID, "x": row.X, "y": row.Y})

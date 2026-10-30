@@ -8159,15 +8159,30 @@ func runAI(args []string) {
 		aiFingerprint(args[1:])
 	case "lint":
 		textOut := false
-		for _, arg := range args[2:] {
-			switch arg {
+		lintOpts := aifile.LintOptions{}
+		for i := 2; i < len(args); i++ {
+			switch args[i] {
 			case "--text":
 				textOut = true
+			case "--dat-db", "--dat-sha256", "--scenario":
+				option := args[i]
+				i++
+				if i >= len(args) {
+					die("kit ai lint", fmt.Errorf("%s needs a value", option))
+				}
+				switch option {
+				case "--dat-db":
+					lintOpts.DATDatabase = args[i]
+				case "--dat-sha256":
+					lintOpts.ExpectedDATSHA256 = args[i]
+				case "--scenario":
+					lintOpts.Scenario = args[i]
+				}
 			default:
-				die("kit ai lint", fmt.Errorf("unknown option %q", arg))
+				die("kit ai lint", fmt.Errorf("unknown option %q", args[i]))
 			}
 		}
-		report, err := aifile.LintPath(args[1])
+		report, err := aifile.LintPathWithOptions(args[1], lintOpts)
 		if err != nil {
 			die("kit ai lint", err)
 		}
@@ -8497,6 +8512,68 @@ func printAILint(report *aifile.LintReport) {
 	fmt.Printf("path: %s\n", report.Path)
 	fmt.Printf("status: %s\n", status)
 	fmt.Printf("summary: files=%d errors=%d warnings=%d\n", report.Summary.Files, report.Summary.Errors, report.Summary.Warns)
+	fmt.Printf("catalogue: %s (%s)\n", report.Catalogue.Version, report.Catalogue.Scope)
+	fmt.Printf("coverage: checked-forms=%d unchecked-forms=%d\n", report.Coverage.CheckedForms, report.Coverage.UncheckedForms)
+	fmt.Printf("reference: %s\n", report.Catalogue.Source)
+	shownChecks := map[string]bool{}
+	for _, check := range report.Checks {
+		key := check.Command + check.Signature
+		if shownChecks[key] {
+			continue
+		}
+		shownChecks[key] = true
+		fmt.Printf("signature: %s reference-family=%s\n", check.Signature, check.ReferenceFamily)
+		if check.Mechanism != "" {
+			fmt.Printf("  mechanism: %s runtime-semantics=%s\n", check.Mechanism, check.RuntimeSemantics)
+		}
+		if check.Notes != "" {
+			fmt.Printf("  catalogue-note: %s\n", check.Notes)
+		}
+	}
+	if catalogue := report.DATCatalogue; catalogue != nil {
+		fmt.Printf("dat-catalogue: %s version=%s source-sha256=%s\n", catalogue.Path, catalogue.Version, catalogue.SourceSHA256)
+	}
+	if catalogue := report.ScenarioCatalogue; catalogue != nil {
+		fmt.Printf("scenario-context: %s sha256=%s confidence=%s\n", catalogue.Path, catalogue.SHA256, catalogue.Confidence)
+	}
+	for _, pair := range report.Pairs {
+		fmt.Printf("loader-pair: %s -> %s (%s; runtime=%s)\n", pair.Marker, strings.Join(pair.Scripts, ", "), pair.Status, pair.RuntimeStatus)
+	}
+	for _, unit := range report.Units {
+		fmt.Printf("unit: %s:%d:%d operand=%s status=%s confidence=%s\n", unit.File, unit.Line, unit.Column, unit.Operand, unit.Status, unit.Confidence)
+		for _, match := range unit.DATMatches {
+			fmt.Printf("  DAT: unit-index=%d internal-name=%q string-id=%d civs=%d\n", match.UnitIndex, match.InternalName, match.StringID, len(match.Civs))
+		}
+		if unit.ScenarioPlacementCount != nil {
+			fmt.Printf("  scenario-placements: count=%d (structure only)\n", *unit.ScenarioPlacementCount)
+			for i, placement := range unit.ScenarioPlacements {
+				if i == 8 {
+					fmt.Printf("  placements: %d more; use JSON for the complete list\n", len(unit.ScenarioPlacements)-i)
+					break
+				}
+				fmt.Printf("  placement: player-section=%d unit-index=%d reference-id=%d position=(%g,%g,%g) status=%d\n", placement.PlayerSection, placement.UnitIndex, placement.ReferenceID, placement.X, placement.Y, placement.Z, placement.Status)
+			}
+		}
+		for i, ref := range unit.ScenarioReferences {
+			if i == 8 {
+				fmt.Printf("  scenario: %d more references; use JSON for the complete list\n", len(unit.ScenarioReferences)-i)
+				break
+			}
+			fmt.Printf("  scenario: trigger=%d name=%q %s=%d type=%s enabled=%d looping=%d\n", ref.Trigger, ref.TriggerName, ref.Kind, ref.Index, ref.TypeName, ref.Enabled, ref.Looping)
+			if ref.Effect != nil {
+				fields, _ := json.Marshal(ref.Effect.KnownFields)
+				fmt.Printf("    effect-fields: %s\n", fields)
+			}
+			if ref.Condition != nil {
+				fields, _ := json.Marshal(ref.Condition)
+				fmt.Printf("    condition-fields: %s\n", fields)
+			}
+			if len(ref.TriggerConditions) > 0 {
+				fields, _ := json.Marshal(ref.TriggerConditions)
+				fmt.Printf("    trigger-conditions (indices by array position): %s\n", fields)
+			}
+		}
+	}
 	if len(report.Issues) == 0 {
 		fmt.Println("issues: none")
 		return
@@ -8505,9 +8582,19 @@ func printAILint(report *aifile.LintReport) {
 	for _, issue := range report.Issues {
 		file := ""
 		if issue.File != "" {
-			file = issue.File + ": "
+			file = issue.File
+			if issue.Line > 0 {
+				file += fmt.Sprintf(":%d:%d", issue.Line, issue.Column)
+			}
+			file += ": "
 		}
 		fmt.Printf("- [%s] %s%s: %s\n", issue.Severity, file, issue.Code, issue.Message)
+		if issue.Confidence != "" {
+			fmt.Printf("  confidence: %s\n", issue.Confidence)
+		}
+		if issue.Source != "" {
+			fmt.Printf("  source: %s\n", issue.Source)
+		}
 	}
 }
 
@@ -22284,7 +22371,7 @@ func usage() {
   kit campaign extract <campaign.aoe2campaign> [--scenario N | --name STEM] [--out-dir DIR] [--text|--json]
   kit campaign generate <campaign.json> [--out-dir DIR] [--prefix A2KCampaign] [--text]
   kit ai fingerprint <file-or-folder> [--registry known_ais.json] [--register NAME] [--signature AI_FILES_SIGNATURE]
-  kit ai lint <file-or-folder> [--text]
+  kit ai lint <file-or-folder> [--dat-db export.sqlite] [--dat-sha256 HASH] [--scenario map.aoe2scenario] [--text]
   kit ai diff <before-file-or-folder> <after-file-or-folder> [--text]
   kit xs bridge <variables.json> [--out-dir DIR]
   kit xs shims <file-or-dir>... [--out recipe.json] [--prefix TEXT] [--enabled] [--include-params]

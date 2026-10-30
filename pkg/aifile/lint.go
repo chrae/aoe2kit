@@ -11,12 +11,21 @@ import (
 )
 
 type LintReport struct {
-	Path         string                 `json:"path"`
-	OK           bool                   `json:"ok"`
-	Verification aoe2.VerificationClaim `json:"verification"`
-	Files        []LintFile             `json:"files"`
-	Issues       []LintIssue            `json:"issues,omitempty"`
-	Summary      LintSummary            `json:"summary"`
+	Path              string                 `json:"path"`
+	OK                bool                   `json:"ok"`
+	Verification      aoe2.VerificationClaim `json:"verification"`
+	Files             []LintFile             `json:"files"`
+	Issues            []LintIssue            `json:"issues,omitempty"`
+	Summary           LintSummary            `json:"summary"`
+	Catalogue         CatalogueInfo          `json:"catalogue"`
+	Coverage          LintCoverage           `json:"coverage"`
+	Checks            []CommandCheck         `json:"checks,omitempty"`
+	Links             []LintLink             `json:"links,omitempty"`
+	DATCatalogue      *DATCatalogue          `json:"dat_catalogue,omitempty"`
+	ScenarioCatalogue *ScenarioCatalogue     `json:"scenario_catalogue,omitempty"`
+	Units             []UnitResolution       `json:"unit_resolutions,omitempty"`
+	Pairs             []LoaderPair           `json:"loader_pairs,omitempty"`
+	unitResolver      *unitResolver
 }
 
 type LintFile struct {
@@ -28,10 +37,14 @@ type LintFile struct {
 }
 
 type LintIssue struct {
-	Severity string `json:"severity"`
-	Code     string `json:"code"`
-	File     string `json:"file,omitempty"`
-	Message  string `json:"message"`
+	Severity   string `json:"severity"`
+	Code       string `json:"code"`
+	File       string `json:"file,omitempty"`
+	Message    string `json:"message"`
+	Line       int    `json:"line,omitempty"`
+	Column     int    `json:"column,omitempty"`
+	Source     string `json:"source,omitempty"`
+	Confidence string `json:"confidence,omitempty"`
 }
 
 type LintSummary struct {
@@ -55,11 +68,21 @@ type DiffChange struct {
 }
 
 func LintPath(path string) (*LintReport, error) {
+	return LintPathWithOptions(path, LintOptions{})
+}
+
+func LintPathWithOptions(path string, opts LintOptions) (*LintReport, error) {
 	files, root, err := collectAIPaths(path)
 	if err != nil {
 		return nil, err
 	}
-	report := &LintReport{Path: path}
+	report := &LintReport{Path: path, Catalogue: CatalogueInfo{Version: catalogueVersion, Revision: catalogueRevision, Source: catalogueSource, Scope: "partial DE reference signatures; no engine verification"}}
+	resolver, err := openUnitResolver(opts, report)
+	if err != nil {
+		return nil, err
+	}
+	defer resolver.close()
+	report.unitResolver = resolver
 	for _, file := range files {
 		st, err := os.Stat(file)
 		if err != nil {
@@ -84,7 +107,7 @@ func LintPath(path string) (*LintReport, error) {
 			NormalizedBytes: len(normalized),
 			LineEndingsNote: note,
 		})
-		lintAIFile(rel, normalized, report)
+		lintAIFile(file, rel, normalized, report)
 	}
 	report.Summary.Files = len(report.Files)
 	for _, issue := range report.Issues {
@@ -185,19 +208,24 @@ func collectAIPaths(path string) ([]string, string, error) {
 	return files, root, nil
 }
 
-func lintAIFile(rel string, data []byte, report *LintReport) {
+func lintAIFile(path, rel string, data []byte, report *LintReport) {
 	text := string(data)
 	if len(strings.TrimSpace(text)) == 0 {
 		if strings.EqualFold(filepath.Ext(rel), ".ai") {
-			report.addIssue("warning", "empty_ai_loader", rel, ".ai loader is empty; this is valid only when the lobby loads same-base .per/.per2 content separately")
+			pair := findLoaderPair(path, rel)
+			report.Pairs = append(report.Pairs, pair)
+			if len(pair.Scripts) == 0 {
+				report.addIssue("warning", "ai_pair_unresolved", rel, "no same-basename .per/.per2 sibling found; runtime loading is also unverified")
+			} else {
+				report.addIssue("warning", "ai_runtime_loading_unverified", rel, "marker/script pairing is statically present; engine/lobby loading remains unverified")
+			}
 		} else {
 			report.addIssue("error", "empty_ai_file", rel, "AI file is empty")
 		}
 		return
 	}
-	if ok, note := balancedParensIgnoringComments(text); !ok {
-		report.addIssue("error", "unbalanced_parentheses", rel, note)
-	}
+	checker := checkPER(rel, text, report)
+	checker.checkLinks(path)
 	ext := strings.ToLower(filepath.Ext(rel))
 	lower := strings.ToLower(text)
 	if (ext == ".per" || ext == ".per2") && !strings.Contains(lower, "(defrule") && !strings.Contains(lower, "(defconst") && !strings.Contains(lower, "(set-strategic-number") {
@@ -205,41 +233,10 @@ func lintAIFile(rel string, data []byte, report *LintReport) {
 	}
 }
 
-func balancedParensIgnoringComments(text string) (bool, string) {
-	depth := 0
-	line := 1
-	col := 0
-	for i := 0; i < len(text); i++ {
-		ch := text[i]
-		col++
-		if ch == '\n' {
-			line++
-			col = 0
-			continue
-		}
-		if ch == ';' {
-			for i < len(text) && text[i] != '\n' {
-				i++
-			}
-			i--
-			continue
-		}
-		switch ch {
-		case '(':
-			depth++
-		case ')':
-			depth--
-			if depth < 0 {
-				return false, fmt.Sprintf("extra closing parenthesis at line %d column %d", line, col)
-			}
-		}
-	}
-	if depth != 0 {
-		return false, fmt.Sprintf("parenthesis depth ended at %d", depth)
-	}
-	return true, ""
-}
-
 func (r *LintReport) addIssue(severity, code, file, message string) {
-	r.Issues = append(r.Issues, LintIssue{Severity: severity, Code: code, File: file, Message: message})
+	confidence := "static_analysis"
+	if code == "ai_runtime_loading_unverified" || code == "ai_pair_unresolved" {
+		confidence = "unverified"
+	}
+	r.Issues = append(r.Issues, LintIssue{Severity: severity, Code: code, File: file, Message: message, Confidence: confidence})
 }

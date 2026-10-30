@@ -1,7 +1,163 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 1122,
+  "type_count": 1137,
   "types": {
+    "aifile.CatalogueInfo": {
+      "package": "aifile",
+      "name": "CatalogueInfo",
+      "fields": [
+        {
+          "name": "Version",
+          "json": "version",
+          "go_type": "string"
+        },
+        {
+          "name": "Revision",
+          "json": "revision",
+          "go_type": "string"
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string"
+        },
+        {
+          "name": "Scope",
+          "json": "scope",
+          "go_type": "string"
+        }
+      ]
+    },
+    "aifile.CommandCheck": {
+      "package": "aifile",
+      "name": "CommandCheck",
+      "fields": [
+        {
+          "name": "File",
+          "json": "file",
+          "go_type": "string"
+        },
+        {
+          "name": "Line",
+          "json": "line",
+          "go_type": "int"
+        },
+        {
+          "name": "Column",
+          "json": "column",
+          "go_type": "int"
+        },
+        {
+          "name": "Command",
+          "json": "command",
+          "go_type": "string"
+        },
+        {
+          "name": "Signature",
+          "json": "signature",
+          "go_type": "string"
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "ReferenceFamily",
+          "json": "reference_family",
+          "go_type": "string"
+        },
+        {
+          "name": "Parameters",
+          "json": "parameters",
+          "go_type": "[]ParameterCheck",
+          "ref": "aifile.ParameterCheck",
+          "optional": true
+        },
+        {
+          "name": "Notes",
+          "json": "notes",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Mechanism",
+          "json": "mechanism",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "RuntimeSemantics",
+          "json": "runtime_semantics",
+          "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "aifile.DATCatalogue": {
+      "package": "aifile",
+      "name": "DATCatalogue",
+      "fields": [
+        {
+          "name": "Path",
+          "json": "path",
+          "go_type": "string"
+        },
+        {
+          "name": "SourceSHA256",
+          "json": "source_sha256",
+          "go_type": "string"
+        },
+        {
+          "name": "Version",
+          "json": "version",
+          "go_type": "string"
+        },
+        {
+          "name": "ExpectedSHA256",
+          "json": "expected_sha256",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "ExpectedSourceMatches",
+          "json": "expected_source_matches",
+          "go_type": "*bool",
+          "optional": true
+        }
+      ]
+    },
+    "aifile.DATUnitMatch": {
+      "package": "aifile",
+      "name": "DATUnitMatch",
+      "fields": [
+        {
+          "name": "UnitIndex",
+          "json": "unit_index",
+          "go_type": "int"
+        },
+        {
+          "name": "InternalName",
+          "json": "internal_name",
+          "go_type": "string"
+        },
+        {
+          "name": "StringID",
+          "json": "string_id",
+          "go_type": "int"
+        },
+        {
+          "name": "Civs",
+          "json": "civs",
+          "go_type": "[]int"
+        }
+      ]
+    },
     "aifile.DiffChange": {
       "package": "aifile",
       "name": "DiffChange",
@@ -163,6 +319,22 @@
         }
       ]
     },
+    "aifile.LintCoverage": {
+      "package": "aifile",
+      "name": "LintCoverage",
+      "fields": [
+        {
+          "name": "CheckedForms",
+          "json": "checked_forms",
+          "go_type": "int"
+        },
+        {
+          "name": "UncheckedForms",
+          "json": "unchecked_forms",
+          "go_type": "int"
+        }
+      ]
+    },
     "aifile.LintFile": {
       "package": "aifile",
       "name": "LintFile",
@@ -219,6 +391,90 @@
           "name": "Message",
           "json": "message",
           "go_type": "string"
+        },
+        {
+          "name": "Line",
+          "json": "line",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Column",
+          "json": "column",
+          "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "aifile.LintLink": {
+      "package": "aifile",
+      "name": "LintLink",
+      "fields": [
+        {
+          "name": "File",
+          "json": "file",
+          "go_type": "string"
+        },
+        {
+          "name": "Line",
+          "json": "line",
+          "go_type": "int"
+        },
+        {
+          "name": "Kind",
+          "json": "kind",
+          "go_type": "string"
+        },
+        {
+          "name": "Name",
+          "json": "name",
+          "go_type": "string"
+        },
+        {
+          "name": "Target",
+          "json": "target",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "string"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        }
+      ]
+    },
+    "aifile.LintOptions": {
+      "package": "aifile",
+      "name": "LintOptions",
+      "fields": [
+        {
+          "name": "DATDatabase",
+          "go_type": "string"
+        },
+        {
+          "name": "ExpectedDATSHA256",
+          "go_type": "string"
+        },
+        {
+          "name": "Scenario",
+          "go_type": "string"
         }
       ]
     },
@@ -260,6 +516,60 @@
           "json": "summary",
           "go_type": "LintSummary",
           "ref": "aifile.LintSummary"
+        },
+        {
+          "name": "Catalogue",
+          "json": "catalogue",
+          "go_type": "CatalogueInfo",
+          "ref": "aifile.CatalogueInfo"
+        },
+        {
+          "name": "Coverage",
+          "json": "coverage",
+          "go_type": "LintCoverage",
+          "ref": "aifile.LintCoverage"
+        },
+        {
+          "name": "Checks",
+          "json": "checks",
+          "go_type": "[]CommandCheck",
+          "ref": "aifile.CommandCheck",
+          "optional": true
+        },
+        {
+          "name": "Links",
+          "json": "links",
+          "go_type": "[]LintLink",
+          "ref": "aifile.LintLink",
+          "optional": true
+        },
+        {
+          "name": "DATCatalogue",
+          "json": "dat_catalogue",
+          "go_type": "*DATCatalogue",
+          "ref": "aifile.DATCatalogue",
+          "optional": true
+        },
+        {
+          "name": "ScenarioCatalogue",
+          "json": "scenario_catalogue",
+          "go_type": "*ScenarioCatalogue",
+          "ref": "aifile.ScenarioCatalogue",
+          "optional": true
+        },
+        {
+          "name": "Units",
+          "json": "unit_resolutions",
+          "go_type": "[]UnitResolution",
+          "ref": "aifile.UnitResolution",
+          "optional": true
+        },
+        {
+          "name": "Pairs",
+          "json": "loader_pairs",
+          "go_type": "[]LoaderPair",
+          "ref": "aifile.LoaderPair",
+          "optional": true
         }
       ]
     },
@@ -281,6 +591,38 @@
           "name": "Warns",
           "json": "warnings",
           "go_type": "int"
+        }
+      ]
+    },
+    "aifile.LoaderPair": {
+      "package": "aifile",
+      "name": "LoaderPair",
+      "fields": [
+        {
+          "name": "Marker",
+          "json": "marker",
+          "go_type": "string"
+        },
+        {
+          "name": "Scripts",
+          "json": "scripts",
+          "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "string"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "RuntimeStatus",
+          "json": "runtime_status",
+          "go_type": "string"
         }
       ]
     },
@@ -314,6 +656,42 @@
           "name": "Note",
           "json": "note",
           "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "aifile.ParameterCheck": {
+      "package": "aifile",
+      "name": "ParameterCheck",
+      "fields": [
+        {
+          "name": "Kind",
+          "json": "kind",
+          "go_type": "string"
+        },
+        {
+          "name": "Range",
+          "json": "range",
+          "go_type": "*[]int64",
+          "optional": true
+        },
+        {
+          "name": "Allowed",
+          "json": "allowed",
+          "go_type": "[]int64",
+          "optional": true
+        },
+        {
+          "name": "Exceptions",
+          "json": "exceptions",
+          "go_type": "[]int64",
+          "optional": true
+        },
+        {
+          "name": "Constants",
+          "json": "constants",
+          "go_type": "map[string]ReferenceConstant",
+          "ref": "aifile.ReferenceConstant",
           "optional": true
         }
       ]
@@ -368,6 +746,65 @@
         }
       ]
     },
+    "aifile.ReferenceConstant": {
+      "package": "aifile",
+      "name": "ReferenceConstant",
+      "fields": [
+        {
+          "name": "Value",
+          "json": "value",
+          "go_type": "int64"
+        },
+        {
+          "name": "DEOnly",
+          "json": "de_only",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "NeedsDefinition",
+          "json": "needs_definition",
+          "go_type": "bool",
+          "optional": true
+        },
+        {
+          "name": "ReferenceFamily",
+          "json": "reference_family",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Meaning",
+          "json": "meaning",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Units",
+          "json": "units",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Context",
+          "json": "context",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "RuntimeAvailability",
+          "json": "runtime_availability",
+          "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
     "aifile.RegistryEntry": {
       "package": "aifile",
       "name": "RegistryEntry",
@@ -405,6 +842,223 @@
           "name": "ContentSHA256",
           "json": "content_sha256",
           "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "aifile.ScenarioCatalogue": {
+      "package": "aifile",
+      "name": "ScenarioCatalogue",
+      "fields": [
+        {
+          "name": "Path",
+          "json": "path",
+          "go_type": "string"
+        },
+        {
+          "name": "SHA256",
+          "json": "sha256",
+          "go_type": "string"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "PlacementsStatus",
+          "json": "placements_status",
+          "go_type": "string"
+        }
+      ]
+    },
+    "aifile.ScenarioPlacement": {
+      "package": "aifile",
+      "name": "ScenarioPlacement",
+      "fields": [
+        {
+          "name": "PlayerSection",
+          "json": "player_section",
+          "go_type": "int"
+        },
+        {
+          "name": "UnitIndex",
+          "json": "unit_index",
+          "go_type": "int"
+        },
+        {
+          "name": "ReferenceID",
+          "json": "reference_id",
+          "go_type": "int"
+        },
+        {
+          "name": "X",
+          "json": "x",
+          "go_type": "float64"
+        },
+        {
+          "name": "Y",
+          "json": "y",
+          "go_type": "float64"
+        },
+        {
+          "name": "Z",
+          "json": "z",
+          "go_type": "float64"
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "int"
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        }
+      ]
+    },
+    "aifile.ScenarioUnitRef": {
+      "package": "aifile",
+      "name": "ScenarioUnitRef",
+      "fields": [
+        {
+          "name": "Trigger",
+          "json": "trigger",
+          "go_type": "int"
+        },
+        {
+          "name": "TriggerName",
+          "json": "trigger_name",
+          "go_type": "string"
+        },
+        {
+          "name": "Enabled",
+          "json": "enabled",
+          "go_type": "uint32"
+        },
+        {
+          "name": "Looping",
+          "json": "looping",
+          "go_type": "int8"
+        },
+        {
+          "name": "Kind",
+          "json": "kind",
+          "go_type": "string"
+        },
+        {
+          "name": "Index",
+          "json": "index",
+          "go_type": "int"
+        },
+        {
+          "name": "TypeName",
+          "json": "type_name",
+          "go_type": "string"
+        },
+        {
+          "name": "Effect",
+          "json": "effect",
+          "go_type": "*scenario.EffectSummary",
+          "ref": "scenario.EffectSummary",
+          "optional": true
+        },
+        {
+          "name": "Condition",
+          "json": "condition",
+          "go_type": "map[string]any",
+          "optional": true
+        },
+        {
+          "name": "TriggerConditions",
+          "json": "trigger_conditions",
+          "go_type": "[]map[string]any",
+          "optional": true
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        }
+      ]
+    },
+    "aifile.UnitResolution": {
+      "package": "aifile",
+      "name": "UnitResolution",
+      "fields": [
+        {
+          "name": "File",
+          "json": "file",
+          "go_type": "string"
+        },
+        {
+          "name": "Line",
+          "json": "line",
+          "go_type": "int"
+        },
+        {
+          "name": "Column",
+          "json": "column",
+          "go_type": "int"
+        },
+        {
+          "name": "Command",
+          "json": "command",
+          "go_type": "string"
+        },
+        {
+          "name": "Operand",
+          "json": "operand",
+          "go_type": "string"
+        },
+        {
+          "name": "UnitID",
+          "json": "unit_id",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Status",
+          "json": "status",
+          "go_type": "string"
+        },
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string",
+          "optional": true
+        },
+        {
+          "name": "Confidence",
+          "json": "confidence",
+          "go_type": "string"
+        },
+        {
+          "name": "DATMatches",
+          "json": "dat_matches",
+          "go_type": "[]DATUnitMatch",
+          "ref": "aifile.DATUnitMatch",
+          "optional": true
+        },
+        {
+          "name": "ScenarioReferences",
+          "json": "scenario_references",
+          "go_type": "[]ScenarioUnitRef",
+          "ref": "aifile.ScenarioUnitRef",
+          "optional": true
+        },
+        {
+          "name": "ScenarioPlacements",
+          "json": "scenario_placements",
+          "go_type": "[]ScenarioPlacement",
+          "ref": "aifile.ScenarioPlacement",
+          "optional": true
+        },
+        {
+          "name": "ScenarioPlacementCount",
+          "json": "scenario_placement_count",
+          "go_type": "*int",
           "optional": true
         }
       ]
@@ -11205,6 +11859,16 @@
           "optional": true
         },
         {
+          "name": "SearchRadius",
+          "json": "search_radius",
+          "go_type": "float32"
+        },
+        {
+          "name": "WorkRate",
+          "json": "work_rate",
+          "go_type": "float32"
+        },
+        {
           "name": "FieldSpans",
           "json": "field_spans",
           "go_type": "ActionFieldSpans",
@@ -11373,15 +12037,69 @@
       "name": "BuildingSummary",
       "fields": [
         {
-          "name": "SpawningGraphic",
-          "json": "spawning_graphic",
-          "go_type": "int16",
-          "optional": true
+          "name": "ConstructionGraphicID",
+          "json": "construction_graphic_id",
+          "go_type": "int16"
         },
         {
-          "name": "UpgradeGraphic",
-          "json": "upgrade_graphic",
-          "go_type": "int16",
+          "name": "SnowGraphicID",
+          "json": "snow_graphic_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "DestructionGraphicID",
+          "json": "destruction_graphic_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "DestructionRubbleGraphicID",
+          "json": "destruction_rubble_graphic_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "ResearchingGraphic",
+          "json": "researching_graphic",
+          "go_type": "int16"
+        },
+        {
+          "name": "ResearchCompletedGraphic",
+          "json": "research_completed_graphic",
+          "go_type": "int16"
+        },
+        {
+          "name": "AdjacentMode",
+          "json": "adjacent_mode",
+          "go_type": "uint8"
+        },
+        {
+          "name": "GraphicsAngle",
+          "json": "graphics_angle",
+          "go_type": "int16"
+        },
+        {
+          "name": "DisappearsWhenBuilt",
+          "json": "disappears_when_built",
+          "go_type": "uint8"
+        },
+        {
+          "name": "FoundationTerrainID",
+          "json": "foundation_terrain_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "OldOverlayID",
+          "json": "old_overlay_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "TechID",
+          "json": "tech_id",
+          "go_type": "int16"
+        },
+        {
+          "name": "CanBurn",
+          "json": "can_burn",
+          "go_type": "uint8",
           "optional": true
         },
         {
@@ -11409,18 +12127,6 @@
           "optional": true
         },
         {
-          "name": "ConstructionUnit",
-          "json": "construction_unit",
-          "go_type": "int16",
-          "optional": true
-        },
-        {
-          "name": "SalvageUnit",
-          "json": "salvage_unit",
-          "go_type": "int16",
-          "optional": true
-        },
-        {
           "name": "TransformSound",
           "json": "transform_sound",
           "go_type": "int16",
@@ -11430,6 +12136,18 @@
           "name": "ConstructionSound",
           "json": "construction_sound",
           "go_type": "int16",
+          "optional": true
+        },
+        {
+          "name": "WwiseTransformSoundID",
+          "json": "wwise_transform_sound_id",
+          "go_type": "uint32",
+          "optional": true
+        },
+        {
+          "name": "WwiseConstructionSoundID",
+          "json": "wwise_construction_sound_id",
+          "go_type": "uint32",
           "optional": true
         },
         {
@@ -11451,8 +12169,8 @@
           "optional": true
         },
         {
-          "name": "SalvageAttributes",
-          "json": "salvage_attributes",
+          "name": "LootingTable",
+          "json": "looting_table",
           "go_type": "[]uint8",
           "optional": true
         },
@@ -11703,6 +12421,41 @@
           "go_type": "[]TrainLocation",
           "ref": "datfile.TrainLocation",
           "optional": true
+        },
+        {
+          "name": "GarrisonGraphic",
+          "json": "garrison_graphic",
+          "go_type": "int32"
+        },
+        {
+          "name": "SpawningGraphic",
+          "json": "spawning_graphic",
+          "go_type": "int16"
+        },
+        {
+          "name": "UpgradeGraphic",
+          "json": "upgrade_graphic",
+          "go_type": "int16"
+        },
+        {
+          "name": "ChargeTarget",
+          "json": "charge_target",
+          "go_type": "int16"
+        },
+        {
+          "name": "SecondaryProjectileUnit",
+          "json": "secondary_projectile_unit",
+          "go_type": "int32"
+        },
+        {
+          "name": "TotalProjectiles",
+          "json": "total_projectiles",
+          "go_type": "float32"
+        },
+        {
+          "name": "MaxTotalProjectiles",
+          "json": "max_total_projectiles",
+          "go_type": "uint8"
         },
         {
           "name": "FieldSpans",
@@ -16775,6 +17528,41 @@
           "name": "MapColor",
           "json": "map_color",
           "go_type": "uint8"
+        },
+        {
+          "name": "CanBeBuiltOn",
+          "json": "can_be_built_on",
+          "go_type": "uint8"
+        },
+        {
+          "name": "CanBeGathered",
+          "json": "can_be_gathered",
+          "go_type": "uint8"
+        },
+        {
+          "name": "HillMode",
+          "json": "hill_mode",
+          "go_type": "uint8"
+        },
+        {
+          "name": "BlastDefenseLevel",
+          "json": "blast_defense_level",
+          "go_type": "uint8"
+        },
+        {
+          "name": "OutlineRadiusX",
+          "json": "outline_radius_x",
+          "go_type": "float32"
+        },
+        {
+          "name": "OutlineRadiusY",
+          "json": "outline_radius_y",
+          "go_type": "float32"
+        },
+        {
+          "name": "OutlineRadiusZ",
+          "json": "outline_radius_z",
+          "go_type": "float32"
         },
         {
           "name": "FlyMode",
@@ -45709,6 +46497,12 @@
           "go_type": "string"
         },
         {
+          "name": "AISignal",
+          "json": "ai_signal",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
           "name": "Timer",
           "json": "timer",
           "go_type": "*int",
@@ -47333,6 +48127,12 @@
       "package": "scenario",
       "name": "EffectRecipe",
       "fields": [
+        {
+          "name": "AISignalValue",
+          "json": "ai_signal_value",
+          "go_type": "*int",
+          "optional": true
+        },
         {
           "name": "Op",
           "json": "op",
@@ -49016,6 +49816,20 @@
           "name": "UnsupportedChanges",
           "json": "unsupported_changes",
           "go_type": "[]string",
+          "optional": true
+        },
+        {
+          "name": "OpaqueDifferences",
+          "json": "opaque_differences",
+          "go_type": "[]StructureFieldDiff",
+          "ref": "scenario.StructureFieldDiff",
+          "optional": true
+        },
+        {
+          "name": "IgnoredSaveMetadata",
+          "json": "ignored_save_metadata",
+          "go_type": "[]StructureFieldDiff",
+          "ref": "scenario.StructureFieldDiff",
           "optional": true
         },
         {
@@ -57045,6 +57859,29 @@
           "name": "Message",
           "json": "message",
           "go_type": "string"
+        }
+      ]
+    },
+    "xs.FunctionDecl": {
+      "package": "xs",
+      "name": "FunctionDecl",
+      "doc": "FunctionDecl is source evidence only; it does not establish that the engine can compile or load the containing file.",
+      "fields": [
+        {
+          "name": "Name",
+          "go_type": "string"
+        },
+        {
+          "name": "ReturnType",
+          "go_type": "string"
+        },
+        {
+          "name": "Parameters",
+          "go_type": "int"
+        },
+        {
+          "name": "Line",
+          "go_type": "int"
         }
       ]
     },

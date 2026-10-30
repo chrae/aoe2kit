@@ -398,3 +398,47 @@ When appending triggers, `patch` updates `Triggers:number_of_triggers`,
 `Triggers:trigger_display_order_array`, `Options:number_of_triggers`, and
 `FileHeader:trigger_count`, then reopens the output and verifies rebuild and
 trigger invariants.
+
+### AI signal conditions and acknowledgements
+
+Trigger conditions accept `{"op":"ai_signal","ai_signal":0}` (type 12)
+for legacy signals and `{"op":"multiplayer_ai_signal","ai_signal":0}`
+(type 30; alias `ai_signal_multiplayer`) for multiplayer signals. Both accept
+`inverted` (default 0). Neither has a player selector; supplying `source_player`
+or `target_player` is rejected rather than implying player filtering.
+
+The existing `script_call` effect accepts `message`, for example
+`{"op":"script_call","message":"Probe_Write();"}`. The referenced function
+must exist in the scenario XS environment at runtime.
+
+Acknowledgement effects accept `ai_signal_value`:
+`{"op":"acknowledge_multiplayer_ai_signal","ai_signal_value":0}` (type 69).
+Legacy `acknowledge_ai_signal` (type 50) remains authorable but emits a plan/patch
+warning: the reference documents desyncs in multiplayer and recorded games.
+These recipes are verified by write/reparse/describe tests only; engine signal
+routing, delivery and XS execution remain unconfirmed.
+
+Sources: [UGC conditions](https://ugc.aoe2.rocks/scenarios/triggers/conditions/conditions/),
+[UGC effects](https://ugc.aoe2.rocks/scenarios/triggers/effects/effects/), and
+[condition IDs and fields](https://github.com/KSneijders/AoE2ScenarioParser/blob/master/AoE2ScenarioParser/datasets/conditions.py).
+
+#### Single-player runtime observation, 2026-10-29
+
+One customer canary on DE `101.103.57257.0` observed the legacy path:
+a single P2 probe executed `(set-signal 1)`, condition type 12 / signal 1
+on trigger 938 invoked `mcb_scenario_ai_signal();`, and scenario XS appended
+`MCB_AI_SIGNAL` to the scenario-named `.xsdat` at game time 4. The same sidecar
+contains the scenario startup marker at game time 1. P2 attribution comes from
+the one-probe setup and replay chat, not from a condition player selector.
+
+Evidence identifiers (external customer artifacts, not repository fixtures):
+
+- Scenario SHA-256: `7fceaeb959882a54de26a751a696251f74b97cd91d5541606ea596c328963f41`.
+- Replay SHA-256: `04fff2127be3888534a407445101867ea74dab7a2694ac09f43be0ba5fb9aa3e`.
+- Sidecar SHA-256: `f7bd1e07cd78b4bff6c2fcc270b95502c5bdc822983b958670e6b178c9b51071` (131 bytes).
+
+The runtime DAT fingerprint was not supplied. This observation does not verify
+multiplayer conditions, `fe-set-signal`, AI-side XS file I/O, or exact resource
+payload semantics: the recorded P2 stone value was -300000, but its starting
+balance was not measured. Static lint metadata remains reference-backed rather
+than claiming universal engine verification.

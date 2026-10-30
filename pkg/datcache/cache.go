@@ -16,7 +16,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const schemaVersion = 3
+// Version 4 refreshes the stored obstruction flags after correcting the
+// VER 8.8+ base-record layout (hotkeys live in train locations).
+const schemaVersion = 4
 
 type Cache struct {
 	db       *sql.DB
@@ -139,6 +141,10 @@ func (c *Cache) Unit(civID, unitID int) (datfile.UnitSummary, bool, error) {
 		return datfile.UnitSummary{}, false, err
 	}
 	unit, err := datfile.ParseUnitRecord(blob, civID, unitID, c.Version, start)
+	if err != nil {
+		return datfile.UnitSummary{}, false, err
+	}
+	unit.FullFields, err = datfile.DecodeUnitFields(blob, c.Version)
 	if err != nil {
 		return datfile.UnitSummary{}, false, err
 	}

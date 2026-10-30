@@ -377,6 +377,13 @@ type UnitSummary struct {
 	MovementType       uint8             `json:"movement_type"`
 	MapDrawLevel       uint8             `json:"map_draw_level"`
 	MapColor           uint8             `json:"map_color"`
+	CanBeBuiltOn       uint8             `json:"can_be_built_on"`
+	CanBeGathered      uint8             `json:"can_be_gathered"`
+	HillMode           uint8             `json:"hill_mode"`
+	BlastDefenseLevel  uint8             `json:"blast_defense_level"`
+	OutlineRadiusX     float32           `json:"outline_radius_x"`
+	OutlineRadiusY     float32           `json:"outline_radius_y"`
+	OutlineRadiusZ     float32           `json:"outline_radius_z"`
 	FlyMode            uint8             `json:"fly_mode"`
 	ObstructionTypeID  uint8             `json:"obstruction_type_id"`
 	ObstructionClassID uint8             `json:"obstruction_class_id"`
@@ -468,9 +475,11 @@ type DamageGraphic struct {
 }
 
 type ActionSummary struct {
-	DropSites  []int16          `json:"drop_sites,omitempty"`
-	Tasks      []TaskSummary    `json:"tasks,omitempty"`
-	FieldSpans ActionFieldSpans `json:"field_spans,omitempty"`
+	DropSites    []int16          `json:"drop_sites,omitempty"`
+	Tasks        []TaskSummary    `json:"tasks,omitempty"`
+	SearchRadius float32          `json:"search_radius"`
+	WorkRate     float32          `json:"work_rate"`
+	FieldSpans   ActionFieldSpans `json:"field_spans,omitempty"`
 }
 
 type ActionFieldSpans struct {
@@ -580,16 +589,23 @@ type Type50FieldSpans struct {
 }
 
 type CreatableSummary struct {
-	TrainLocationCount int                 `json:"train_location_count"`
-	TrainTime0         int16               `json:"train_time_0"`
-	TrainUnitID0       int16               `json:"train_unit_id_0"`
-	TrainButtonID0     uint8               `json:"train_button_id_0"`
-	TrainHotKeyID0     int32               `json:"train_hotkey_id_0"`
-	ButtonIconID       int16               `json:"button_icon_id"`
-	ButtonHotkeyAction int16               `json:"button_hotkey_action"`
-	Costs              []AttributeCost     `json:"costs,omitempty"`
-	TrainLocations     []TrainLocation     `json:"train_locations,omitempty"`
-	FieldSpans         CreatableFieldSpans `json:"field_spans,omitempty"`
+	TrainLocationCount      int                 `json:"train_location_count"`
+	TrainTime0              int16               `json:"train_time_0"`
+	TrainUnitID0            int16               `json:"train_unit_id_0"`
+	TrainButtonID0          uint8               `json:"train_button_id_0"`
+	TrainHotKeyID0          int32               `json:"train_hotkey_id_0"`
+	ButtonIconID            int16               `json:"button_icon_id"`
+	ButtonHotkeyAction      int16               `json:"button_hotkey_action"`
+	Costs                   []AttributeCost     `json:"costs,omitempty"`
+	TrainLocations          []TrainLocation     `json:"train_locations,omitempty"`
+	GarrisonGraphic         int32               `json:"garrison_graphic"`
+	SpawningGraphic         int16               `json:"spawning_graphic"`
+	UpgradeGraphic          int16               `json:"upgrade_graphic"`
+	ChargeTarget            int16               `json:"charge_target"`
+	SecondaryProjectileUnit int32               `json:"secondary_projectile_unit"`
+	TotalProjectiles        float32             `json:"total_projectiles"`
+	MaxTotalProjectiles     uint8               `json:"max_total_projectiles"`
+	FieldSpans              CreatableFieldSpans `json:"field_spans,omitempty"`
 }
 
 type AttributeCost struct {
@@ -623,21 +639,32 @@ type CreatableFieldSpans struct {
 }
 
 type BuildingSummary struct {
-	SpawningGraphic    int16            `json:"spawning_graphic,omitempty"`
-	UpgradeGraphic     int16            `json:"upgrade_graphic,omitempty"`
-	StackUnit          int16            `json:"stack_unit,omitempty"`
-	HeadUnit           int16            `json:"head_unit,omitempty"`
-	TransformUnit      int16            `json:"transform_unit,omitempty"`
-	PileUnit           int16            `json:"pile_unit,omitempty"`
-	ConstructionUnit   int16            `json:"construction_unit,omitempty"`
-	SalvageUnit        int16            `json:"salvage_unit,omitempty"`
-	TransformSound     int16            `json:"transform_sound,omitempty"`
-	ConstructionSound  int16            `json:"construction_sound,omitempty"`
-	GarrisonType       uint8            `json:"garrison_type,omitempty"`
-	GarrisonHealRate   float32          `json:"garrison_heal_rate,omitempty"`
-	GarrisonRepairRate float32          `json:"garrison_repair_rate,omitempty"`
-	SalvageAttributes  []uint8          `json:"salvage_attributes,omitempty"`
-	LinkedBuildings    []LinkedBuilding `json:"linked_buildings,omitempty"`
+	ConstructionGraphicID      int16            `json:"construction_graphic_id"`
+	SnowGraphicID              int16            `json:"snow_graphic_id"`
+	DestructionGraphicID       int16            `json:"destruction_graphic_id"`
+	DestructionRubbleGraphicID int16            `json:"destruction_rubble_graphic_id"`
+	ResearchingGraphic         int16            `json:"researching_graphic"`
+	ResearchCompletedGraphic   int16            `json:"research_completed_graphic"`
+	AdjacentMode               uint8            `json:"adjacent_mode"`
+	GraphicsAngle              int16            `json:"graphics_angle"`
+	DisappearsWhenBuilt        uint8            `json:"disappears_when_built"`
+	FoundationTerrainID        int16            `json:"foundation_terrain_id"`
+	OldOverlayID               int16            `json:"old_overlay_id"`
+	TechID                     int16            `json:"tech_id"`
+	CanBurn                    uint8            `json:"can_burn,omitempty"`
+	StackUnit                  int16            `json:"stack_unit,omitempty"`
+	HeadUnit                   int16            `json:"head_unit,omitempty"`
+	TransformUnit              int16            `json:"transform_unit,omitempty"`
+	PileUnit                   int16            `json:"pile_unit,omitempty"`
+	TransformSound             int16            `json:"transform_sound,omitempty"`
+	ConstructionSound          int16            `json:"construction_sound,omitempty"`
+	WwiseTransformSoundID      uint32           `json:"wwise_transform_sound_id,omitempty"`
+	WwiseConstructionSoundID   uint32           `json:"wwise_construction_sound_id,omitempty"`
+	GarrisonType               uint8            `json:"garrison_type,omitempty"`
+	GarrisonHealRate           float32          `json:"garrison_heal_rate,omitempty"`
+	GarrisonRepairRate         float32          `json:"garrison_repair_rate,omitempty"`
+	LootingTable               []uint8          `json:"looting_table,omitempty"`
+	LinkedBuildings            []LinkedBuilding `json:"linked_buildings,omitempty"`
 }
 
 type LinkedBuilding struct {
@@ -6759,7 +6786,11 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 		return UnitSummary{}, err
 	}
 	unit.FieldSpans.BloodUnitID = Span{Name: "blood_unit_id", Start: start, End: c.off}
-	if err := c.skip(1 + 1); err != nil {
+	if err := c.skip(1); err != nil {
+		return UnitSummary{}, err
+	}
+	unit.CanBeBuiltOn, err = c.u8()
+	if err != nil {
 		return UnitSummary{}, err
 	}
 	start = c.off
@@ -6792,7 +6823,11 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 		return UnitSummary{}, err
 	}
 	unit.FieldSpans.ClearanceSizeY = Span{Name: "clearance_size_y", Start: start, End: c.off}
-	if err := c.skip(1 + 1); err != nil {
+	unit.HillMode, err = c.u8()
+	if err != nil {
+		return UnitSummary{}, err
+	}
+	if err := c.skip(1); err != nil {
 		return UnitSummary{}, err
 	}
 	start = c.off
@@ -6808,7 +6843,14 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 	}
 	unit.FieldSpans.MovementType = Span{Name: "movement_type", Start: start, End: c.off}
 	unit.FlyMode = unit.MovementType
-	if err := c.skip(2 + 4 + 1 + 1 + 1); err != nil {
+	if err := c.skip(2 + 4); err != nil {
+		return UnitSummary{}, err
+	}
+	unit.BlastDefenseLevel, err = c.u8()
+	if err != nil {
+		return UnitSummary{}, err
+	}
+	if err := c.skip(1 + 1); err != nil {
 		return UnitSummary{}, err
 	}
 	start = c.off
@@ -6826,7 +6868,18 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 		return UnitSummary{}, err
 	}
 	unit.FieldSpans.MapColor = Span{Name: "map_color", Start: start, End: c.off}
-	if err := c.skip(4 + 4 + 4 + 1 + 1 + 1 + 1 + 1); err != nil {
+	if err := c.skip(4 + 4); err != nil {
+		return UnitSummary{}, err
+	}
+	// VER 8.8+ stores hotkeys in train locations, not in the base record.
+	if err := c.skip(1); err != nil { // recyclable
+		return UnitSummary{}, err
+	}
+	unit.CanBeGathered, err = c.u8()
+	if err != nil {
+		return UnitSummary{}, err
+	}
+	if err := c.skip(1 + 1 + 1); err != nil {
 		return UnitSummary{}, err
 	}
 	start = c.off
@@ -6841,7 +6894,19 @@ func parseUnit(c *cursor, civIndex, unitIndex int, versionAtLeast88 bool) (UnitS
 		return UnitSummary{}, err
 	}
 	unit.FieldSpans.ObstructionClassID = Span{Name: "obstruction_class_id", Start: start, End: c.off}
-	if err := c.skip(22); err != nil {
+	if err := c.skip(4 + 2); err != nil { // trait, civilization, unused i16, selection effect/colour
+		return UnitSummary{}, err
+	}
+	if unit.OutlineRadiusX, err = c.f32(); err != nil {
+		return UnitSummary{}, err
+	}
+	if unit.OutlineRadiusY, err = c.f32(); err != nil {
+		return UnitSummary{}, err
+	}
+	if unit.OutlineRadiusZ, err = c.f32(); err != nil {
+		return UnitSummary{}, err
+	}
+	if err := c.skip(8); err != nil {
 		return UnitSummary{}, err
 	}
 	unit.Attributes, err = parseUnitAttributes(c)
@@ -6962,6 +7027,9 @@ func ParseUnitRecord(record []byte, civIndex, unitIndex int, version string, rec
 	unit.RecordStart = recordStart
 	unit.RecordEnd = recordStart + len(record)
 	unit.RecordLength = len(record)
+	if err := populateSkippedUnitFields(record, &unit); err != nil {
+		return UnitSummary{}, err
+	}
 	return unit, nil
 }
 
@@ -6989,6 +7057,9 @@ func offsetSpans(v reflect.Value, delta int) {
 	}
 	if v.Kind() == reflect.Struct && v.Type() == reflect.TypeOf(Span{}) && v.CanSet() {
 		span := v.Interface().(Span)
+		if span == (Span{}) {
+			return
+		}
 		span.Start += delta
 		span.End += delta
 		v.Set(reflect.ValueOf(span))
@@ -7078,7 +7149,14 @@ func parseDamageGraphics(c *cursor) ([]DamageGraphic, UnitListSpans, error) {
 
 func parseAction(c *cursor, versionAtLeast88 bool) (ActionSummary, error) {
 	var out ActionSummary
-	if err := c.skip(2 + 4 + 4); err != nil {
+	if err := c.skip(2); err != nil {
+		return out, err
+	}
+	var err error
+	if out.SearchRadius, err = c.f32(); err != nil {
+		return out, err
+	}
+	if out.WorkRate, err = c.f32(); err != nil {
 		return out, err
 	}
 	dropSiteCountStart := c.off
@@ -7412,6 +7490,34 @@ func parseCreatable(c *cursor, versionAtLeast88 bool) (CreatableSummary, error) 
 		}
 	}
 	out.FieldSpans.TrainLocations = Span{Name: "train_locations", Start: rowsStart, End: c.off}
+	// VER 8.8+ DE creatable tail through invulnerability. Keep the cursor
+	// advancement in the canonical parser while decoding the fields that are
+	// stable in the current 45-byte layout.
+	if err := c.require(45); err != nil {
+		return out, err
+	}
+	prefix := cursor{data: c.data[c.off : c.off+45]}
+	if err := prefix.skip(4 + 4 + 1 + 1); err != nil {
+		return out, err
+	}
+	if out.GarrisonGraphic, err = prefix.i32(); err != nil {
+		return out, err
+	}
+	if out.SpawningGraphic, err = prefix.i16(); err != nil {
+		return out, err
+	}
+	if out.UpgradeGraphic, err = prefix.i16(); err != nil {
+		return out, err
+	}
+	if err := prefix.skip(2 + 2 + 4 + 4 + 2 + 2); err != nil {
+		return out, err
+	}
+	if out.ChargeTarget, err = prefix.i16(); err != nil {
+		return out, err
+	}
+	if err := prefix.skip(4 + 1 + 4); err != nil {
+		return out, err
+	}
 	if err := c.skip(4 + 4 + 1 + 1 + 4 + 2 + 2 + 2 + 2 + 4 + 4 + 2 + 2 + 2 + 4 + 1 + 4); err != nil {
 		return out, err
 	}
@@ -7430,6 +7536,26 @@ func parseCreatable(c *cursor, versionAtLeast88 bool) (CreatableSummary, error) 
 		return out, err
 	}
 	out.FieldSpans.ButtonHotkeyAction = Span{Name: "creatable_button_hotkey_action", Start: start, End: c.off}
+	if err := c.require(40); err != nil {
+		return out, err
+	}
+	tail := cursor{data: c.data[c.off : c.off+40]}
+	if err := tail.skip(4 + 4 + 4 + 4 + 1 + 4 + 4 + 4); err != nil {
+		return out, err
+	}
+	if out.SecondaryProjectileUnit, err = tail.i32(); err != nil {
+		return out, err
+	}
+	tail = cursor{data: c.data[c.off : c.off+40]}
+	if err := tail.skip(4 + 4 + 4); err != nil {
+		return out, err
+	}
+	if out.TotalProjectiles, err = tail.f32(); err != nil {
+		return out, err
+	}
+	if out.MaxTotalProjectiles, err = tail.u8(); err != nil {
+		return out, err
+	}
 	if err := c.skip(4 + 4 + 4 + 4 + 1 + 4 + 4 + 4 + 4 + 4 + 1 + 2); err != nil {
 		return out, err
 	}
@@ -7500,10 +7626,46 @@ func parseBuilding(c *cursor) (BuildingSummary, error) {
 		return out, io.ErrUnexpectedEOF
 	}
 	pre := cursor{data: c.data[c.off : c.off+25]}
-	if out.SpawningGraphic, err = pre.i16(); err != nil {
+	if out.ConstructionGraphicID, err = pre.i16(); err != nil {
 		return out, err
 	}
-	if out.UpgradeGraphic, err = pre.i16(); err != nil {
+	if out.SnowGraphicID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.DestructionGraphicID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.DestructionRubbleGraphicID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.ResearchingGraphic, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.ResearchCompletedGraphic, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.AdjacentMode, err = pre.u8(); err != nil {
+		return out, err
+	}
+	if out.GraphicsAngle, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.DisappearsWhenBuilt, err = pre.u8(); err != nil {
+		return out, err
+	}
+	if out.StackUnit, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.FoundationTerrainID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.OldOverlayID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.TechID, err = pre.i16(); err != nil {
+		return out, err
+	}
+	if out.CanBurn, err = pre.u8(); err != nil {
 		return out, err
 	}
 	if err := c.skip(25); err != nil {
@@ -7537,30 +7699,22 @@ func parseBuilding(c *cursor) (BuildingSummary, error) {
 		return out, io.ErrUnexpectedEOF
 	}
 	post := cursor{data: c.data[c.off : c.off+33]}
-	if out.StackUnit, err = post.i16(); err != nil {
-		return out, err
-	}
 	if out.HeadUnit, err = post.i16(); err != nil {
 		return out, err
 	}
 	if out.TransformUnit, err = post.i16(); err != nil {
 		return out, err
 	}
-	if out.PileUnit, err = post.i16(); err != nil {
-		return out, err
-	}
-	if out.ConstructionUnit, err = post.i16(); err != nil {
-		return out, err
-	}
-	// The current layout retains a second legacy transform-unit slot here.
-	// Keep it opaque until its distinction from attribute 204 is established.
-	if err := post.skip(2); err != nil {
-		return out, err
-	}
 	if out.TransformSound, err = post.i16(); err != nil {
 		return out, err
 	}
 	if out.ConstructionSound, err = post.i16(); err != nil {
+		return out, err
+	}
+	if out.WwiseTransformSoundID, err = post.u32(); err != nil {
+		return out, err
+	}
+	if out.WwiseConstructionSoundID, err = post.u32(); err != nil {
 		return out, err
 	}
 	if out.GarrisonType, err = post.u8(); err != nil {
@@ -7572,12 +7726,12 @@ func parseBuilding(c *cursor) (BuildingSummary, error) {
 	if out.GarrisonRepairRate, err = post.f32(); err != nil {
 		return out, err
 	}
-	if out.SalvageUnit, err = post.i16(); err != nil {
+	if out.PileUnit, err = post.i16(); err != nil {
 		return out, err
 	}
-	out.SalvageAttributes = make([]uint8, 6)
-	for i := range out.SalvageAttributes {
-		if out.SalvageAttributes[i], err = post.u8(); err != nil {
+	out.LootingTable = make([]uint8, 6)
+	for i := range out.LootingTable {
+		if out.LootingTable[i], err = post.u8(); err != nil {
 			return out, err
 		}
 	}

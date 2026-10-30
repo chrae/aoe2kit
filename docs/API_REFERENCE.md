@@ -50,7 +50,7 @@ go run ./cmd/apiref --kit ./kit \
 Flags marked **required** in the tables below appear unbracketed in the tool's own
 usage line and must be supplied.
 
-Tool version `0.4.2` — 257 commands, 19 probed.
+Tool version `v0.4.3` — 257 commands, 19 probed.
 
 ## Command index
 
@@ -450,11 +450,14 @@ kit ai fingerprint <file-or-folder> [--registry known_ais.json] [--register NAME
 ### `ai lint`
 
 ```
-kit ai lint <file-or-folder> [--text]
+kit ai lint <file-or-folder> [--dat-db export.sqlite] [--dat-sha256 HASH] [--scenario map.aoe2scenario] [--text]
 ```
 
 | flag | value |
 | --- | --- |
+| `--dat-db` | `export.sqlite` |
+| `--dat-sha256` | `HASH` |
+| `--scenario` | `map.aoe2scenario` |
 | `--text` | _(boolean)_ |
 
 - probe: `skipped_no_fixture`

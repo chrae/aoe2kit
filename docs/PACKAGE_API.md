@@ -185,6 +185,44 @@ func Signature(refs []Reference) string
 
 TYPES
 
+type CatalogueInfo struct {
+	Version  string `json:"version"`
+	Revision string `json:"revision"`
+	Source   string `json:"source"`
+	Scope    string `json:"scope"`
+}
+
+type CommandCheck struct {
+	File             string           `json:"file"`
+	Line             int              `json:"line"`
+	Column           int              `json:"column"`
+	Command          string           `json:"command"`
+	Signature        string           `json:"signature"`
+	Source           string           `json:"source"`
+	Confidence       string           `json:"confidence"`
+	ReferenceFamily  string           `json:"reference_family"`
+	Parameters       []ParameterCheck `json:"parameters,omitempty"`
+	Notes            string           `json:"notes,omitempty"`
+	Mechanism        string           `json:"mechanism,omitempty"`
+	RuntimeSemantics string           `json:"runtime_semantics,omitempty"`
+}
+
+type DATCatalogue struct {
+	Path                  string `json:"path"`
+	SourceSHA256          string `json:"source_sha256"`
+	Version               string `json:"version"`
+	ExpectedSHA256        string `json:"expected_sha256,omitempty"`
+	ExpectedSourceMatches *bool  `json:"expected_source_matches,omitempty"`
+	// Has unexported fields.
+}
+
+type DATUnitMatch struct {
+	UnitIndex    int    `json:"unit_index"`
+	InternalName string `json:"internal_name"`
+	StringID     int    `json:"string_id"`
+	Civs         []int  `json:"civs"`
+}
+
 type DiffChange struct {
 	Kind   string `json:"kind"`
 	File   string `json:"file,omitempty"`
@@ -230,6 +268,11 @@ type Group struct {
 
 func GroupReferences(refs []Reference) []Group
 
+type LintCoverage struct {
+	CheckedForms   int `json:"checked_forms"`
+	UncheckedForms int `json:"unchecked_forms"`
+}
+
 type LintFile struct {
 	Path            string `json:"path"`
 	RelativePath    string `json:"relative_path"`
@@ -239,27 +282,66 @@ type LintFile struct {
 }
 
 type LintIssue struct {
-	Severity string `json:"severity"`
-	Code     string `json:"code"`
-	File     string `json:"file,omitempty"`
-	Message  string `json:"message"`
+	Severity   string `json:"severity"`
+	Code       string `json:"code"`
+	File       string `json:"file,omitempty"`
+	Message    string `json:"message"`
+	Line       int    `json:"line,omitempty"`
+	Column     int    `json:"column,omitempty"`
+	Source     string `json:"source,omitempty"`
+	Confidence string `json:"confidence,omitempty"`
+}
+
+type LintLink struct {
+	File       string `json:"file"`
+	Line       int    `json:"line"`
+	Kind       string `json:"kind"`
+	Name       string `json:"name"`
+	Target     string `json:"target,omitempty"`
+	Status     string `json:"status"`
+	Confidence string `json:"confidence"`
+}
+
+type LintOptions struct {
+	DATDatabase       string
+	ExpectedDATSHA256 string
+	Scenario          string
 }
 
 type LintReport struct {
-	Path         string                 `json:"path"`
-	OK           bool                   `json:"ok"`
-	Verification aoe2.VerificationClaim `json:"verification"`
-	Files        []LintFile             `json:"files"`
-	Issues       []LintIssue            `json:"issues,omitempty"`
-	Summary      LintSummary            `json:"summary"`
+	Path              string                 `json:"path"`
+	OK                bool                   `json:"ok"`
+	Verification      aoe2.VerificationClaim `json:"verification"`
+	Files             []LintFile             `json:"files"`
+	Issues            []LintIssue            `json:"issues,omitempty"`
+	Summary           LintSummary            `json:"summary"`
+	Catalogue         CatalogueInfo          `json:"catalogue"`
+	Coverage          LintCoverage           `json:"coverage"`
+	Checks            []CommandCheck         `json:"checks,omitempty"`
+	Links             []LintLink             `json:"links,omitempty"`
+	DATCatalogue      *DATCatalogue          `json:"dat_catalogue,omitempty"`
+	ScenarioCatalogue *ScenarioCatalogue     `json:"scenario_catalogue,omitempty"`
+	Units             []UnitResolution       `json:"unit_resolutions,omitempty"`
+	Pairs             []LoaderPair           `json:"loader_pairs,omitempty"`
+	// Has unexported fields.
 }
 
 func LintPath(path string) (*LintReport, error)
+
+func LintPathWithOptions(path string, opts LintOptions) (*LintReport, error)
 
 type LintSummary struct {
 	Files  int `json:"files"`
 	Errors int `json:"errors"`
 	Warns  int `json:"warnings"`
+}
+
+type LoaderPair struct {
+	Marker        string   `json:"marker"`
+	Scripts       []string `json:"scripts,omitempty"`
+	Status        string   `json:"status"`
+	Confidence    string   `json:"confidence"`
+	RuntimeStatus string   `json:"runtime_status"`
 }
 
 type Loadout struct {
@@ -271,6 +353,14 @@ type Loadout struct {
 }
 
 func NewLoadout(refs []Reference) Loadout
+
+type ParameterCheck struct {
+	Kind       string                       `json:"kind"`
+	Range      *[2]int64                    `json:"range,omitempty"`
+	Allowed    []int64                      `json:"allowed,omitempty"`
+	Exceptions []int64                      `json:"exceptions,omitempty"`
+	Constants  map[string]ReferenceConstant `json:"constants,omitempty"`
+}
 
 type Reference struct {
 	Raw       string `json:"raw"`
@@ -289,6 +379,18 @@ func ParseReferences(stringsIn []string) []Reference
 
 func (r Reference) Normalized() string
 
+type ReferenceConstant struct {
+	Value               int64  `json:"value"`
+	DEOnly              bool   `json:"de_only,omitempty"`
+	NeedsDefinition     bool   `json:"needs_definition,omitempty"`
+	ReferenceFamily     string `json:"reference_family,omitempty"`
+	Source              string `json:"source,omitempty"`
+	Meaning             string `json:"meaning,omitempty"`
+	Units               string `json:"units,omitempty"`
+	Context             string `json:"context,omitempty"`
+	RuntimeAvailability string `json:"runtime_availability,omitempty"`
+}
+
 type Registry map[string]RegistryEntry
 
 func LoadRegistry(path string) (Registry, error)
@@ -300,6 +402,54 @@ type RegistryEntry struct {
 	Signature     string   `json:"signature,omitempty"`
 	Files         []string `json:"files,omitempty"`
 	ContentSHA256 string   `json:"content_sha256,omitempty"`
+}
+
+type ScenarioCatalogue struct {
+	Path             string `json:"path"`
+	SHA256           string `json:"sha256"`
+	Confidence       string `json:"confidence"`
+	PlacementsStatus string `json:"placements_status"`
+}
+
+type ScenarioPlacement struct {
+	PlayerSection int     `json:"player_section"`
+	UnitIndex     int     `json:"unit_index"`
+	ReferenceID   int     `json:"reference_id"`
+	X             float64 `json:"x"`
+	Y             float64 `json:"y"`
+	Z             float64 `json:"z"`
+	Status        int     `json:"status"`
+	Confidence    string  `json:"confidence"`
+}
+
+type ScenarioUnitRef struct {
+	Trigger           int                     `json:"trigger"`
+	TriggerName       string                  `json:"trigger_name"`
+	Enabled           uint32                  `json:"enabled"`
+	Looping           int8                    `json:"looping"`
+	Kind              string                  `json:"kind"`
+	Index             int                     `json:"index"`
+	TypeName          string                  `json:"type_name"`
+	Effect            *scenario.EffectSummary `json:"effect,omitempty"`
+	Condition         map[string]any          `json:"condition,omitempty"`
+	TriggerConditions []map[string]any        `json:"trigger_conditions,omitempty"`
+	Confidence        string                  `json:"confidence"`
+}
+
+type UnitResolution struct {
+	File                   string              `json:"file"`
+	Line                   int                 `json:"line"`
+	Column                 int                 `json:"column"`
+	Command                string              `json:"command"`
+	Operand                string              `json:"operand"`
+	UnitID                 *int                `json:"unit_id,omitempty"`
+	Status                 string              `json:"status"`
+	Source                 string              `json:"source,omitempty"`
+	Confidence             string              `json:"confidence"`
+	DATMatches             []DATUnitMatch      `json:"dat_matches,omitempty"`
+	ScenarioReferences     []ScenarioUnitRef   `json:"scenario_references,omitempty"`
+	ScenarioPlacements     []ScenarioPlacement `json:"scenario_placements,omitempty"`
+	ScenarioPlacementCount *int                `json:"scenario_placement_count,omitempty"`
 }
 ```
 
@@ -1815,6 +1965,246 @@ type Summary struct {
 }
 ```
 
+## aoe2kit/pkg/compose
+
+```go
+package compose // import "aoe2kit/pkg/compose"
+
+Package compose builds deterministic terrain and unit recipes from reusable art
+primitives. These are preview-derived composition recipes, not physics, pathing,
+passability or engine-verified visual guarantees. No art is bundled.
+
+FUNCTIONS
+
+func CliffFacets(axis Axis, highSide int) ([]int, error)
+    CliffFacets follows the observed camera-facing convention: +x slabs face +y,
+    +y slabs face -x. High ground on the near side uses lips, not reverse faces.
+    Evidence: cliff facet preview comparisons; not a terrain-height operation.
+
+func FBM(x, y float64, seed int) float64
+    FBM is the generators' four-octave value noise: frequency doubles, amplitude
+    halves, and each octave offsets the seed by 101. No global RNG is consumed.
+
+func Noise(x, y float64, seed int) float64
+    Noise is smooth value noise on the integer lattice, in [0,1].
+
+
+TYPES
+
+type Axis string
+
+const (
+	AxisX Axis = "x"
+	AxisY Axis = "y"
+)
+type Brush struct {
+	UnitID   int
+	Variants []int
+}
+
+type Grid struct {
+	Width     int   `json:"width"`
+	Height    int   `json:"height"`
+	Terrain   []int `json:"terrain_id"`
+	Layer     []int `json:"layer"`
+	Elevation []int `json:"elevation"`
+}
+
+type Placement struct {
+	UnitID, Player, Variant, Status int
+	X, Y, Z                         float64
+}
+
+type Point struct{ X, Y float64 }
+
+type Pool struct {
+	Point
+	Radius float64
+}
+
+type RNG struct {
+	// Has unexported fields.
+}
+    RNG is the workshop generators' xorshift64 sequence. It is reproducible,
+    not cryptographic. A zero-value RNG initializes to state 1.
+
+func NewRNG(seed uint64) *RNG
+
+func (r *RNG) Float64() float64
+
+func (r *RNG) Intn(n int) int
+
+func (r *RNG) Jitter(radius float64) float64
+
+func (r *RNG) Pick(values ...int) int
+
+type RiverOptions struct {
+	Core, Shallow, Bank, Deep int
+	BankWidth                 float64
+	Pools                     []Pool
+}
+
+type RiverPoint struct {
+	Point
+	HalfWidth float64
+}
+
+type Scene struct {
+	Random *RNG
+	// Has unexported fields.
+}
+    Scene uses sticky errors: invalid placement never silently disappears, and a
+    failed scene cannot export. Claims are circular art spacing, not collision.
+
+func New(width, height, terrain int, seed uint64) (*Scene, error)
+
+func (s *Scene) Claim(p Point, radius float64)
+
+func (s *Scene) CliffWall(from, to float64, position func(float64) Point, o WallOptions)
+    CliffWall lays 1-2 slabs at 3-tile pitch separated by 1.5-2.5-tile joints.
+    Position may bend the run; excessive offsets cannot make rigid slabs curve.
+    Evidence: preview-reviewed bricks-and-mortar walls; joints remain art
+    recipes.
+
+func (s *Scene) Dimensions() (int, int)
+
+func (s *Scene) Err() error
+
+func (s *Scene) Free(p Point) bool
+    Free tests a candidate point against reserved radii; touching is allowed.
+
+func (s *Scene) FreeRadius(p Point, radius float64) bool
+
+func (s *Scene) Gaia(id int, p Point, variant int)
+    Gaia places an explicit visual index, never radians. Validate unit-specific
+    variant availability using the selected DAT/art before compiling the recipe.
+
+func (s *Scene) Grid() Grid
+
+func (s *Scene) LatticeStair(start Point, o StairOptions) []Point
+    LatticeStair uses the observed York corner lattice: v15/v3 on a three-tile
+    (1,1) staircase, optional v4 flats, v12/v14 caps and a two-step gully.
+    Evidence: campaign placement census and preview, not a walkability
+    guarantee.
+
+func (s *Scene) MixedTrack(points []Point, o TrackOptions)
+    MixedTrack uses dirt/mud FBM and sparse square/half-board art. Evidence:
+    preview-reviewed mixed-character tracks; the caller supplies water terrain
+    exclusions and probabilities rather than inheriting a location-specific
+    list.
+
+func (s *Scene) Put(p Placement)
+
+func (s *Scene) Recipe() (scenario.Recipe, error)
+    Recipe returns Kit's existing typed recipe, including an in-memory grid.
+    The target scenario must already have the same dimensions. It is not reset:
+    existing units remain unless the caller explicitly adds a removal operation.
+
+func (s *Scene) River(points []RiverPoint, o RiverOptions)
+    River paints a variable-width polyline with core (55%), shallow and bank,
+    then round plunge pools (60% deep core). Rasterization uses tile centres and
+    strongest water coverage at crossings, replacing the generators' overlapping
+    half-tile stamps. Evidence: preview-derived narrow streams spread at blended
+    borders; this controls source terrain, not the engine's visible water width.
+
+func (s *Scene) SetElevation(x, y, value int)
+
+func (s *Scene) SetLayer(x, y, id int)
+
+func (s *Scene) SetTerrain(x, y, id int)
+
+func (s *Scene) Terrace(from, to float64, level func(float64) float64, o TerraceOptions) []Point
+    Terrace lays straight runs of 2-3 v4/v5 pieces at rounded whole-tile levels.
+    Coverup groups rotate at clean cuts and sit downhill (+y) of the face.
+    Evidence: preview-reviewed built terraces; gradual offset slabs made stairs,
+    so direction/height changes are discrete cuts disguised with matching art.
+
+func (s *Scene) TerrainAt(x, y int) (int, bool)
+
+func (s *Scene) Units() []Placement
+
+func (s *Scene) WaterfallPair(p Point, background, overlay, angle int)
+    WaterfallPair places background and overlay at one lip. Angle and anchor are
+    explicit because the particle placement convention is not engine-calibrated.
+
+func (s *Scene) WriteBundle(dir string) error
+    WriteBundle writes recipe.json and grid.json into a NEW directory.
+    Refusing an existing directory protects previous critic rounds from partial
+    overwrite.
+
+type StairOptions struct {
+	UnitID     int
+	Steps      int
+	GapStart   int // -1 disables the two-step gully
+	GapTerrain int
+	FlatChance float64
+	EndCaps    bool
+}
+
+type TerraceOptions struct {
+	UnitID   int
+	Coverups [][]Brush
+}
+
+type TrackOptions struct {
+	Dry, Mud                                    int
+	HalfWidth                                   float64
+	NoiseSeed                                   int
+	WetThreshold, MissingBoards, DryBoardChance float64
+	RoadID                                      int
+	AvoidTerrains                               []int
+}
+
+type Turtle struct {
+	Road   WoodenRoad
+	Next   Point
+	DX, DY int
+	// Has unexported fields.
+}
+
+func (t *Turtle) Forward(n int)
+
+func (t *Turtle) Turn(dx, dy int)
+    Turn must be a right-angle turn after Forward. The resulting Next is the
+    centre of the first outgoing square, matched to the curve's measured mouth.
+
+type WallOptions struct {
+	UnitID   int
+	Axis     Axis
+	HighSide int
+	// Mortar palettes are explicit so rock species match the wall material.
+	Mortar []Brush
+}
+
+type WoodenRoad struct {
+	Scene  *Scene
+	UnitID int
+}
+    WoodenRoad is the measured visual-index convention for the Wooden Road kit
+    (normally unit 2748). Geometry is preview-derived; it does not make a bridge
+    passable. Supplying a different ID assumes it shares the same facet layout.
+
+func (r WoodenRoad) AxisStrip(start Point, dx, dy, n int)
+    AxisStrip uses v0 squares at one-tile pitch; it works in all four
+    directions.
+
+func (r WoodenRoad) Band(x, y, n int)
+    Band squares a (1,1) two-square staircase with v9/v8 triangle shoulders.
+    Evidence: previewed joins; integer x,y name the first tile, not its centre.
+
+func (r WoodenRoad) Curve(p Point, cx, cy int)
+    Curve joins axis strips around block corner (cx,cy), each component +/-1.
+    Mouths: (cx,-cy/2) and (-cx/2,cy), measured in tile offsets from the anchor.
+
+func (r WoodenRoad) DiagonalCorner(p Point, variant, strips int)
+    DiagonalCorner uses measured mouth offsets for v16..19; v5/v7 strips attach
+    at 0.685 along their diagonal and repeat every 1.37 per coordinate.
+
+func (r WoodenRoad) Ring(p Point)
+
+func (r WoodenRoad) Square(p Point)
+```
+
 ## aoe2kit/pkg/customstore
 
 ```go
@@ -3129,9 +3519,10 @@ func EffectUnitClassID(name string) (int16, bool)
 func EffectUnitClassName(classID int16) string
 func EncodeCurrentDETaskList(rows []TaskRow) ([]byte, error)
 func ExportSQLite(datPath, outPath string) error
-    ExportSQLite writes a query-oriented view of every present DAT unit. Scalar
-    decoded fields become columns; variable-length attacks, armours, attributes,
-    and damage graphics are child tables. The source DAT remains untouched.
+    ExportSQLite writes a query-oriented view of every present DAT unit.
+    Scalar decoded fields become columns; variable-length attacks, armours,
+    attributes, damage graphics, costs, and train locations are child tables.
+    The source DAT remains untouched.
 
 func Inflate(compressed []byte) ([]byte, error)
 func RebuildUnitRecord(payload []byte, unit UnitSummary, patch UnitPatch) ([]byte, []string, error)
@@ -3154,9 +3545,11 @@ type ActionFieldSpans struct {
 }
 
 type ActionSummary struct {
-	DropSites  []int16          `json:"drop_sites,omitempty"`
-	Tasks      []TaskSummary    `json:"tasks,omitempty"`
-	FieldSpans ActionFieldSpans `json:"field_spans,omitempty"`
+	DropSites    []int16          `json:"drop_sites,omitempty"`
+	Tasks        []TaskSummary    `json:"tasks,omitempty"`
+	SearchRadius float32          `json:"search_radius"`
+	WorkRate     float32          `json:"work_rate"`
+	FieldSpans   ActionFieldSpans `json:"field_spans,omitempty"`
 }
 
 type AttributeCost struct {
@@ -3194,21 +3587,32 @@ type BuildingConnection struct {
 }
 
 type BuildingSummary struct {
-	SpawningGraphic    int16            `json:"spawning_graphic,omitempty"`
-	UpgradeGraphic     int16            `json:"upgrade_graphic,omitempty"`
-	StackUnit          int16            `json:"stack_unit,omitempty"`
-	HeadUnit           int16            `json:"head_unit,omitempty"`
-	TransformUnit      int16            `json:"transform_unit,omitempty"`
-	PileUnit           int16            `json:"pile_unit,omitempty"`
-	ConstructionUnit   int16            `json:"construction_unit,omitempty"`
-	SalvageUnit        int16            `json:"salvage_unit,omitempty"`
-	TransformSound     int16            `json:"transform_sound,omitempty"`
-	ConstructionSound  int16            `json:"construction_sound,omitempty"`
-	GarrisonType       uint8            `json:"garrison_type,omitempty"`
-	GarrisonHealRate   float32          `json:"garrison_heal_rate,omitempty"`
-	GarrisonRepairRate float32          `json:"garrison_repair_rate,omitempty"`
-	SalvageAttributes  []uint8          `json:"salvage_attributes,omitempty"`
-	LinkedBuildings    []LinkedBuilding `json:"linked_buildings,omitempty"`
+	ConstructionGraphicID      int16            `json:"construction_graphic_id"`
+	SnowGraphicID              int16            `json:"snow_graphic_id"`
+	DestructionGraphicID       int16            `json:"destruction_graphic_id"`
+	DestructionRubbleGraphicID int16            `json:"destruction_rubble_graphic_id"`
+	ResearchingGraphic         int16            `json:"researching_graphic"`
+	ResearchCompletedGraphic   int16            `json:"research_completed_graphic"`
+	AdjacentMode               uint8            `json:"adjacent_mode"`
+	GraphicsAngle              int16            `json:"graphics_angle"`
+	DisappearsWhenBuilt        uint8            `json:"disappears_when_built"`
+	FoundationTerrainID        int16            `json:"foundation_terrain_id"`
+	OldOverlayID               int16            `json:"old_overlay_id"`
+	TechID                     int16            `json:"tech_id"`
+	CanBurn                    uint8            `json:"can_burn,omitempty"`
+	StackUnit                  int16            `json:"stack_unit,omitempty"`
+	HeadUnit                   int16            `json:"head_unit,omitempty"`
+	TransformUnit              int16            `json:"transform_unit,omitempty"`
+	PileUnit                   int16            `json:"pile_unit,omitempty"`
+	TransformSound             int16            `json:"transform_sound,omitempty"`
+	ConstructionSound          int16            `json:"construction_sound,omitempty"`
+	WwiseTransformSoundID      uint32           `json:"wwise_transform_sound_id,omitempty"`
+	WwiseConstructionSoundID   uint32           `json:"wwise_construction_sound_id,omitempty"`
+	GarrisonType               uint8            `json:"garrison_type,omitempty"`
+	GarrisonHealRate           float32          `json:"garrison_heal_rate,omitempty"`
+	GarrisonRepairRate         float32          `json:"garrison_repair_rate,omitempty"`
+	LootingTable               []uint8          `json:"looting_table,omitempty"`
+	LinkedBuildings            []LinkedBuilding `json:"linked_buildings,omitempty"`
 }
 
 type Civ struct {
@@ -3250,16 +3654,23 @@ type CreatableFieldSpans struct {
 }
 
 type CreatableSummary struct {
-	TrainLocationCount int                 `json:"train_location_count"`
-	TrainTime0         int16               `json:"train_time_0"`
-	TrainUnitID0       int16               `json:"train_unit_id_0"`
-	TrainButtonID0     uint8               `json:"train_button_id_0"`
-	TrainHotKeyID0     int32               `json:"train_hotkey_id_0"`
-	ButtonIconID       int16               `json:"button_icon_id"`
-	ButtonHotkeyAction int16               `json:"button_hotkey_action"`
-	Costs              []AttributeCost     `json:"costs,omitempty"`
-	TrainLocations     []TrainLocation     `json:"train_locations,omitempty"`
-	FieldSpans         CreatableFieldSpans `json:"field_spans,omitempty"`
+	TrainLocationCount      int                 `json:"train_location_count"`
+	TrainTime0              int16               `json:"train_time_0"`
+	TrainUnitID0            int16               `json:"train_unit_id_0"`
+	TrainButtonID0          uint8               `json:"train_button_id_0"`
+	TrainHotKeyID0          int32               `json:"train_hotkey_id_0"`
+	ButtonIconID            int16               `json:"button_icon_id"`
+	ButtonHotkeyAction      int16               `json:"button_hotkey_action"`
+	Costs                   []AttributeCost     `json:"costs,omitempty"`
+	TrainLocations          []TrainLocation     `json:"train_locations,omitempty"`
+	GarrisonGraphic         int32               `json:"garrison_graphic"`
+	SpawningGraphic         int16               `json:"spawning_graphic"`
+	UpgradeGraphic          int16               `json:"upgrade_graphic"`
+	ChargeTarget            int16               `json:"charge_target"`
+	SecondaryProjectileUnit int32               `json:"secondary_projectile_unit"`
+	TotalProjectiles        float32             `json:"total_projectiles"`
+	MaxTotalProjectiles     uint8               `json:"max_total_projectiles"`
+	FieldSpans              CreatableFieldSpans `json:"field_spans,omitempty"`
 }
 
 type DamageGraphic struct {
@@ -4003,11 +4414,18 @@ type TechTreeCommon struct {
 }
 
 type Terrain struct {
-	Index           int         `json:"index"`
-	Name            DebugString `json:"name"`
-	Name2           DebugString `json:"name_2"`
-	OverlayMaskName DebugString `json:"overlay_mask_name"`
-	Span            Span        `json:"span"`
+	Index                  int         `json:"index"`
+	Name                   DebugString `json:"name"`
+	Name2                  DebugString `json:"name_2"`
+	OverlayMaskName        DebugString `json:"overlay_mask_name"`
+	BlendPriority          int32       `json:"blend_priority"`
+	BlendType              int32       `json:"blend_type"`
+	MinimapColorHigh       uint8       `json:"minimap_color_high"`
+	MinimapColorMedium     uint8       `json:"minimap_color_medium"`
+	MinimapColorLow        uint8       `json:"minimap_color_low"`
+	MinimapColorCliffLeft  uint8       `json:"minimap_color_cliff_left"`
+	MinimapColorCliffRight uint8       `json:"minimap_color_cliff_right"`
+	Span                   Span        `json:"span"`
 }
 
 type TerrainRestriction struct {
@@ -4210,6 +4628,8 @@ type UnitFieldSpans struct {
 	ClearanceSizeY     Span `json:"clearance_size_y"`
 	TerrainTableID     Span `json:"terrain_table_id"`
 	MovementType       Span `json:"movement_type"`
+	MapDrawLevel       Span `json:"map_draw_level"`
+	MapColor           Span `json:"map_color"`
 	ObstructionTypeID  Span `json:"obstruction_type_id"`
 	ObstructionClassID Span `json:"obstruction_class_id"`
 	StandingGraphic1   Span `json:"standing_graphic_1"`
@@ -4355,6 +4775,15 @@ type UnitSummary struct {
 	ClearanceSizeY     float32           `json:"clearance_size_y"`
 	TerrainTableID     int16             `json:"terrain_table_id"`
 	MovementType       uint8             `json:"movement_type"`
+	MapDrawLevel       uint8             `json:"map_draw_level"`
+	MapColor           uint8             `json:"map_color"`
+	CanBeBuiltOn       uint8             `json:"can_be_built_on"`
+	CanBeGathered      uint8             `json:"can_be_gathered"`
+	HillMode           uint8             `json:"hill_mode"`
+	BlastDefenseLevel  uint8             `json:"blast_defense_level"`
+	OutlineRadiusX     float32           `json:"outline_radius_x"`
+	OutlineRadiusY     float32           `json:"outline_radius_y"`
+	OutlineRadiusZ     float32           `json:"outline_radius_z"`
 	FlyMode            uint8             `json:"fly_mode"`
 	ObstructionTypeID  uint8             `json:"obstruction_type_id"`
 	ObstructionClassID uint8             `json:"obstruction_class_id"`
@@ -4775,6 +5204,55 @@ type Rule struct {
 }
 ```
 
+## aoe2kit/pkg/felt
+
+```go
+package felt // import "aoe2kit/pkg/felt"
+
+Package felt describes reviewed visual connector behavior without game assets.
+
+TYPES
+
+type Catalog struct {
+	Schema  string  `json:"schema"`
+	Entries []Entry `json:"entries"`
+}
+
+func Load(path string) (Catalog, error)
+    Load reads a felt compendium with per-entry grammar, or the built-in
+    reviewed connector subset. Variant counts are supplied separately by the
+    caller's DAT.
+
+func (c Catalog) Find(id int) (Entry, bool)
+
+func (c Catalog) Rotate(id, variant, degrees int) (int, error)
+    Rotate requires an explicit reviewed mapping. An axis alone cannot prove
+    which corner, end, facing or chirality should replace an existing variant.
+
+func (c Catalog) Validate() error
+
+type Entry struct {
+	UnitID   int       `json:"unit_const"`
+	Name     string    `json:"name,omitempty"`
+	Contexts []string  `json:"contexts,omitempty"`
+	Grammar  []Variant `json:"grammar"`
+}
+
+func Skeleton(e Entry, count int) (Entry, error)
+    Skeleton fills all DAT facings, leaving unreviewed fields explicitly
+    unmapped.
+
+type Variant struct {
+	Index        int         `json:"variant"`
+	Axis         string      `json:"axis,omitempty"`
+	Role         string      `json:"role"`
+	RendersAlong []string    `json:"renders_along,omitempty"`
+	RotatesTo    map[int]int `json:"rotates_to,omitempty"`
+	Evidence     string      `json:"evidence"`
+	Note         string      `json:"note,omitempty"`
+}
+```
+
 ## aoe2kit/pkg/fetch
 
 ```go
@@ -4960,6 +5438,70 @@ type UnitBindPatch struct {
 	Before int `json:"before"`
 	After  int `json:"after"`
 }
+```
+
+## aoe2kit/pkg/gameinstall
+
+```go
+package gameinstall // import "aoe2kit/pkg/gameinstall"
+
+Package gameinstall resolves a user's local Age of Empires II installation.
+
+CONSTANTS
+
+const EnvDir = "AOE2KIT_GAME_DIR"
+
+FUNCTIONS
+
+func BlendomaticPath(gameDir string) string
+    BlendomaticPath locates the installed terrain-transition masks beside the
+    DAT.
+
+func DataPath(gameDir string) string
+    DataPath returns the conventional DE DAT path below a resolved game root.
+
+func Discover() (string, error)
+    Discover searches conventional Steam install locations without assuming a
+    particular user's home directory or Steam library path.
+
+func FindLooseSLD(gameDir, fileName string) (string, error)
+    FindLooseSLD finds a loose SLD whose basename matches the DAT graphic file
+    reference. Packed DRS content remains unsupported and is never extracted.
+
+func GraphicsDir(gameDir string) string
+    GraphicsDir returns the conventional loose-asset directory. Packed DRS
+    archives are deliberately not treated as loose SLD files.
+
+func MinimapPalettePath(gameDir string) string
+    MinimapPalettePath returns the conventional terrain palette path when it
+    exists in the resolved game installation.
+
+func Resolve(explicit string) (string, error)
+    Resolve applies Kit's shared precedence: explicit option, environment, then
+    conventional Steam discovery. An empty result means discovery found none.
+
+func ResolveOptional(explicit string) (string, error)
+    ResolveOptional chooses a configured path without requiring it to exist.
+    If no path is configured, failed platform discovery is non-fatal.
+
+func TerrainAssetPath(gameDir, group, name string) (string, error)
+    TerrainAssetPath resolves only a basename in a known installed terrain
+    group. DAT references are data, not paths: separators and traversal are
+    rejected.
+
+
+TYPES
+
+type Status struct {
+	Found               bool   `json:"found"`
+	GameDir             string `json:"game_dir,omitempty"`
+	SpritesReadable     bool   `json:"sprites_readable"`
+	SpriteAssetCount    int    `json:"sprite_asset_count"`
+	SpriteAssetLocation string `json:"sprite_asset_location,omitempty"`
+	Message             string `json:"message"`
+}
+
+func Inspect(explicit string) Status
 ```
 
 ## aoe2kit/pkg/gamestrings
@@ -5794,7 +6336,30 @@ CONSTANTS
 
 const Version = "aoe2kit.gfx.v1"
 
+FUNCTIONS
+
+func DecodeDDS(r io.Reader) (*image.RGBA, error)
+    DecodeDDS reads the first mip of a single 2D BC1/BC2/BC3 DDS texture.
+    Header facts: Microsoft DDS_HEADER and DDS_PIXELFORMAT documentation.
+    Unsupported formats fail explicitly; no assets or external decoder are used.
+
+
 TYPES
+
+type BlendomaticMode struct {
+	Flags      [31]byte
+	PackedBits []byte
+	Alpha      [31]*image.Gray
+}
+    BlendomaticMode holds the installed file's flags, packed bit masks and alpha
+    diamonds. Alpha stores normalized file weights (0..128 becomes 0..255),
+    not necessarily incoming-terrain opacity; the renderer chooses polarity.
+    PackedBits is preserved without asserting how DE uses it alongside alpha.
+
+func DecodeBlendomatic(r io.Reader) ([]BlendomaticMode, error)
+    DecodeBlendomatic supports the measured 97x49, 2353-pixel diamond layout.
+    Format and directional-mask facts are documented by openage (see NOTICE).
+    Unknown layouts, truncated records and trailing data are rejected.
 
 type SLD struct {
 	Path    string     `json:"path,omitempty"`
@@ -5808,6 +6373,16 @@ type SLD struct {
 func OpenSLD(path string) (*SLD, error)
 
 func ParseSLD(data []byte) (*SLD, error)
+
+func (f *SLD) RenderFrame(ordinal int, playerColor color.RGBA) (*image.RGBA, SLDFrame, error)
+    RenderFrame decodes one main sprite frame. Frames with delta encoding are
+    reconstructed from preceding main frames; the returned image retains the
+    frame canvas, so callers place its top-left at tile-(hotspot).
+
+func (f *SLD) RenderShadowFrame(ordinal int) (*image.RGBA, SLDFrame, error)
+    RenderShadowFrame returns BC4 coverage in the alpha channel on the full
+    frame canvas. Its hotspot is identical to the main sprite's. A missing
+    shadow layer returns a nil image, not an invented silhouette.
 
 type SLDExportOptions struct {
 	OutDir string
@@ -6102,7 +6677,7 @@ const ProfileMarkerName = "KIT_PROFILE.json"
 VARIABLES
 
 var (
-	Version   = "0.1.0"
+	Version   = "0.4.3"
 	Commit    = "unknown"
 	BuildType = "dev"
 )
@@ -6534,6 +7109,768 @@ type ModStatusEntry struct {
 	Published *bool          `json:"published,omitempty"`
 	Type      string         `json:"type,omitempty"`
 	RawKeys   map[string]any `json:"raw_keys,omitempty"`
+}
+```
+
+## aoe2kit/pkg/preview
+
+```go
+package preview // import "aoe2kit/pkg/preview"
+
+Package preview produces deterministic, local previews without bundling art.
+
+CONSTANTS
+
+const SnapshotSchema = "aoe2kit.preview.snapshot.v1"
+
+FUNCTIONS
+
+func AlignMoodImages(a, b *image.RGBA) ([2]int, float64, error)
+    AlignMoodImages searches translations only. It does not invent
+    scale/rotation corrections; callers must supply screenshots at matching
+    pixel scale.
+
+func CheckSpriteCompleteness(r Report) error
+    CheckSpriteCompleteness ignores intentional exclusions, but not a missing,
+    undecodable, unsupported, or invalid-variant sprite in the requested view.
+
+func PrepareMoodCalibration(path, gameDir string) ([]MoodFitCase, []MoodAlignment, error)
+func ReadMinimapPalette(path string) ([]color.RGBA, error)
+    ReadMinimapPalette reads the game's indexed widgetui palette used by the
+    minimap.
+
+func ResolveRotationModel(name string) (string, error)
+    ResolveRotationModel never infers a model from file version or value range.
+
+func RotationIndex(o Object, model string, angles int) (int, error)
+    RotationIndex is a preview hypothesis, not a conversion of the scenario.
+    Candidate radian models use raw Rotation, ignoring the cached Variant index.
+
+func ScenarioPaths(inputs []string) ([]string, error)
+    ScenarioPaths expands directories deterministically and deduplicates
+    aliases. Directory symlinks are not traversed; explicit file symlinks are
+    canonicalized.
+
+func ShaderBloomCompose(scene, bloom [3]float64, enabled bool) [3]float64
+    ShaderBloomCompose is the copy pass. Render-target quantization/clipping,
+    and which texture was bound as its input, are outside this equation.
+
+func ShaderBloomExtract(samples [4][3]float64, m Mood, intensity float64) [3]float64
+    ShaderBloomExtract averages the four bilinear fetch results BEFORE
+    thresholding each channel and applying bloom saturation. It does not clip
+    the output to 1.
+
+func ShaderBloomFilter(samples [8][3]float64, weights [8]float64) [3]float64
+    ShaderBloomFilter is one eight-fetch blur pass. Weights and offsets are CPU
+    supplied; the shader does not normalize weights or compute them from sigma.
+    Callers supply already-sampled colours and apply BloomTint after the
+    vertical pass only. No assumed Gaussian kernel is hidden here.
+
+func ShaderBloomTint(c [3]float64, m Mood) [3]float64
+func ShaderDistanceFog(c [3]float64, screenY, optionEnable, optionIntensity float64, m Mood) [3]float64
+    Distance fog is additive in this combine pass, not a lerp toward fog colour.
+    screenY is the full pass's normalized coordinate, not a crop-relative value.
+
+func ShaderPostGrade(c [3]float64, m Mood, correction bool, gamma float64) [3]float64
+    ShaderPostGrade follows the recovered combine-pass arithmetic. Gamma here
+    is the engine option exponent, NOT the mood JSON's unused gamma field.
+    Every saturation point matters; brightness does not precede contrast or
+    saturation. This is a stage equation, not a claim to reproduce the complete
+    renderer.
+
+func ShaderSpriteCombine(terrain, sprite [3]float64, alpha, modulationAlpha float64, receivesShadow bool, m Mood, correction bool) [3]float64
+    ShaderSpriteCombine composites straight sprite RGB, not premultiplied RGB.
+    receivesShadow is the sampled metadata's low flag bit. Terrain has already
+    been shadowed separately by ShaderTerrainGrade.
+
+func ShaderTerrainAttributes(visibility, lightmap [2]float64, fogBorder bool) [4]float64
+    ShaderTerrainAttributes packs the visibility and lightmap samples. These are
+    not terrain IDs or a material palette index.
+
+func ShaderTerrainGrade(c, light [3]float64, modulationAlpha float64, m Mood, correction, bloom bool, bloomIntensity float64) [3]float64
+    ShaderTerrainGrade is the terrain branch before sprite composition and post
+    grading. light = diffuse*attributeTexture.b + ambient + base; the caller
+    must supply these engine values. Modulation RGB is not used by this stage.
+
+func ShaderTerrainLight(attributeBlue float64, diffuse, ambient, base [3]float64) [3]float64
+func ShaderUniformPatch(c [3]float64, m Mood, o ShaderMoodOptions) [3]float64
+    ShaderUniformPatch evaluates recovered stages with explicitly assumed
+    pass bindings: combine -> downsample/blur -> copy-add. On a uniform field,
+    spatial taps reduce to their sums. This is NOT a substitute for spatial
+    bloom on textured pixels, and the runtime pass bindings remain to be
+    verified.
+
+func ShaderVignette(c [3]float64, uv [2]float64, explored, optionIntensity float64, m Mood) [3]float64
+    ShaderVignette uses four rectangular edge ramps; smoothness is unused in the
+    recovered pass. It operates before the post colour correction.
+
+func ValidateMoodFitCases(cases []MoodFitCase) error
+func WritePNG(path string, img image.Image) error
+func WriteSnapshot(path string, snap Snapshot) error
+
+TYPES
+
+type AssetFetchReport struct {
+	Schema     string        `json:"schema"`
+	Copied     []string      `json:"copied"`
+	Present    []string      `json:"already_present"`
+	Remaining  []NeededAsset `json:"remaining"`
+	Unresolved []AssetIssue  `json:"unresolved,omitempty"`
+	Notes      []string      `json:"notes"`
+}
+
+func FetchMissingSLDs(manifest AssetManifest, source, mirror string) (AssetFetchReport, error)
+    FetchMissingSLDs only copies loose graphics needed by this manifest.
+    It never overwrites files or extracts archives, and rejects links escaping
+    graphics.
+
+type AssetIssue struct {
+	UnitID int    `json:"unit_id"`
+	Reason string `json:"reason"`
+}
+
+type AssetManifest struct {
+	Schema     string        `json:"schema"`
+	Crop       Crop          `json:"crop"`
+	Assets     []NeededAsset `json:"assets"`
+	Unresolved []AssetIssue  `json:"unresolved"`
+	Complete   bool          `json:"dependency_list_complete"`
+	Missing    int           `json:"missing"`
+	Notes      []string      `json:"notes"`
+}
+
+func ArtworkAssets(art *scenario.Artwork, idx *datfile.Index, gameDir string, crop *Crop) (AssetManifest, error)
+    ArtworkAssets lists runtime sprite dependencies, never copies/distributes
+    art. Paths are relative to an installation, suitable for an external batch
+    fetcher. A missing particle definition makes the list explicitly incomplete:
+    fetch the JSON and rerun to discover its atlas dependencies.
+
+type CensusEntry struct {
+	UnitID    int             `json:"unit_id"`
+	Name      string          `json:"dat_name,omitempty"`
+	ClassID   int16           `json:"class_id"`
+	Known     bool            `json:"dat_known"`
+	Count     int             `json:"count"`
+	Players   map[int]int     `json:"players"`
+	Rotations []RotationCount `json:"rotations"`
+}
+
+type CensusFile struct {
+	Path       string `json:"path"`
+	Version    string `json:"version"`
+	Units      int    `json:"matched_units"`
+	PeakRSSKiB int64  `json:"peak_rss_kib,omitempty"`
+}
+
+type CensusReport struct {
+	Schema   string        `json:"schema"`
+	Crop     Crop          `json:"crop"`
+	Total    int           `json:"total"`
+	Distinct int           `json:"distinct_unit_kinds"`
+	Units    []CensusEntry `json:"units"`
+	Notes    []string      `json:"notes"`
+}
+
+func ArtworkCensus(art *scenario.Artwork, idx *datfile.Index, opts StudyOptions) (CensusReport, error)
+    ArtworkCensus counts anchors in a half-open crop; rotations are stored
+    values, not animation frame ordinals or a claim that every value is a valid
+    variant.
+
+type CorpusCounter struct {
+	// Has unexported fields.
+}
+
+func NewCorpusCounter(idx *datfile.Index, opts StudyOptions) *CorpusCounter
+
+func (c *CorpusCounter) Add(path string, art *scenario.Artwork, peakRSSKiB int64) error
+    Add accumulates one file at a time, retaining counts rather than its
+    objects.
+
+func (c *CorpusCounter) Report(against *CorpusCounter, minMaps int) (CorpusReport, error)
+
+type CorpusReport struct {
+	Schema       string       `json:"schema"`
+	Total        int          `json:"total"`
+	Returned     int          `json:"returned"`
+	Files        []CensusFile `json:"files"`
+	AgainstFiles []CensusFile `json:"against_files,omitempty"`
+	Units        []CorpusUnit `json:"units"`
+	Notes        []string     `json:"notes"`
+}
+
+type CorpusUnit struct {
+	CensusEntry
+	Maps         int  `json:"maps"`
+	AgainstCount int  `json:"against_count"`
+	AgainstMaps  int  `json:"against_maps"`
+	CountDelta   int  `json:"count_delta"`
+	MapDelta     int  `json:"map_delta"`
+	OnlyInInput  bool `json:"only_in_input"`
+}
+
+type Crop struct {
+	X1 int `json:"x1"`
+	Y1 int `json:"y1"`
+	X2 int `json:"x2"`
+	Y2 int `json:"y2"`
+}
+
+func AroundCrop(s Snapshot, x, y, radius float64) (*Crop, error)
+    AroundCrop produces a half-open tile window clipped to the map.
+
+func FitUnitCrop(s Snapshot, ids []int) (*Crop, error)
+    FitUnitCrop bounds all matching objects, including their footprint and
+    a one-tile margin. It does not silently choose one of several distant
+    clusters.
+
+type DiamondRegistration struct {
+	Scale, OX, OY float64
+	FitRMS        float64
+	FitCount      int
+	Residuals     []RegistrationResidual
+}
+    DiamondRegistration fits the rotate270 diamond convention used by preview:
+    px = OX + (x+y)*Scale/2; py = OY + (y-x-height)*Scale/4. It does not
+    establish that the supplied heights or ground model are correct.
+
+func FitDiamondRegistration(anchors []RegistrationAnchor) (DiamondRegistration, error)
+    FitDiamondRegistration estimates one scale and two translations by least
+    squares. At least three fitting anchors with distinct projected coordinates
+    are required. Use independent holdouts to test a candidate height model.
+
+type FacetEntry struct {
+	UnitID     int             `json:"unit_id"`
+	Name       string          `json:"dat_name,omitempty"`
+	Count      int             `json:"count"`
+	Stored     []RotationCount `json:"stored_rotations"`
+	Available  []int           `json:"available"`
+	Placed     []int           `json:"placed"`
+	Missing    []int           `json:"missing"`
+	Unexpected []RotationCount `json:"unexpected,omitempty"`
+	Complete   *bool           `json:"complete,omitempty"`
+	Unknown    string          `json:"unknown,omitempty"`
+}
+
+type FacetReport struct {
+	Schema  string       `json:"schema"`
+	Version string       `json:"scenario_version"`
+	Crop    Crop         `json:"crop"`
+	Units   []FacetEntry `json:"units"`
+	Notes   []string     `json:"notes"`
+}
+
+func ArtworkFacets(art *scenario.Artwork, idx *datfile.Index, opts StudyOptions) (FacetReport, error)
+    ArtworkFacets compares stored index coverage with DAT standing-graphic angle
+    slots. Animation frames are deliberately not a visual variant inventory.
+
+type GrammarOptions struct {
+	UnitID                  int
+	Dat                     *datfile.Index
+	GameDir, CompendiumPath string
+}
+
+type GrammarReport struct {
+	Schema      string       `json:"schema"`
+	Entries     []felt.Entry `json:"entries"`
+	GraphicFile string       `json:"graphic_file"`
+	FrameCount  int          `json:"animation_frames_per_variant"`
+	Items       []SpriteItem `json:"items"`
+	Notes       []string     `json:"notes"`
+}
+
+func RenderGrammar(o GrammarOptions) (*image.RGBA, GrammarReport, error)
+    RenderGrammar renders installed art only; grammar and generated images carry
+    no assertion about collision, passability or engine-facing semantics.
+
+type Hotspot struct {
+	Crop    Crop          `json:"crop"`
+	Count   int           `json:"count"`
+	Variety int           `json:"distinct_unit_kinds"`
+	Units   []CensusEntry `json:"units"`
+	Bounds  Crop          `json:"bounds"`
+	CropArg string        `json:"crop_arg"`
+	Score   float64       `json:"score"`
+}
+
+type HotspotReport struct {
+	Schema             string    `json:"schema"`
+	Rank               string    `json:"rank"`
+	GaiaOnly           bool      `json:"gaia_only"`
+	ExcludedForestFish int       `json:"excluded_forest_fish"`
+	MatchedCells       int       `json:"matched_cells"`
+	Hotspots           []Hotspot `json:"hotspots"`
+	Notes              []string  `json:"notes"`
+}
+
+func ArtworkHotspots(art *scenario.Artwork, idx *datfile.Index, opts StudyOptions) (HotspotReport, error)
+    ArtworkHotspots ranks occupied grid cells, with deterministic ties.
+    Only the DAT tree and fish classes are excluded; unknown units stay visible
+    for study.
+
+type ImageExtent struct {
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+	Scale      int    `json:"scale"`
+	Projection string `json:"projection"`
+	MapOriginX int    `json:"map_origin_x"`
+	MapOriginY int    `json:"map_origin_y"`
+}
+    SnapshotImageExtent adds the height-field headroom to the flat image frame.
+    Optional stored=true also reserves headroom for recorded object Z values.
+
+func SnapshotImageExtent(s Snapshot, scale int, projection string, elevation bool, stored ...bool) (ImageExtent, error)
+
+type Mood struct {
+	ShaderFields    bool       `json:"shader_fields,omitempty"`
+	Name            string     `json:"name"`
+	Saturation      float64    `json:"saturation"`
+	Contrast        float64    `json:"contrast"`
+	Brightness      float64    `json:"brightness"`
+	TintFactor      float64    `json:"tint_factor"`
+	TintColor       [3]float64 `json:"tint_color"`
+	TerrainTint     [3]float64 `json:"terrain_tint_color"`
+	BloomThreshold  float64    `json:"bloom_threshold"`
+	BloomIntensity  float64    `json:"bloom_intensity"`
+	BloomTint       [3]float64 `json:"bloom_tint_color"`
+	ShadowStrength  float64    `json:"shadow_strength"`
+	CloudStrength   float64    `json:"cloud_strength"`
+	DistanceFog     float64    `json:"distance_fog_visible_intensity"`
+	FogColor        [3]float64 `json:"distance_fog_color"`
+	BloomSaturation float64    `json:"bloom_saturation"`
+	BloomScene      [3]float64 `json:"bloom_scene_intensity"`
+	BloomTerrain    float64    `json:"bloom_terrain_correction"`
+	BloomSigma      float64    `json:"bloom_sigma"`
+	ShadowColor     [3]float64 `json:"shadow_color"`
+	VignetteBorder  [2]float64 `json:"vignette_border"`
+	VignetteRadius  float64    `json:"vignette_radius"`
+	VignetteAmount  float64    `json:"vignette_intensity"`
+	VignetteColor   [3]float64 `json:"vignette_color"`
+}
+    Mood is one colour mood ("Color Mood" in the editor) from the game's
+    terrain/colorcorrection_json/colorcorrection.json. Only the fields the
+    preview grade uses are decoded.
+
+func LoadMood(gameDir, name string) (Mood, error)
+    LoadMood reads mood name (case-insensitive; "" means Default) from the game
+    install.
+
+type MoodAlignment struct {
+	Name          string  `json:"name"`
+	Offset        [2]int  `json:"offset"`
+	Correlation   float64 `json:"correlation"`
+	PreviewSHA256 string  `json:"preview_sha256"`
+	CaptureSHA256 string  `json:"capture_sha256"`
+}
+
+type MoodCalibrationCase struct {
+	Name         string                  `json:"name"`
+	Preview      string                  `json:"preview"`
+	Capture      string                  `json:"capture"`
+	Mood         string                  `json:"mood"`
+	InputMood    string                  `json:"input_mood,omitempty"` // Empty means raw, not Default.
+	Offset       *[2]int                 `json:"offset,omitempty"`     // Capture coordinate = preview coordinate + offset.
+	Stride       int                     `json:"stride,omitempty"`
+	Regions      []MoodCalibrationRegion `json:"regions,omitempty"`
+	TextureInput bool                    `json:"texture_input,omitempty"`
+	TextureGain  [3]float64              `json:"texture_gain,omitempty"`
+}
+
+type MoodCalibrationManifest struct {
+	Cases []MoodCalibrationCase `json:"cases"`
+}
+    MoodCalibrationManifest paths are relative to the manifest, not the process
+    cwd.
+
+type MoodCalibrationRegion struct {
+	Name    string   `json:"name"`
+	Points  [][2]int `json:"points"` // Preview pixel positions; medians over paired valid points.
+	Exclude bool     `json:"exclude,omitempty"`
+	Texture string   `json:"texture,omitempty"`
+}
+
+type MoodFitCase struct {
+	Name      string       `json:"name"`
+	Mood      Mood         `json:"mood"`
+	InputMood *Mood        `json:"input_mood,omitempty"`
+	Samples   []MoodSample `json:"samples"`
+}
+
+type MoodFitResult struct {
+	Name      string         `json:"name"`
+	Mood      string         `json:"mood"`
+	HeldOut   bool           `json:"held_out"`
+	Samples   int            `json:"samples"`
+	Before    float64        `json:"before_rms"`
+	After     float64        `json:"after_rms"`
+	Residuals []MoodResidual `json:"residuals"`
+}
+
+func MoodResiduals(cases []MoodFitCase, model MoodModel, holdout string) []MoodFitResult
+
+type MoodModel struct {
+	TintShape   string  `json:"tint_shape"`
+	Pivot       float64 `json:"pivot"`
+	Tint        float64 `json:"tint"`
+	Multiply    float64 `json:"multiply"`
+	Attenuate   float64 `json:"attenuate"`
+	Bloom       float64 `json:"bloom"`
+	Highlight   float64 `json:"highlight"`
+	Fog         float64 `json:"fog"`
+	BloomChroma float64 `json:"bloom_chroma"`
+}
+    MoodModel is a shared empirical grade, not a reconstruction of the engine
+    shader. TintShape selects lerp, multiply, or mixed. All coefficients are
+    shared by moods.
+
+func CurrentMoodModel() MoodModel
+
+func FitMoodModel(cases []MoodFitCase, holdout string) (MoodModel, map[string]float64, error)
+    FitMoodModel uses bounded deterministic coordinate descent. Each case
+    has equal weight, so a large meadow image cannot drown out small swatch
+    sample sets. Held-out moods are never used for coefficients or tint-shape
+    selection.
+
+func LoadMoodModel(path string) (MoodModel, error)
+    LoadMoodModel reads the model from a calibrate-mood JSON report.
+
+func (p MoodModel) Validate() error
+
+type MoodReport struct {
+	Name        string   `json:"name"`
+	Source      string   `json:"source"`
+	Rule        string   `json:"rule"`
+	NotModelled []string `json:"not_modelled"`
+}
+
+func ApplyMood(img *image.RGBA, m Mood, source string) MoodReport
+    ApplyMood grades img in place. The pixel at the image origin is the
+    background (the diamond projection never covers the corners) and is left as
+    it is.
+
+func ApplyMoodModel(img *image.RGBA, m Mood, source string, p MoodModel) (MoodReport, error)
+    ApplyMoodModel applies an explicitly selected calibration, including its
+    assumptions in the render report. Invalid models do not mutate the image.
+
+type MoodResidual struct {
+	Name      string     `json:"name"`
+	Excluded  bool       `json:"excluded,omitempty"`
+	Before    float64    `json:"before_rms"`
+	After     float64    `json:"after_rms"`
+	Predicted [3]float64 `json:"predicted_rgb"`
+}
+
+type MoodSample struct {
+	Name     string            `json:"name"`
+	Input    [3]float64        `json:"input_rgb"` // 0..1, unpremultiplied display RGB
+	Capture  [3]float64        `json:"capture_rgb"`
+	Excluded bool              `json:"excluded,omitempty"`
+	Texture  *MoodTextureStats `json:"texture,omitempty"`
+}
+
+type MoodTextureStats struct {
+	SHA256 string     `json:"sha256"`
+	Mean   [3]float64 `json:"mean_rgb"`
+	Median [3]float64 `json:"median_rgb"`
+	Pixels int        `json:"opaque_pixels"`
+}
+
+func MeasureMoodTexture(path string) (MoodTextureStats, error)
+    MeasureMoodTexture uses the full original DDS mip, not the preview's resized
+    texture. Its global distribution is a diagnostic, not a registered UV
+    sample.
+
+type NeededAsset struct {
+	Path   string `json:"path"`
+	Kind   string `json:"kind"`
+	Status string `json:"status"`
+	Units  []int  `json:"unit_ids"`
+}
+
+type Object struct {
+	UnitID                int     `json:"unit_id"`
+	X                     float64 `json:"x"`
+	Y                     float64 `json:"y"`
+	Z                     float64 `json:"z,omitempty"`
+	Rotation              float64 `json:"rotation"`
+	Status                int     `json:"status,omitempty"`
+	InitialAnimationFrame int     `json:"initial_animation_frame,omitempty"`
+	Variant               int     `json:"variant,omitempty"`
+	Player                int     `json:"player"`
+	Class                 string  `json:"class"`
+	Name                  string  `json:"name,omitempty"`
+	FootprintX            float64 `json:"footprint_x,omitempty"`
+	FootprintY            float64 `json:"footprint_y,omitempty"`
+	Blocking              bool    `json:"blocking,omitempty"`
+	MapDrawLevel          uint8   `json:"map_draw_level,omitempty"`
+	MapColor              uint8   `json:"map_color,omitempty"`
+	HasMapFields          bool    `json:"has_map_fields,omitempty"`
+	MinimapMode           int     `json:"minimap_mode,omitempty"`
+	HasMinimapMode        bool    `json:"has_minimap_mode,omitempty"`
+}
+
+func SortedObjects(in []Object) []Object
+
+type Options struct {
+	Projection          string
+	Scale               int
+	Layers              map[string]bool
+	Crop                *Crop
+	MinimapScale        int
+	MinimapOrientation  string
+	Palette             []color.RGBA
+	SpriteTilePixels    int
+	Dat                 *datfile.Index
+	Textures            *TerrainTextureOptions
+	Shadows             *ShadowOptions
+	Elevation           bool // Opt-in height field; shared-corner rule and lighting are provisional.
+	StoredObjectHeights bool // Use recorded object Z values when elevation is enabled.
+	RotationModel       string
+}
+
+type ParticleReport struct {
+	UnitID    int     `json:"unit_id"`
+	X         float64 `json:"x"`
+	Y         float64 `json:"y"`
+	GraphicID int     `json:"graphic_id"`
+	Name      string  `json:"particle"`
+	Mapping   string  `json:"mapping_evidence"`
+	Status    string  `json:"status"`
+	Reason    string  `json:"reason,omitempty"`
+	Layer     string  `json:"layer,omitempty"`
+	Angle     int     `json:"angle"`
+	Angles    int     `json:"angles,omitempty"`
+	Frame     int     `json:"atlas_frame"`
+	Filename  string  `json:"frame_name,omitempty"`
+	Scale     float64 `json:"scale,omitempty"`
+	Placement string  `json:"placement_evidence"`
+}
+    ParticleReport distinguishes an explicit DAT reference from the as-yet
+    uncalibrated angle/anchor convention used to preview a static loop frame.
+
+type ProjectDefaults struct {
+	Dat       string `json:"dat,omitempty"`
+	GameDir   string `json:"game_dir,omitempty"`
+	Sprites   bool   `json:"sprites,omitempty"`
+	Textures  bool   `json:"textures,omitempty"`
+	Shadows   bool   `json:"shadows,omitempty"`
+	Mood      string `json:"mood,omitempty"`
+	Elevation bool   `json:"elevation,omitempty"`
+	Scale     int    `json:"scale,omitempty"`
+}
+    ProjectDefaults supplies optional CLI defaults, never output destinations.
+
+func LoadProjectDefaults(dir string) (ProjectDefaults, error)
+    LoadProjectDefaults searches upward for kit-preview.json. Relative asset
+    paths are resolved from that file, not from the caller's working directory.
+
+type RegistrationAnchor struct {
+	X, Y, Height float64
+	PX, PY       float64
+	Holdout      bool `json:",omitempty"`
+}
+    RegistrationAnchor pairs a world position and explicit ground height with an
+    observed screenshot point. Height uses stored levels, not editor UI levels.
+    Holdout points are evaluated but do not influence the fitted camera.
+
+type RegistrationResidual struct {
+	DX, DY, Distance float64
+	Holdout          bool
+}
+
+type Report struct {
+	Crop               *Crop                 `json:"crop,omitempty"`
+	Scale              int                   `json:"scale,omitempty"`
+	Schema             string                `json:"schema"`
+	OK                 bool                  `json:"ok"`
+	Stage              string                `json:"stage"`
+	Projection         string                `json:"projection"`
+	ImageWidth         int                   `json:"image_width"`
+	ImageHeight        int                   `json:"image_height"`
+	Drawn              int                   `json:"drawn"`
+	CountsByClass      map[string]int        `json:"counts_by_class"`
+	Skipped            []Skipped             `json:"skipped,omitempty"`
+	TerrainColors      string                `json:"terrain_colors"`
+	PixelSHA256        string                `json:"pixel_sha256"`
+	Minimap            bool                  `json:"minimap,omitempty"`
+	MinimapOrientation string                `json:"minimap_orientation,omitempty"`
+	ObjectColors       string                `json:"object_colors,omitempty"`
+	ObjectMarkerSizing string                `json:"object_marker_sizing,omitempty"`
+	Palette            string                `json:"palette,omitempty"`
+	ElevationMode      string                `json:"elevation_mode,omitempty"`
+	ElevationPadding   int                   `json:"elevation_padding,omitempty"`
+	ObjectHeightMode   string                `json:"object_height_mode,omitempty"`
+	Fallbacks          []string              `json:"fallbacks,omitempty"`
+	Textures           *TerrainTextureReport `json:"textures,omitempty"`
+	Mood               *MoodReport           `json:"mood,omitempty"`
+	Shadows            *ShadowReport         `json:"shadows,omitempty"`
+	Particles          []ParticleReport      `json:"particles,omitempty"`
+	RotationModel      string                `json:"rotation_model,omitempty"`
+	ScenarioVersion    string                `json:"scenario_version,omitempty"`
+}
+
+func RenderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error)
+
+func RenderMinimap(s Snapshot, dat *datfile.Index, opts Options) (*image.RGBA, Report, error)
+    RenderMinimap draws a compact, whole-map 2:1 isometric overview using DAT
+    terrain colors when the indexed game palette is available.
+
+func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string) (*image.RGBA, Report, error)
+    RenderSprites overlays individual sprites onto the terrain preview in
+    painter order. It loads only graphics referenced by objects in this
+    snapshot.
+
+type RotationCount struct {
+	Rotation float64 `json:"rotation"`
+	Count    int     `json:"count"`
+}
+
+type ShaderMoodAudit struct {
+	Options     ShaderMoodOptions  `json:"options"`
+	Assumptions []string           `json:"assumptions"`
+	InverseRMS  map[string]float64 `json:"input_inverse_rms"`
+	Results     []MoodFitResult    `json:"results"`
+}
+
+func ShaderMoodResiduals(cases []MoodFitCase, o ShaderMoodOptions, holdout string) (ShaderMoodAudit, error)
+    ShaderMoodResiduals compares the existing default with a fixed shader audit.
+    Holdout is a reporting label only: this path performs no coefficient
+    fitting.
+
+type ShaderMoodOptions struct {
+	ColorCorrection bool       `json:"color_correction"`
+	Bloom           bool       `json:"bloom"`
+	BloomScale      float64    `json:"bloom_option_scale"`
+	HorizontalSum   float64    `json:"horizontal_tap_sum"`
+	VerticalSum     float64    `json:"vertical_tap_sum"`
+	Gamma           float64    `json:"gamma_exponent"`
+	InputLight      [3]float64 `json:"input_lighting"`
+	ModulationAlpha float64    `json:"modulation_alpha"`
+	DistanceFog     bool       `json:"distance_fog"`
+	DistanceScale   float64    `json:"distance_fog_option_scale"`
+	ScreenY         float64    `json:"screen_y"`
+}
+    ShaderMoodOptions records engine state that cannot be recovered from the
+    mood JSON alone. This audit models a uniform, fully visible terrain patch,
+    not the engine's spatial buffers. Values must be supplied explicitly,
+    never fitted into the recovered stage equations.
+
+func (o ShaderMoodOptions) Validate() error
+
+type ShadowOptions struct {
+	Mood    *Mood
+	Overlap string // max (default) or sum; blend state is not yet engine-verified.
+}
+    ShadowOptions enables the experimental SLD coverage pass. Nil Mood means
+    color correction is disabled, not that a default mood should be guessed.
+
+type ShadowReport struct {
+	Overlap       string    `json:"overlap"`
+	Mood          string    `json:"mood"`
+	Drawn         int       `json:"drawn"`
+	Missing       int       `json:"missing_layers"`
+	CoveredPixels int       `json:"covered_pixels"`
+	Skipped       []Skipped `json:"skipped,omitempty"`
+	Limitations   []string  `json:"limitations"`
+}
+
+type Skipped struct {
+	UnitID int    `json:"unit_id"`
+	Reason string `json:"reason"`
+}
+
+type Snapshot struct {
+	ScenarioVersion string      `json:"scenario_version,omitempty"`
+	Schema          string      `json:"schema"`
+	Stage           string      `json:"stage"`
+	Width           int         `json:"width"`
+	Height          int         `json:"height"`
+	Terrain         []Tile      `json:"terrain"`
+	Objects         []Object    `json:"objects,omitempty"`
+	PlayerColors    map[int]int `json:"player_colors,omitempty"`
+	SourceWarnings  []string    `json:"source_warnings,omitempty"`
+}
+
+func ArtworkSnapshot(art *scenario.Artwork, stage string, dat *datfile.Index) (Snapshot, error)
+    ArtworkSnapshot accepts the read-only map/unit projection, including older
+    campaigns whose trigger and authoring formats are intentionally unsupported.
+
+func ReadSnapshot(path string) (Snapshot, error)
+
+func ReplaySnapshot(path string, dat *datfile.Index) (Snapshot, error)
+    ReplaySnapshot builds a preview snapshot from the terrain grid embedded in
+    a replay. Initial object state is included when Kit can decode its header
+    spine.
+
+func ScenarioSnapshot(file *scenario.File, stage string, dat *datfile.Index) (Snapshot, error)
+
+type SpriteItem struct {
+	UnitID      int      `json:"unit_id"`
+	Name        string   `json:"name"`
+	GraphicID   int      `json:"graphic_id"`
+	GraphicFile string   `json:"graphic_file"`
+	Variant     int      `json:"variant"`
+	Frame       int      `json:"frame"`
+	States      []string `json:"states,omitempty"`
+	Status      string   `json:"status"`
+	Reason      string   `json:"reason,omitempty"`
+}
+
+type StudyOptions struct {
+	Crop              *Crop
+	GaiaOnly          bool
+	Player            *int
+	UnitIDs           []int
+	Diverse           bool
+	MinCount          int
+	IncludeForestFish bool
+	Cell, Top         int
+	Rank              string
+}
+
+type TerrainAssetReport struct {
+	ID              int      `json:"terrain_id"`
+	Texture         string   `json:"texture"`
+	TextureWidth    int      `json:"texture_width,omitempty"`
+	TextureHeight   int      `json:"texture_height,omitempty"`
+	Mask            string   `json:"mask,omitempty"`
+	MaskTopFraction *float64 `json:"mask_top_fraction,omitempty"`
+	BlendType       int32    `json:"blend_type"`
+	BlendPriority   int32    `json:"blend_priority"`
+	BlendFamily     string   `json:"candidate_blend_family"`
+	Issues          []string `json:"issues,omitempty"`
+}
+
+type TerrainTextureOptions struct {
+	GameDir       string
+	Repeat        float64 // Mask repeat in world tiles.
+	TextureRepeat float64
+	Edges         bool
+}
+    TerrainTextureOptions opts in to installed art. Repeat is in world tiles,
+    independent of DDS dimensions and crop. Zero selects ten tiles for both
+    masks and textures; grass texture scale is calibrated to registered
+    captures.
+
+type TerrainTextureReport struct {
+	Repeat            float64              `json:"mask_repeat_tiles"`
+	TextureRepeat     float64              `json:"texture_repeat_tiles"`
+	LayerRule         string               `json:"layer_rule"`
+	EmptyMaskRule     string               `json:"empty_mask_rule"`
+	EdgeRule          string               `json:"edge_rule"`
+	EdgeEvidence      []string             `json:"edge_evidence,omitempty"`
+	BlendomaticSHA256 string               `json:"blendomatic_sha256,omitempty"`
+	BlendomaticModes  int                  `json:"blendomatic_modes,omitempty"`
+	EdgeIssue         string               `json:"edge_issue,omitempty"`
+	Assumptions       []string             `json:"assumptions"`
+	Assets            []TerrainAssetReport `json:"assets"`
+}
+
+type Tile struct {
+	X         int     `json:"x"`
+	Y         int     `json:"y"`
+	TerrainID int     `json:"terrain_id"`
+	Layer     *int    `json:"layer,omitempty"`
+	Elevation float64 `json:"elevation"`
 }
 ```
 
@@ -10852,6 +12189,10 @@ var DE158Layout = Layout{
 
 FUNCTIONS
 
+func ArtworkVersions() []string
+    ArtworkVersions lists measured layout families, not full read/write support.
+    1.38 and 1.39 have no corpus evidence and remain unsupported.
+
 func BlankScenarioSeedBytes() ([]byte, error)
 func CollisionFootprintBlocks(x, y, z float32) bool
     CollisionFootprintBlocks is the shared DAT collision gate for object
@@ -10926,6 +12267,9 @@ func WatchLocal(path string, opts WatchOptions, emit func(WatchEvent) error) err
     loop so Kit has no OS-specific or remote-machine dependency. Callers can
     select Once for a single snapshot in scripts and tests.
 
+func WriteMapPatchRecipe(path string, report MapPatchDiffReport) error
+    WriteMapPatchRecipe writes only patchable results, using an atomic rename.
+
 func XSCarrierContent(message string) string
 func DecodeBackgroundImageNode(data []byte) (*parsedNode, int, error)
     DecodeBackgroundImageNode owns the image frame. Empty editor images are a
@@ -10986,6 +12330,29 @@ type AnalysisReport struct {
 	Watermarks        []WatermarkSignal   `json:"watermarks,omitempty"`
 	EffectTypes       []EffectTypeSummary `json:"effect_types,omitempty"`
 }
+
+type Artwork struct {
+	Version       string        `json:"version"`
+	Scope         string        `json:"scope"`
+	Width         int           `json:"width"`
+	Height        int           `json:"height"`
+	ColorMood     string        `json:"color_mood,omitempty"`
+	Tiles         []TerrainTile `json:"tiles"`
+	Units         UnitInfo      `json:"units"`
+	PlayerColors  map[int]int   `json:"player_colors"`
+	Sections      []SectionInfo `json:"sections"`
+	UnparsedBytes int           `json:"unparsed_bytes"`
+}
+    Artwork is a read-only projection, not a File. It deliberately has no write,
+    recipe, rebuild or trigger APIs. Reading it does not extend full-format
+    support.
+
+func OpenArtwork(path string) (*Artwork, error)
+
+func ParseArtwork(data []byte) (*Artwork, error)
+    ParseArtwork reads the sequential prefix through Units and ignores all later
+    sections. Version branches come from byte measurements of campaign families;
+    no offset scanning, plausible-map search or generic schema walker is used.
 
 type BeforeAfter[T any] struct {
 	Before T `json:"before"`
@@ -11152,6 +12519,7 @@ func ConditionEditorSchemas() []ConditionEditorSchema
 
 type ConditionRecipe struct {
 	Op                             string `json:"op"`
+	AISignal                       *int   `json:"ai_signal,omitempty"`
 	Timer                          *int   `json:"timer,omitempty"`
 	UnitObject                     *int   `json:"unit_object,omitempty"`
 	Quantity                       *int   `json:"quantity,omitempty"`
@@ -11586,6 +12954,7 @@ type EffectFieldDelta struct {
 }
 
 type EffectRecipe struct {
+	AISignalValue              *int     `json:"ai_signal_value,omitempty"`
 	Op                         string   `json:"op"`
 	Message                    string   `json:"message,omitempty"`
 	ObjectListUnitID           *int     `json:"object_list_unit_id,omitempty"`
@@ -11792,6 +13161,11 @@ const (
 type Evidence struct {
 	Tier   string
 	Source string
+}
+
+type ExtractOptions struct {
+	Crop              MotifCrop
+	Terrain, Relative bool
 }
 
 type FieldQueryOptions struct {
@@ -12009,6 +13383,10 @@ func (f *File) SetTerrainRect(recipe MapRecipe) error
 
 func (f *File) SetTerrainWithMasks(recipe MapRecipe, masks map[string]terrainMask) error
 
+func (f *File) SetUnitRotations(rotations map[int]float64) error
+    SetUnitRotations updates reference-ID-addressed rotations in one traversal
+    and refresh. Validate every target before writing any field.
+
 func (f *File) SetXS(recipe XSRecipe) error
 
 func (f *File) SetXSCarrier(recipe XSRecipe, content string) error
@@ -12216,27 +13594,6 @@ func MapFile(path string) (*MapInfo, error)
     MapFile reads map metadata without requiring later sections such as Units or
     Triggers to be understood.
 
-// MapPatchDiffReport describes a deterministic map-art-only recipe that turns
-// before into after. It refuses changes outside terrain, elevation, and placed units.
-type MapPatchDiffReport struct {
-    Before, After string
-    Patchable bool
-    Width, Height, ChangedCells int
-    AddedUnits, RemovedUnits, EditedUnits int
-    UnsupportedChanges []string
-    Recipe Recipe
-}
-
-// MapPatchDiff computes exact terrain/elevation-cell and reference-id-based
-// unit operations. Non-map semantic edits make Patchable false.
-func MapPatchDiff(before, after *File) (MapPatchDiffReport, error)
-
-// MapPatchDiffFiles opens scenarios and computes a map-art-only patch recipe.
-func MapPatchDiffFiles(beforePath, afterPath string) (MapPatchDiffReport, error)
-
-// WriteMapPatchRecipe writes a patchable recipe via a temporary file and rename.
-func WriteMapPatchRecipe(path string, report MapPatchDiffReport) error
-
 type MapLayout struct {
 	StringStarter1     [2]byte
 	WaterDefinition    string
@@ -12260,6 +13617,33 @@ type MapLayout struct {
 }
 
 func DecodeMapLayout(data []byte) (MapLayout, int, error)
+
+type MapPatchDiffReport struct {
+	Before              string               `json:"before,omitempty"`
+	After               string               `json:"after,omitempty"`
+	Patchable           bool                 `json:"patchable"`
+	Width               int                  `json:"width"`
+	Height              int                  `json:"height"`
+	ChangedCells        int                  `json:"changed_cells"`
+	AddedUnits          int                  `json:"added_units"`
+	RemovedUnits        int                  `json:"removed_units"`
+	EditedUnits         int                  `json:"edited_units"`
+	UnsupportedChanges  []string             `json:"unsupported_changes,omitempty"`
+	OpaqueDifferences   []StructureFieldDiff `json:"opaque_differences,omitempty"`
+	IgnoredSaveMetadata []StructureFieldDiff `json:"ignored_save_metadata,omitempty"`
+	Recipe              Recipe               `json:"recipe"`
+}
+    MapPatchDiffReport describes a deterministic map-art-only recipe that turns
+    Before into After. It deliberately refuses to represent changes outside
+    terrain, elevation, and placed-unit fields.
+
+func MapPatchDiff(before, after *File) (MapPatchDiffReport, error)
+    MapPatchDiff computes terrain/elevation and unit changes. Any unsupported
+    semantic edit makes Patchable false, preventing callers from silently
+    turning a full scenario edit into a partial map-art patch.
+
+func MapPatchDiffFiles(beforePath, afterPath string) (MapPatchDiffReport, error)
+    MapPatchDiffFiles computes a map-art patch recipe from two scenarios.
 
 type MapRecipe struct {
 	Op           string   `json:"op"`
@@ -12413,6 +13797,27 @@ type MirrorGroup struct {
 }
     MirrorGroup makes duplicated storage explicit. The writer policy is not
     implied by field names: callers must choose the authoritative copy.
+
+type MotifCrop struct {
+	X1 int `json:"x1"`
+	Y1 int `json:"y1"`
+	X2 int `json:"x2"`
+	Y2 int `json:"y2"`
+}
+    MotifCrop uses half-open tile bounds, matching preview crop coordinates.
+
+type MotifPlacement struct {
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  int     `json:"width"`
+	Height int     `json:"height"`
+}
+
+type MotifTransform struct {
+	At      *PointRecipe
+	Rotate  int
+	Grammar felt.Catalog
+}
 
 type NamedSection struct {
 	Name string
@@ -12755,6 +14160,7 @@ func (s RawTriggerSection) ReplaceRecord(index int, payload []byte) error
 func (s RawTriggerSection) Unchanged() bool
 
 type Recipe struct {
+	Source           *RecipeSource           `json:"source,omitempty"`
 	DatPath          string                  `json:"dat_path,omitempty"`
 	Scenario         *ScenarioRecipe         `json:"scenario,omitempty"`
 	XS               *XSRecipe               `json:"xs,omitempty"`
@@ -12773,9 +14179,30 @@ type Recipe struct {
 	Map              []MapRecipe             `json:"map,omitempty"`
 }
 
+func ExtractRecipe(art *Artwork, name string, opts ExtractOptions) (Recipe, error)
+    ExtractRecipe copies placed artwork, leaving target-specific unit references
+    for the normal recipe writer to allocate. It does not carry gameplay links.
+
+func ExtractRecipeFile(path string, opts ExtractOptions) (Recipe, error)
+
 func LoadRecipe(path string) (Recipe, error)
 
 func SmokeRecipe(opts SmokeRecipeOptions) Recipe
+
+func TransformMotif(r Recipe, o MotifTransform) (Recipe, error)
+    TransformMotif returns a placement recipe without mutating its input. Source
+    provenance remains intact; placement records the new frame for subsequent
+    transforms.
+
+type RecipeSource struct {
+	Kind      string          `json:"kind"`
+	Scenario  string          `json:"scenario"`
+	Version   string          `json:"version"`
+	Crop      MotifCrop       `json:"crop"`
+	Relative  bool            `json:"relative"`
+	Placement *MotifPlacement `json:"placement,omitempty"`
+	Notes     []string        `json:"notes,omitempty"`
+}
 
 type ReferenceOptions struct {
 	Kind     string `json:"kind,omitempty"`
@@ -13607,16 +15034,17 @@ type UnitRecipe struct {
 }
 
 type UnitSummary struct {
-	Index           int     `json:"index"`
-	ReferenceID     int     `json:"reference_id"`
-	UnitConst       int     `json:"unit_const"`
-	X               float64 `json:"x"`
-	Y               float64 `json:"y"`
-	Z               float64 `json:"z"`
-	Rotation        float64 `json:"rotation"`
-	Status          int     `json:"status"`
-	CaptionStringID int     `json:"caption_string_id,omitempty"`
-	CaptionString   string  `json:"caption_string,omitempty"`
+	Index                 int     `json:"index"`
+	ReferenceID           int     `json:"reference_id"`
+	UnitConst             int     `json:"unit_const"`
+	X                     float64 `json:"x"`
+	Y                     float64 `json:"y"`
+	Z                     float64 `json:"z"`
+	Rotation              float64 `json:"rotation"`
+	Status                int     `json:"status"`
+	InitialAnimationFrame int     `json:"initial_animation_frame,omitempty"`
+	CaptionStringID       int     `json:"caption_string_id,omitempty"`
+	CaptionString         string  `json:"caption_string,omitempty"`
 }
 
 type VariableEntry struct {
@@ -14401,6 +15829,19 @@ type ExternalFinding struct {
 }
 
 func ExternalFindings(report ParseCheckReport) []ExternalFinding
+
+type FunctionDecl struct {
+	Name       string
+	ReturnType string
+	Parameters int
+	Line       int
+}
+    FunctionDecl is source evidence only; it does not establish that the engine
+    can compile or load the containing file.
+
+func FunctionDeclarations(source string) []FunctionDecl
+    FunctionDeclarations reuses the XS lint lexer so comments and string
+    examples cannot masquerade as callable function definitions.
 
 type IncludeRef struct {
 	From    string `json:"from"`

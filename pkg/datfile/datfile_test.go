@@ -180,7 +180,7 @@ func TestDecodeUnitFileExposesStableSkippedAndBuildingFields(t *testing.T) {
 	for _, key := range []string{
 		"death_spawn", "train_sound", "damage_sound", "undead_graphic", "garrison_capacity",
 		"spawning_graphic", "upgrade_graphic", "stack_unit", "head_unit", "transform_unit", "pile_unit",
-		"annex_unit_1", "annex_unit_1_offset_x", "annex_unit_4_offset_y", "garrison_type", "salvage_unit",
+		"annex_unit_1", "annex_unit_1_offset_x", "annex_unit_4_offset_y", "garrison_type", "looting_table_0",
 	} {
 		if _, ok := fields[key]; !ok {
 			t.Errorf("decoded fields missing %q", key)

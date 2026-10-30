@@ -1,0 +1,20 @@
+; Offline message/state shape fixture; no game or protocol is executed.
+(defconst shared-slot 1)
+(defconst signal-slot 3)
+(defconst local-state 100)
+(defconst every-ally -201)
+(defrule
+    (shared-goal shared-slot 0)
+=>
+    (set-shared-goal shared-slot 1)
+    (up-get-shared-goal c: shared-slot local-state)
+    (up-set-shared-goal c: shared-slot g: local-state)
+    (set-signal signal-slot)
+    (up-get-signal c: signal-slot 101)
+    (up-set-signal c: signal-slot c: 0)
+    (fe-set-signal c: 4 c: 1)
+    (chat-to-allies "intent fixture")
+    (up-chat-data-to-all "state=%d" g: local-state)
+    (up-chat-data-to-player every-ally "intent=%d" g: local-state)
+    (disable-self)
+)

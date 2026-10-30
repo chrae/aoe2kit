@@ -1,0 +1,10 @@
+; Regression: reference enum spellings are not declarations.
+; MCBCombatProbe.per2: DE reported line 21, ERR2005: Invalid identifier:
+; (up-clean-search search-remote object-data-distance search-order-asc)
+; The engine did not distinguish which of the three symbols failed.
+(defrule
+ (true)
+=>
+ (up-clean-search search-remote object-data-distance search-order-asc)
+ (up-target-objects 1 2 formation-line stance-aggressive)
+)

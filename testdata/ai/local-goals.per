@@ -1,0 +1,13 @@
+; Static phase-gate shape; no engine execution implied.
+(defconst phase 100)
+(defconst first-phase 0)
+(defrule
+ (goal phase first-phase)
+=>
+ (set-goal phase 1)
+)
+(defrule
+ (goal 16000 -2147483648)
+=>
+ (set-goal 1 2147483647)
+)

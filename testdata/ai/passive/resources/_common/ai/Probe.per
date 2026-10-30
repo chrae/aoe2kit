@@ -1,0 +1,20 @@
+(include "Probe.xs")
+(defconst timer-id 97)
+(defconst search-goal 100)
+(defrule
+    (true)
+=>
+    (enable-timer timer-id 5)
+    (disable-self)
+)
+(defrule
+    (timer-triggered timer-id)
+=>
+    (up-full-reset-search)
+    (up-find-local c: 83 c: 240)
+    (up-get-search-state search-goal)
+    (up-chat-data-to-all "count=%d; parentheses () are text" g: search-goal)
+    (xs-script-call "probe_tick")
+    (disable-timer timer-id)
+    (disable-self)
+)

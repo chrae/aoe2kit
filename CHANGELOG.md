@@ -1,6 +1,27 @@
 # Changelog
 
-## Unreleased
+## v0.4.3 - 2026-10-30
+
+### Added and fixed
+- Expand persistent DAT SQLite projections and reuse cached full-unit records.
+- Add partial reference-backed PER checks and static XS function linkage.
+- Resolve AI unit operands from read-only SQLite with independent scenario evidence.
+- Report placed scenario units separately from trigger references, including zero counts.
+- Preserve decoded trigger operands and sibling conditions in AI reference evidence.
+- Check DUC search, targeting and combat signatures and documented operand limits.
+- Explain object-data selector values, provenance, units and runtime limitations.
+- Check shared-goal, signal and scoped-chat forms as distinct mechanisms.
+- Author AI Signal conditions and acknowledgements; warn on deprecated acknowledgements.
+- Record one build-scoped single-player signal-to-scenario-XS sidecar observation.
+- Check resource-addition operands without inferring exact runtime resource semantics.
+- Warn when reference enum spellings lack visible declarations or builtin evidence.
+- Check strategic-number assignment and direct/indirect goal comparisons.
+- Check local goal equality and assignment with DE ID and value limits.
+- Preserve public catalogue provenance and map-art patch comparison improvements.
+
+AI coverage remains partial. Load/include resolution, general engine behavior and
+multiplayer signal synchronization are unverified. The newer XS network API is
+not yet included in the builtin snapshot. Automatic updating is not included.
 
 ### Added
 - Opt-in diamond height-field terrain rendering with registered corner

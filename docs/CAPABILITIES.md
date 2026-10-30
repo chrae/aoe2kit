@@ -140,7 +140,10 @@ metadata, and DAT binding.
 ## 6. AI files, mods, packaging (`kit ai`, `kit mod`, kit core)
 
 `ai fingerprint/lint/diff` hash and sanity-check `.ai`/`.per` files, with a
-registry keyed to replay-side AI signatures. `mod check` diagnoses mod
+registry keyed to replay-side AI signatures. The [AI linter](AI_LINT.md) adds
+source locations, a partial typed DE probe catalogue with reference provenance,
+and conservative PER-to-XS source linkage; it does not establish engine acceptance.
+`mod check` diagnoses mod
 activation, including the case where a local mod exists but the game is
 running the default data set. `inventory` / `manifest` / `verify` / `pack` /
 `portable-check` make the kit self-verifying and self-packaging, with

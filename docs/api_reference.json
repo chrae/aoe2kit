@@ -1,6 +1,6 @@
 {
   "tool": "aoe2kit",
-  "version": "0.4.2",
+  "version": "v0.4.3",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
   "command_count": 257,
@@ -67,8 +67,20 @@
       ],
       "name": "ai lint",
       "group": "ai",
-      "usage": "kit ai lint \u003cfile-or-folder\u003e [--text]",
+      "usage": "kit ai lint \u003cfile-or-folder\u003e [--dat-db export.sqlite] [--dat-sha256 HASH] [--scenario map.aoe2scenario] [--text]",
       "flags": [
+        {
+          "name": "--dat-db",
+          "value_hint": "export.sqlite"
+        },
+        {
+          "name": "--dat-sha256",
+          "value_hint": "HASH"
+        },
+        {
+          "name": "--scenario",
+          "value_hint": "map.aoe2scenario"
+        },
         {
           "name": "--text"
         }
