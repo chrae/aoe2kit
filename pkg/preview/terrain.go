@@ -173,7 +173,8 @@ func loadTerrainMaterials(tiles []Tile, s Snapshot, crop Crop, dat *datfile.Inde
 		Assumptions:   []string{"mask repeat defaults to 10 tiles, origin-anchored (fitted on road over grass; other pairs not yet fitted); texture repeat independently defaults to 10, fitted to flat grass samples in one registered capture and checked in two further views; other materials remain uncalibrated", fmt.Sprintf("textures sampled at at most %dx%d; first mip, static water; no runtime shaders; geometric elevation requires --elevation", limit, limit)}}
 	var blends []gfx.BlendomaticMode
 	if opts.Edges {
-		r.EdgeRule = "CANDIDATE: installed blendomatic diamonds selected by eight-neighbor topology; stored weight retains base, higher DAT priority draws last. Classic DAT-type pair-to-mode mapping and coordinate variants remain candidates for DE. Road single/ring outlines are closer to the probe, but the diagonal pinch is weaker; water mode 1 leaves a ring opening contrary to the human observation. No radial footprints. DE blend textures/shader are not reproduced."
+		r.EdgeRule = "CANDIDATE: DAT blend types 2/3/4 use a continuous quadratic B-spline material field, including wet rock; other land boundaries use installed blendomatic diamonds selected by eight-neighbor topology. This static material policy is not the DE water shader or a slope-lighting model."
+		r.Assumptions = append(r.Assumptions, "wet-material interpolation includes terrain 109 wet rock; it can produce dark continuous bands on flat ground. Whole/window/tile parity with a prior Kit build does not establish engine accuracy")
 		r.Assumptions = append(r.Assumptions, "blendomatic flags and packed bit masks are preserved by the decoder, not used for shading; only normalized byte weights are sampled")
 		r.EdgeEvidence = []string{
 			"editor screenshots: a single shallow-water tile spreads softly beyond its diamond onto grass; water closes the one-tile hole in a 3x3 ring (human report)",

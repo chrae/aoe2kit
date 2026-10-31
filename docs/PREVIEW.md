@@ -649,6 +649,13 @@ kit preview old.aoe2scenario --sprites --rotation-model radians --game-dir game 
 
 ### Bounded tile pyramids and pixel windows
 
+Terrain edges use the continuous wet-material policy from the prior local
+renderer for DAT blend types 2/3/4, including wet rock. It interpolates material
+weights in world coordinates and returns to installed blendomatic masks outside
+wet boundaries. This can create darker continuous rock bands at elevation zero;
+it is separate from slope lighting and sprite shadows. The policy remains a
+static preview approximation, not an engine water-shader reconstruction.
+
 `kit preview map.aoe2scenario --tiles-dir tiles --tile-size 256 --scales 8,16,32,64`
 uses the normal rendering flags, including `--elevation`, `--sprites`, `--textures`
 and `--strict`. Each scale produces `tiles/<z>/<x>_<y>.png`; `extent.json` records

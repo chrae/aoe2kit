@@ -76,6 +76,18 @@ func blendAlpha(mask *image.Gray, u, v float64) float64 {
 }
 
 func terrainEdgePixel(tiles []Tile, width, height int, mats map[int]terrainMaterial, x, y float64, opts TerrainTextureOptions) color.RGBA {
+	water, waterWeight := waterTransitionPixel(tiles, width, height, mats, x, y, opts)
+	if waterWeight == 1 {
+		return water
+	}
+	c := landEdgePixel(tiles, width, height, mats, x, y, opts)
+	if waterWeight > 0 {
+		return mixTerrain(c, water, waterWeight)
+	}
+	return c
+}
+
+func landEdgePixel(tiles []Tile, width, height int, mats map[int]terrainMaterial, x, y float64, opts TerrainTextureOptions) color.RGBA {
 	tx, ty := int(x), int(y)
 	current := tiles[ty*width+tx]
 	base := mats[tileMaterial(current)]
@@ -130,4 +142,63 @@ func terrainEdgePixel(tiles []Tile, width, height int, mats map[int]terrainMater
 		c = mixTerrain(c, layeredPixel(g.tile, mats, x, y, opts.Repeat, opts.TextureRepeat), alpha)
 	}
 	return c
+}
+
+// Candidate static-water policy, not a reconstruction of the DE water shader.
+// Interpolate material weights with a quadratic B-spline, sampling textures at
+// the same world coordinate. Shared edges therefore have the same value from
+// either side, regardless of DAT priority or the classic directional masks.
+func waterTransitionPixel(tiles []Tile, width, height int, mats map[int]terrainMaterial, x, y float64, opts TerrainTextureOptions) (color.RGBA, float64) {
+	bx, by := int(x), int(y)
+	u, v := x-float64(bx)-.5, y-float64(by)-.5
+	wx := [3]float64{.5 * (.5 - u) * (.5 - u), .75 - u*u, .5 * (.5 + u) * (.5 + u)}
+	wy := [3]float64{.5 * (.5 - v) * (.5 - v), .75 - v*v, .5 * (.5 + v) * (.5 + v)}
+	var samples [9]Tile
+	var weights [9]float64
+	n := 0
+	waterWeight := 0.0
+	for i := 0; i < 9; i++ {
+		tx, ty := max(0, min(width-1, bx+i%3-1)), max(0, min(height-1, by+i/3-1))
+		t := tiles[ty*width+tx]
+		weight := wx[i%3] * wy[i/3]
+		if tileHasWaterOrShore(t, mats) {
+			waterWeight += weight
+		}
+		at := n
+		for j := 0; j < n; j++ {
+			if samples[j].TerrainID == t.TerrainID && tileMaterial(samples[j]) == tileMaterial(t) {
+				at = j
+				break
+			}
+		}
+		if at == n {
+			samples[n] = t
+			n++
+		}
+		weights[at] += weight
+	}
+	if waterWeight == 0 {
+		return color.RGBA{}, 0
+	}
+	var rgb [3]float64
+	for i, t := range samples[:n] {
+		if weights[i] == 0 {
+			continue
+		}
+		c := layeredPixel(t, mats, x, y, opts.Repeat, opts.TextureRepeat)
+		rgb[0] += float64(c.R) * weights[i]
+		rgb[1] += float64(c.G) * weights[i]
+		rgb[2] += float64(c.B) * weights[i]
+	}
+	// A water/shore tile's weight is at least 1/4 inside its cell. Saturate
+	// there so both sides of every water boundary use the identical field;
+	// fade back to the existing land-edge policy away from that boundary.
+	fade := min(1, waterWeight*4)
+	fade = fade * fade * (3 - 2*fade)
+	return color.RGBA{uint8(math.Round(rgb[0])), uint8(math.Round(rgb[1])), uint8(math.Round(rgb[2])), 255}, fade
+}
+
+func tileHasWaterOrShore(t Tile, mats map[int]terrainMaterial) bool {
+	base, top := mats[t.TerrainID].blendType, mats[tileMaterial(t)].blendType
+	return (base >= 2 && base <= 4) || (top >= 2 && top <= 4)
 }

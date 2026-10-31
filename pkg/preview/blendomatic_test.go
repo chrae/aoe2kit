@@ -3,6 +3,7 @@ package preview
 import (
 	"image"
 	"image/color"
+	"math"
 	"testing"
 )
 
@@ -66,5 +67,86 @@ func TestBlendMaskSampling(t *testing.T) {
 	m.SetGray(48, 24, color.Gray{0})
 	if blendAlpha(m, .5, .5) != 1 {
 		t.Fatal("stored weight polarity")
+	}
+}
+
+func TestWaterTransitionsShareEdgesAndCorners(t *testing.T) {
+	for _, kind := range []int32{0, 2, 3, 4} {
+		mats := map[int]terrainMaterial{
+			0: {blendType: 3, priority: 180, fallback: color.RGBA{0, 40, 200, 255}},
+			1: {blendType: kind, priority: 1, fallback: color.RGBA{220, 180, 80, 255}},
+		}
+		tiles := make([]Tile, 16)
+		for i := range tiles {
+			tiles[i] = Tile{TerrainID: (i + i/4) % 2}
+		}
+		opts := TerrainTextureOptions{Repeat: 10, TextureRepeat: 9}
+		near := func(a, b color.RGBA) {
+			t.Helper()
+			for _, d := range []int{int(a.R) - int(b.R), int(a.G) - int(b.G), int(a.B) - int(b.B)} {
+				if math.Abs(float64(d)) > 1 {
+					t.Fatalf("type%d seam: %v != %v", kind, a, b)
+				}
+			}
+		}
+		for edge := 1; edge < 4; edge++ {
+			for p := 1; p < 80; p++ {
+				x, y := float64(edge), float64(p)/20
+				near(terrainEdgePixel(tiles, 4, 4, mats, x-1e-8, y, opts), terrainEdgePixel(tiles, 4, 4, mats, x+1e-8, y, opts))
+				near(terrainEdgePixel(tiles, 4, 4, mats, y, x-1e-8, opts), terrainEdgePixel(tiles, 4, 4, mats, y, x+1e-8, opts))
+			}
+		}
+		uniform := make([]Tile, 16)
+		if got := terrainEdgePixel(uniform, 4, 4, mats, .5, .5, opts); got != mats[0].fallback {
+			t.Fatal("uniform water changed", got)
+		}
+		for id, m := range mats {
+			m.priority = 500 - m.priority
+			mats[id] = m
+		}
+		a := terrainEdgePixel(tiles, 4, 4, mats, 1, .5, opts)
+		if a != (color.RGBA{110, 110, 140, 255}) {
+			t.Fatal("priority changed boundary mixture", a)
+		}
+	}
+}
+
+func TestShoreTransitionsToLandWithoutMaskSeams(t *testing.T) {
+	mats := map[int]terrainMaterial{0: {blendType: 2, fallback: color.RGBA{220, 180, 80, 255}}, 1: {blendType: 0, fallback: color.RGBA{20, 80, 20, 255}}}
+	tiles := []Tile{{TerrainID: 0}, {TerrainID: 1}}
+	for _, x := range []float64{1 - 1e-8, 1, 1 + 1e-8} {
+		got := terrainEdgePixel(tiles, 2, 1, mats, x, .5, TerrainTextureOptions{})
+		if got != (color.RGBA{120, 130, 50, 255}) {
+			t.Fatal("shore/land seam", x, got)
+		}
+	}
+}
+
+func TestWaterTransitionLeavesDryLandPolicyAlone(t *testing.T) {
+	mats := map[int]terrainMaterial{0: {blendType: 0, fallback: color.RGBA{255, 0, 0, 255}}, 1: {blendType: 5, fallback: color.RGBA{0, 0, 255, 255}}}
+	tiles := []Tile{{TerrainID: 0}, {TerrainID: 1}}
+	for x := 0.0; x < 2; x += .01 {
+		_, w := waterTransitionPixel(tiles, 2, 1, mats, x, .5, TerrainTextureOptions{})
+		if w != 0 {
+			t.Fatal("dry land entered water policy", w)
+		}
+	}
+}
+
+func TestWaterBaseWithBeachOverlayStillBlends(t *testing.T) {
+	mats := map[int]terrainMaterial{
+		0: {blendType: 3, fallback: color.RGBA{0, 40, 200, 255}},
+		1: {blendType: 2, fallback: color.RGBA{220, 180, 80, 255}},
+	}
+	top := 1
+	// An unavailable beach mask retains the visible water base; classifying
+	// only its top layer used to leave this boundary as a hard sand diamond.
+	tiles := []Tile{{TerrainID: 0, Layer: &top}, {TerrainID: 1}}
+	opts := TerrainTextureOptions{Repeat: 10, TextureRepeat: 9}
+	for _, x := range []float64{1 - 1e-8, 1, 1 + 1e-8} {
+		got := terrainEdgePixel(tiles, 2, 1, mats, x, .5, opts)
+		if got != (color.RGBA{110, 110, 140, 255}) {
+			t.Fatal("layered water seam", x, got)
+		}
 	}
 }
