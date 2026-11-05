@@ -3,7 +3,7 @@ package kit
 import "encoding/json"
 
 var (
-	Version   = "0.4.3"
+	Version   = "0.4.4"
 	Commit    = "unknown"
 	BuildType = "dev"
 )

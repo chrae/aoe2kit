@@ -330,6 +330,7 @@
     "pkg/preview/crop_test.go",
     "pkg/preview/defaults.go",
     "pkg/preview/defaults_test.go",
+    "pkg/preview/diagnostics_test.go",
     "pkg/preview/elevation.go",
     "pkg/preview/facets.go",
     "pkg/preview/facets_test.go",

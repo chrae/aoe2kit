@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 1143,
+  "type_count": 1144,
   "types": {
     "aifile.CatalogueInfo": {
       "package": "aifile",
@@ -25281,6 +25281,11 @@
           "go_type": "int"
         },
         {
+          "name": "UnitName",
+          "json": "unit_name",
+          "go_type": "string"
+        },
+        {
           "name": "Reason",
           "json": "reason",
           "go_type": "string"
@@ -25328,6 +25333,23 @@
           "name": "Notes",
           "json": "notes",
           "go_type": "[]string"
+        }
+      ]
+    },
+    "preview.AssetUnit": {
+      "package": "preview",
+      "name": "AssetUnit",
+      "doc": "AssetUnit identifies a dependency's consumer; UnitName is the Gaia DAT name, not a localized label.",
+      "fields": [
+        {
+          "name": "UnitID",
+          "json": "unit_id",
+          "go_type": "int"
+        },
+        {
+          "name": "UnitName",
+          "json": "unit_name",
+          "go_type": "string"
         }
       ]
     },
@@ -26396,6 +26418,12 @@
           "name": "Units",
           "json": "unit_ids",
           "go_type": "[]int"
+        },
+        {
+          "name": "RequiredBy",
+          "json": "required_by",
+          "go_type": "[]AssetUnit",
+          "ref": "preview.AssetUnit"
         }
       ]
     },
@@ -27182,6 +27210,11 @@
           "name": "UnitID",
           "json": "unit_id",
           "go_type": "int"
+        },
+        {
+          "name": "UnitName",
+          "json": "unit_name",
+          "go_type": "string"
         },
         {
           "name": "Reason",

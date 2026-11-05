@@ -168,7 +168,7 @@ func OpenSLD(path string) (*SLD, error) {
 }
 
 func ParseSLD(data []byte) (*SLD, error) {
-	if len(data) < 16 {
+	if len(data) < 14 {
 		return nil, fmt.Errorf("SLD too short: %d bytes", len(data))
 	}
 	if string(data[:4]) != "SLDX" {
@@ -180,18 +180,23 @@ func ParseSLD(data []byte) (*SLD, error) {
 		raw:     append([]byte(nil), data...),
 	}
 	frameCount := int(binary.LittleEndian.Uint16(data[6:8]))
-	if !supportedSLDFrameHeaderMarker(data) {
-		return nil, fmt.Errorf("unsupported SLD frame header marker 0x%04x", binary.LittleEndian.Uint16(data[10:12]))
+	// This sizes the file header, not the first frame. Both supported variants
+	// retain full 12-byte frame records with independent dimensions/hotspots.
+	headerBytes := int(binary.LittleEndian.Uint16(data[10:12]))
+	if headerBytes != 14 && headerBytes != 16 {
+		return nil, fmt.Errorf("unsupported SLD file header size %d", headerBytes)
 	}
-	pos := 16
+	if len(data) < headerBytes {
+		return nil, fmt.Errorf("SLD file header exceeds file: %d bytes", headerBytes)
+	}
+	pos := headerBytes
 	for i := 0; i < frameCount; i++ {
-		frameHeaderBytes := sldFrameHeaderBytes(data, i)
-		if pos+frameHeaderBytes > len(data) {
+		if pos+12 > len(data) {
 			return nil, fmt.Errorf("frame %d header exceeds file at %d", i, pos)
 		}
-		frame := parseSLDFrameHeader(data, pos, frameHeaderBytes)
+		frame := parseSLDFrameHeader(data, pos)
 		frame.Ordinal = i
-		pos += frameHeaderBytes
+		pos += 12
 		for _, kind := range sldLayerKinds {
 			if frame.Type&kind.Mask == 0 {
 				continue
@@ -212,32 +217,11 @@ func ParseSLD(data []byte) (*SLD, error) {
 	return file, nil
 }
 
-func supportedSLDFrameHeaderMarker(data []byte) bool {
-	marker := binary.LittleEndian.Uint16(data[10:12])
-	return marker == 0x0010 || marker == 0x000e
-}
-
-func sldFrameHeaderBytes(data []byte, frameOrdinal int) int {
-	if binary.LittleEndian.Uint16(data[10:12]) == 0x000e && frameOrdinal == 0 {
-		return 10
-	}
-	return 12
-}
-
-func parseSLDFrameHeader(data []byte, pos int, headerBytes int) SLDFrame {
+func parseSLDFrameHeader(data []byte, pos int) SLDFrame {
 	frame := SLDFrame{
 		Width:  int(binary.LittleEndian.Uint16(data[pos : pos+2])),
 		Height: int(binary.LittleEndian.Uint16(data[pos+2 : pos+4])),
 		Start:  pos,
-	}
-	if headerBytes == 10 {
-		center := int(int16(binary.LittleEndian.Uint16(data[pos+4 : pos+6])))
-		frame.HotspotX = center
-		frame.HotspotY = center
-		frame.Type = data[pos+6]
-		frame.Unknown = data[pos+7]
-		frame.Index = binary.LittleEndian.Uint16(data[pos+8 : pos+10])
-		return frame
 	}
 	frame.HotspotX = int(int16(binary.LittleEndian.Uint16(data[pos+4 : pos+6])))
 	frame.HotspotY = int(int16(binary.LittleEndian.Uint16(data[pos+6 : pos+8])))
@@ -360,7 +344,9 @@ func (f *SLD) decodeMainLayer(frame SLDFrame, layer SLDLayer, previous *image.RG
 
 func (f *SLD) decodeGraphicsLayer(frame SLDFrame, layer SLDLayer, previous *image.RGBA, shadow bool) (*image.RGBA, error) {
 	img := image.NewRGBA(image.Rect(0, 0, frame.Width, frame.Height))
-	if previous != nil && len(previous.Pix) == len(img.Pix) && (layer.Flag1&0x80 != 0 || layer.Flag1&0x01 != 0) {
+	// Only bit 7 marks inherited blocks. Static shadow layers also set bit 0;
+	// treating that as delta encoding accumulates unrelated facing silhouettes.
+	if previous != nil && len(previous.Pix) == len(img.Pix) && layer.Flag1&0x80 != 0 {
 		copy(img.Pix, previous.Pix)
 	}
 	contentStart := layer.Start + 4

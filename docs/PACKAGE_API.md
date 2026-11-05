@@ -6683,7 +6683,7 @@ const ProfileMarkerName = "KIT_PROFILE.json"
 VARIABLES
 
 var (
-	Version   = "0.4.3"
+	Version   = "0.4.4"
 	Commit    = "unknown"
 	BuildType = "dev"
 )
@@ -7238,8 +7238,9 @@ func FetchMissingSLDs(manifest AssetManifest, source, mirror string) (AssetFetch
     graphics.
 
 type AssetIssue struct {
-	UnitID int    `json:"unit_id"`
-	Reason string `json:"reason"`
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
+	Reason   string `json:"reason"`
 }
 
 type AssetManifest struct {
@@ -7257,6 +7258,13 @@ func ArtworkAssets(art *scenario.Artwork, idx *datfile.Index, gameDir string, cr
     art. Paths are relative to an installation, suitable for an external batch
     fetcher. A missing particle definition makes the list explicitly incomplete:
     fetch the JSON and rerun to discover its atlas dependencies.
+
+type AssetUnit struct {
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
+}
+    AssetUnit identifies a dependency's consumer; UnitName is the Gaia DAT name,
+    not a localized label. An unavailable name remains empty.
 
 type CensusEntry struct {
 	UnitID    int             `json:"unit_id"`
@@ -7599,10 +7607,11 @@ func MeasureMoodTexture(path string) (MoodTextureStats, error)
     sample.
 
 type NeededAsset struct {
-	Path   string `json:"path"`
-	Kind   string `json:"kind"`
-	Status string `json:"status"`
-	Units  []int  `json:"unit_ids"`
+	Path       string      `json:"path"`
+	Kind       string      `json:"kind"`
+	Status     string      `json:"status"`
+	Units      []int       `json:"unit_ids"`
+	RequiredBy []AssetUnit `json:"required_by"`
 }
 
 type Object struct {
@@ -7816,8 +7825,9 @@ type ShadowReport struct {
 }
 
 type Skipped struct {
-	UnitID int    `json:"unit_id"`
-	Reason string `json:"reason"`
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
+	Reason   string `json:"reason"`
 }
 
 type Snapshot struct {

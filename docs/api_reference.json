@@ -1,6 +1,6 @@
 {
   "tool": "aoe2kit",
-  "version": "v0.4.3",
+  "version": "v0.4.4",
   "generated_by": "cmd/apiref (usage parsed from the kit binary; output contracts probed against fixtures)",
   "probe_fixtures": {},
   "command_count": 257,

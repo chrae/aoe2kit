@@ -14,15 +14,24 @@ import (
 )
 
 type NeededAsset struct {
-	Path   string `json:"path"`
-	Kind   string `json:"kind"`
-	Status string `json:"status"`
-	Units  []int  `json:"unit_ids"`
+	Path       string      `json:"path"`
+	Kind       string      `json:"kind"`
+	Status     string      `json:"status"`
+	Units      []int       `json:"unit_ids"`
+	RequiredBy []AssetUnit `json:"required_by"`
+}
+
+// AssetUnit identifies a dependency's consumer; UnitName is the Gaia DAT name,
+// not a localized label. An unavailable name remains empty.
+type AssetUnit struct {
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
 }
 
 type AssetIssue struct {
-	UnitID int    `json:"unit_id"`
-	Reason string `json:"reason"`
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
+	Reason   string `json:"reason"`
 }
 
 type AssetManifest struct {
@@ -94,6 +103,7 @@ func ArtworkAssets(art *scenario.Artwork, idx *datfile.Index, gameDir string, cr
 		}
 	}
 	assets := map[string]*NeededAsset{}
+	meta := studyMetadata(idx)
 	add := func(rel, kind string, id int) {
 		a := assets[rel]
 		if a == nil {
@@ -109,10 +119,13 @@ func ArtworkAssets(art *scenario.Artwork, idx *datfile.Index, gameDir string, cr
 		}
 		if len(a.Units) == 0 || a.Units[len(a.Units)-1] != id {
 			a.Units = append(a.Units, id)
+			a.RequiredBy = append(a.RequiredBy, AssetUnit{UnitID: id, UnitName: meta[id].Name})
 		}
 	}
-	issue := func(id int, why string) { r.Unresolved = append(r.Unresolved, AssetIssue{id, why}); r.Complete = false }
-	meta := studyMetadata(idx)
+	issue := func(id int, why string) {
+		r.Unresolved = append(r.Unresolved, AssetIssue{UnitID: id, UnitName: meta[id].Name, Reason: why})
+		r.Complete = false
+	}
 	for _, entry := range census.Units {
 		id := entry.UnitID
 		u, ok := meta[id]

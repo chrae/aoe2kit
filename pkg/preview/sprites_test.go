@@ -230,3 +230,34 @@ func TestSpriteMissingVariantAndHiddenLayer(t *testing.T) {
 		t.Fatal("isometric sprite must not claim topdown projection")
 	}
 }
+
+func TestShortSLDHeaderRetainsLowerSpriteAndWindowOverlap(t *testing.T) {
+	root, idx := spriteFixture(t)
+	path := filepath.Join(root, "resources", "_common", "drs", "graphics", "synthetic.sld")
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary.LittleEndian.PutUint16(b[10:12], 14)
+	b = append(append([]byte{}, b[:14]...), b[16:]...)
+	if err := os.WriteFile(path, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	opts := Options{Projection: "diamond", Scale: 8, SpriteTilePixels: 4}
+	full, r, err := RenderSprites(spriteSnapshot(), opts, idx, root)
+	if err != nil || r.Drawn != 1 {
+		t.Fatal(r, err)
+	}
+	if got := full.RGBAAt(38, 29); got != (color.RGBA{255, 0, 0, 255}) {
+		t.Fatal("lower half of sprite clipped", got)
+	}
+	// The anchor lies outside this window; the lower part must still overlap.
+	opts.Window = &PixelWindow{X: 36, Y: 29, Width: 8, Height: 1}
+	window, r, err := RenderSprites(spriteSnapshot(), opts, idx, root)
+	if err != nil || r.Drawn != 1 {
+		t.Fatal(r, err)
+	}
+	if window.RGBAAt(38, 29) != full.RGBAAt(38, 29) {
+		t.Fatal("window culled lower sprite extent")
+	}
+}

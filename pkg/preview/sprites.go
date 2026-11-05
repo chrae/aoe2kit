@@ -34,16 +34,13 @@ type SpriteItem struct {
 // stored angle by angle, frameCount frames per angle, so angle a starts at
 // a*frameCount. Static art (one frame per angle) keeps the rotation as the
 // frame, matching the engine-verified oak fact; animated units (a camel has
-// 16 angles x 60 frames) get the first frame of their facing. Out-of-range
-// rotations are not wrapped, so the renderer still reports them.
+// 16 angles x 60 frames) get the first frame of their facing. Animation frames
+// never create additional facing slots, including single-facing graphics.
 func angleFrameOrdinal(rotation, angleCount, frameCount int) int {
-	if frameCount <= 1 || angleCount <= 1 || rotation < 0 {
-		return rotation
-	}
-	if rotation >= angleCount {
+	if angleCount < 0 || frameCount < 0 || rotation < 0 || rotation >= max(1, angleCount) {
 		return -1 // past the last angle: reported as unavailable
 	}
-	return rotation * frameCount
+	return rotation * max(1, frameCount)
 }
 
 func drawSpriteFit(dst *image.RGBA, src image.Image, target image.Rectangle) {
@@ -221,18 +218,18 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 				continue
 			}
 			if opts.Crop != nil && (o.X < float64(opts.Crop.X1) || o.Y < float64(opts.Crop.Y1) || o.X >= float64(opts.Crop.X2) || o.Y >= float64(opts.Crop.Y2)) {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "outside crop"})
+				report.Skipped = append(report.Skipped, skippedObject(o, idx, "outside crop"))
 				continue
 			}
 			u, ok := unitMetadata(idx, 0, o.UnitID)
 			if !ok {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "unit absent from Gaia DAT"})
+				report.Skipped = append(report.Skipped, skippedObject(o, idx, "unit absent from Gaia DAT"))
 				continue
 			}
 			graphicID := int(u.StandingGraphic1)
 			g, ok := idx.Graphic(graphicID)
 			if !ok {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "standing graphic absent from DAT"})
+				report.Skipped = append(report.Skipped, skippedObject(o, idx, "standing graphic absent from DAT"))
 				continue
 			}
 			path, known := paths[graphicID]
@@ -246,7 +243,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 				}
 			}
 			if e != nil {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "missing sprite: " + e.Error()})
+				report.Skipped = append(report.Skipped, skippedObject(o, idx, "missing sprite: "+e.Error()))
 				continue
 			}
 			sld := loaded[graphicID]
@@ -254,7 +251,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 				var e error
 				sld, e = gfx.OpenSLD(path)
 				if e != nil {
-					report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "SLD decode: " + e.Error()})
+					report.Skipped = append(report.Skipped, skippedObject(o, idx, "SLD decode: "+e.Error()))
 					continue
 				}
 				if sld.Size > 0 && loadedBytes+sld.Size <= 128*1024*1024 {
@@ -264,7 +261,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 			}
 			variant, rotationErr := RotationIndex(o, model, int(g.AngleCount))
 			if rotationErr != nil {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: rotationErr.Error()})
+				report.Skipped = append(report.Skipped, skippedObject(o, idx, rotationErr.Error()))
 				continue
 			}
 			variant = angleFrameOrdinal(variant, int(g.AngleCount), int(g.FrameCount))
@@ -284,7 +281,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 					img, frame, e = sld.RenderFrame(variant, pc)
 				}
 				if e != nil {
-					report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: fmt.Sprintf("visual variant %d unavailable: %v", variant, e)})
+					report.Skipped = append(report.Skipped, skippedObject(o, idx, fmt.Sprintf("visual variant %d unavailable: %v", variant, e)))
 					continue
 				}
 				cached = cachedFrame{img, frame}
@@ -323,7 +320,7 @@ func RenderSprites(s Snapshot, opts Options, idx *datfile.Index, gameDir string)
 	report.Projection = defaultProjection(opts.Projection)
 	for _, p := range report.Particles {
 		if p.Status == "skipped" {
-			report.Skipped = append(report.Skipped, Skipped{UnitID: p.UnitID, Reason: "particle: " + p.Reason})
+			report.Skipped = append(report.Skipped, skippedObject(Object{UnitID: p.UnitID}, idx, "particle: "+p.Reason))
 		}
 	}
 	if len(report.Particles) > 0 {

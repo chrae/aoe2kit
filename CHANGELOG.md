@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.4 - 2026-11-04
+
+### Fixed
+- Decode 14-byte SLD file headers with complete frame dimensions and independent
+  hotspots, preserving lower sprite pixels and window overlap.
+- Inherit SLD layer pixels only when the delta bit is set; static shadow layers
+  no longer accumulate silhouettes from earlier facings.
+- Validate declared facing slots before selecting animation frames, including
+  single-facing animated graphics. Invalid facings remain reported as skipped.
+- Include DAT unit names, with snapshot fallback, in skipped and missing asset
+  diagnostics, and identify the consumers of required assets.
+
 ## v0.4.3 - 2026-10-30
 
 ### Added and fixed

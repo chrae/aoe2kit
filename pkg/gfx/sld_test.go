@@ -153,8 +153,8 @@ func TestRenderShadowFrame(t *testing.T) {
 	}
 }
 
-func TestParseSLDCompactFrameHeader(t *testing.T) {
-	file, err := ParseSLD(syntheticCompactHeaderSLD())
+func TestParseSLDShortFileHeader(t *testing.T) {
+	file, err := ParseSLD(syntheticShortFileHeaderSLD())
 	if err != nil {
 		t.Fatalf("ParseSLD: %v", err)
 	}
@@ -162,8 +162,8 @@ func TestParseSLDCompactFrameHeader(t *testing.T) {
 		t.Fatalf("frames = %d, want 1", len(file.Frames))
 	}
 	frame := file.Frames[0]
-	if frame.Width != 4 || frame.Height != 4 || frame.HotspotX != 2 || frame.HotspotY != 2 || frame.Type != 0x01 {
-		t.Fatalf("compact frame = %+v", frame)
+	if frame.Width != 4 || frame.Height != 4 || frame.HotspotX != 2 || frame.HotspotY != 3 || frame.Type != 0x01 || frame.Start != 14 {
+		t.Fatalf("short-file-header frame = %+v", frame)
 	}
 	if len(frame.Layers) != 1 || frame.Layers[0].Name != "main" || frame.Layers[0].ContentLength != 26 {
 		t.Fatalf("layers = %+v", frame.Layers)
@@ -321,25 +321,11 @@ func syntheticSLD() []byte {
 	return out
 }
 
-func syntheticCompactHeaderSLD() []byte {
+func syntheticShortFileHeaderSLD() []byte {
 	out := syntheticSLD()
 	out[10] = 0x0e
 	out[11] = 0x00
-	frameStart := 16
-	frameEnd := frameStart + 12
-	compact := []byte{
-		out[frameStart], out[frameStart+1],
-		out[frameStart+2], out[frameStart+3],
-		out[frameStart+4], out[frameStart+5],
-		out[frameStart+8],
-		out[frameStart+9],
-		out[frameStart+10], out[frameStart+11],
-	}
-	var rebuilt []byte
-	rebuilt = append(rebuilt, out[:frameStart]...)
-	rebuilt = append(rebuilt, compact...)
-	rebuilt = append(rebuilt, out[frameEnd:]...)
-	return rebuilt
+	return append(append([]byte{}, out[:14]...), out[16:]...)
 }
 
 func syntheticSLDWithOddUnknownLayer() []byte {
@@ -360,4 +346,88 @@ func syntheticSLDWithOddUnknownLayer() []byte {
 	out = append(out, unknown...)
 	out = append(out, playerColor...)
 	return out
+}
+
+func TestShortFileHeaderKeepsRectangularCanvasAndDeltaPixels(t *testing.T) {
+	b := syntheticShortFileHeaderSLD()
+	binary.LittleEndian.PutUint16(b[6:8], 2)
+	// A rectangular canvas and asymmetric hotspot expose a two-byte shift.
+	for i, v := range []uint16{8, 12, 2, 3} {
+		binary.LittleEndian.PutUint16(b[14+2*i:], v)
+	}
+	for i, v := range []uint16{2, 8, 6, 12} {
+		binary.LittleEndian.PutUint16(b[30+2*i:], v)
+	}
+	b = append(b, b[14:26]...)
+	// Frame one retains its predecessor's bottom block without drawing.
+	body := []byte{}
+	for _, v := range []uint16{2, 8, 6, 12} {
+		body = binary.LittleEndian.AppendUint16(body, v)
+	}
+	body = append(body, 0x80, 1, 1, 0, 1, 0)
+	b = binary.LittleEndian.AppendUint32(b, uint32(len(body)+4))
+	b = append(b, body...)
+	b = append(b, 0, 0)
+	f, err := ParseSLD(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for ordinal := 0; ordinal < 2; ordinal++ {
+		img, frame, err := f.RenderFrame(ordinal, color.RGBA{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if frame.Width != 8 || frame.Height != 12 || frame.HotspotX != 2 || frame.HotspotY != 3 || img.Bounds() != image.Rect(0, 0, 8, 12) {
+			t.Fatalf("frame%d geometry: %+v %v", ordinal, frame, img.Bounds())
+		}
+		if got := img.RGBAAt(5, 11); got != (color.RGBA{255, 0, 0, 255}) {
+			t.Fatalf("frame%d lower block clipped: %v", ordinal, got)
+		}
+	}
+}
+
+func TestShadowVariantsAreIndependentAndDeltaBitRetains(t *testing.T) {
+	b := []byte("SLDX")
+	for _, v := range []uint16{4, 3, 0, 16} {
+		b = binary.LittleEndian.AppendUint16(b, v)
+	}
+	b = binary.LittleEndian.AppendUint32(b, 0)
+	for i, tc := range []struct {
+		x, y, w, h  uint16
+		flag, alpha byte
+	}{
+		{0, 0, 4, 4, 1, 80}, {0, 0, 1, 1, 1, 160}, {1, 1, 1, 1, 0x81, 240},
+	} {
+		for _, v := range []uint16{4, 4, 2, 3} {
+			b = binary.LittleEndian.AppendUint16(b, v)
+		}
+		b = append(b, 2, 0)
+		b = binary.LittleEndian.AppendUint16(b, uint16(i))
+		body := []byte{}
+		for _, v := range []uint16{tc.x, tc.y, tc.x + tc.w, tc.y + tc.h} {
+			body = binary.LittleEndian.AppendUint16(body, v)
+		}
+		body = append(body, tc.flag, 1, 1, 0, 0, 1, tc.alpha, 0, 0, 0, 0, 0, 0, 0)
+		b = binary.LittleEndian.AppendUint32(b, uint32(len(body)+4))
+		b = append(b, body...)
+		b = append(b, 0, 0)
+	}
+	f, err := ParseSLD(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	static, _, err := f.RenderShadowFrame(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if static.RGBAAt(0, 0).A != 160 || static.RGBAAt(3, 3).A != 0 {
+		t.Fatal("independent facing retained previous silhouette")
+	}
+	delta, _, err := f.RenderShadowFrame(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if delta.RGBAAt(0, 0).A != 160 || delta.RGBAAt(1, 1).A != 240 || delta.RGBAAt(3, 3).A != 0 {
+		t.Fatal("delta did not retain only its immediate predecessor")
+	}
 }

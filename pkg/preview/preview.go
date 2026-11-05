@@ -126,8 +126,19 @@ type Report struct {
 }
 
 type Skipped struct {
-	UnitID int    `json:"unit_id"`
-	Reason string `json:"reason"`
+	UnitID   int    `json:"unit_id"`
+	UnitName string `json:"unit_name"`
+	Reason   string `json:"reason"`
+}
+
+func skippedObject(o Object, idx *datfile.Index, reason string) Skipped {
+	name := o.Name
+	if idx != nil {
+		if u, ok := unitMetadata(idx, 0, o.UnitID); ok && u.Name != "" {
+			name = u.Name
+		}
+	}
+	return Skipped{UnitID: o.UnitID, UnitName: name, Reason: reason}
 }
 
 func ScenarioSnapshot(file *scenario.File, stage string, dat *datfile.Index) (Snapshot, error) {
@@ -349,7 +360,7 @@ func RenderMinimap(s Snapshot, dat *datfile.Index, opts Options) (*image.RGBA, R
 				continue
 			}
 			if o.X < 0 || o.Y < 0 || o.X >= float64(s.Width) || o.Y >= float64(s.Height) {
-				report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "outside map"})
+				report.Skipped = append(report.Skipped, skippedObject(o, dat, "outside map"))
 				continue
 			}
 			if o.HasMapFields && o.MapDrawLevel == 0 {
@@ -680,11 +691,11 @@ func renderFlat(s Snapshot, opts Options) (*image.RGBA, Report, error) {
 	}
 	for _, o := range depthSortedObjects(s.Objects, crop, scale, projection) {
 		if o.X < float64(crop.X1) || o.Y < float64(crop.Y1) || o.X >= float64(crop.X2) || o.Y >= float64(crop.Y2) {
-			report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "outside crop"})
+			report.Skipped = append(report.Skipped, skippedObject(o, nil, "outside crop"))
 			continue
 		}
 		if !layerEnabled(opts.Layers, "objects") {
-			report.Skipped = append(report.Skipped, Skipped{UnitID: o.UnitID, Reason: "objects layer disabled"})
+			report.Skipped = append(report.Skipped, skippedObject(o, nil, "objects layer disabled"))
 			continue
 		}
 		paintObject(groundCanvas(img, groundOffset(o)), o, crop, scale, projection)
