@@ -1,5 +1,5 @@
 {
-  "baseline_commit": "d27222d350cec278e6b9e208ec5d8116269c7d09",
+  "baseline_commit": "caa953b954cfbc75d82a149a876928f614c1d8a0",
   "files": [
     ".github/workflows/refresh-release-artifacts.yml",
     ".github/workflows/release.yml",
@@ -422,6 +422,7 @@
     "pkg/replay/issues.go",
     "pkg/replay/lifecycle.go",
     "pkg/replay/memory.go",
+    "pkg/replay/mp_identity_graph_test.go",
     "pkg/replay/object_index.go",
     "pkg/replay/object_state.go",
     "pkg/replay/opaque_spans.go",
@@ -435,6 +436,7 @@
     "pkg/replay/postgame.go",
     "pkg/replay/postgame_corpus.go",
     "pkg/replay/replay.go",
+    "pkg/replay/resign_payload_test.go",
     "pkg/replay/result.go",
     "pkg/replay/result_test.go",
     "pkg/replay/scenario_metadata_test.go",
@@ -451,6 +453,7 @@
     "pkg/replay/syncstream.go",
     "pkg/replay/syncstream_test.go",
     "pkg/replay/taunts.go",
+    "pkg/replay/team_context.go",
     "pkg/replay/telemetry.go",
     "pkg/replay/trigger_tier.go",
     "pkg/replay/unit_names.go",

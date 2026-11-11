@@ -11,6 +11,9 @@ func classifyTriggerGraphTier(graph *triggergraph.Graph, region *triggergraph.Re
 		return "unavailable"
 	}
 	for _, warning := range graph.Warnings {
+		if warning == "modern embedded trigger count and display-order validated" {
+			return "triggergraph_count_and_order_validated"
+		}
 		lower := strings.ToLower(warning)
 		if strings.Contains(lower, "stopped trigger parse") ||
 			strings.Contains(lower, "primary trigger region parse failed") ||

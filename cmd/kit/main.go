@@ -11482,6 +11482,8 @@ func printReplayEventLine(event replay.ReplayEvent) {
 		fmt.Printf("- #%04d %s%sACTION id=%d%s payload=%d offset=%d confidence=%s%s\n", event.Index, time, player, event.ActionID, name, event.PayloadBytes, event.SourceOffset, event.Confidence, raw)
 	case "resign":
 		fmt.Printf("- #%04d %s%sRESIGN sequence=%d\n", event.Index, time, player, event.Sequence)
+	case "action_11_candidate":
+		fmt.Printf("- #%04d %s%sACTION_11_CANDIDATE envelope=%s payload=%d offset=%d confidence=%s raw=%s\n", event.Index, time, player, event.Action11Format, event.PayloadBytes, event.SourceOffset, event.Confidence, event.RawHex)
 	case "move", "order", "patrol", "attack_move", "attack_ground", "build", "gather_point", "de_multi_gatherpoint", "ungarrison", "special", "ai_order":
 		target := ""
 		if event.TargetID != 0 {
@@ -13952,7 +13954,7 @@ func printReplaySummary(report *replay.SummaryReport) {
 		if player.Winner != nil {
 			winner = fmt.Sprintf(" winner=%t", *player.Winner)
 		}
-		fmt.Printf("- slot=%d p=%d %q civ=%d/%s color=%d team=%d profile=%d kind=%s%s%s\n",
+		fmt.Printf("- slot=%d p=%d %q civ=%d/%s color=%d lobby_team=%d profile=%d kind=%s%s%s\n",
 			player.Slot, player.PlayerID, player.Name, player.Civ, player.CivName, player.Color,
 			player.Team, player.ProfileID, player.Kind, rating, winner)
 	}

@@ -279,6 +279,9 @@ walk:
 					if ev.Type == "resign" {
 						r.EndAnchor.LastResign = &t
 					}
+					if ev.Type == "action_11_candidate" {
+						r.Warnings = appendUniqueWarning(r.Warnings, action11Uncertainty)
+					}
 					if ev.Type == "flare" {
 						w.FlareCount++
 					}

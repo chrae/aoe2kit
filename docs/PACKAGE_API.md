@@ -6683,7 +6683,7 @@ const ProfileMarkerName = "KIT_PROFILE.json"
 VARIABLES
 
 var (
-	Version   = "0.4.4"
+	Version   = "0.4.5"
 	Commit    = "unknown"
 	BuildType = "dev"
 )
@@ -9255,6 +9255,7 @@ type EventCounts struct {
 	UntypedActions int            `json:"untyped_actions"`
 	SpatialActions int            `json:"spatial_actions"`
 	Resigns        int            `json:"resigns"`
+	Candidates11   int            `json:"action_11_candidates,omitempty"`
 	UnknownOps     int            `json:"unknown_ops"`
 	ActionIDs      map[int]int    `json:"action_ids,omitempty"`
 	EventTypes     map[string]int `json:"event_types,omitempty"`
@@ -10635,8 +10636,9 @@ type PlayerSlot struct {
 	Name           string `json:"name,omitempty"`
 	AIName         string `json:"ai_name,omitempty"`
 	DLCID          int    `json:"dlc_id,omitempty"`
-	Color          int    `json:"color,omitempty"`
+	Color          int    `json:"color"`
 	Team           int    `json:"team,omitempty"`
+	TeamSource     string `json:"team_source,omitempty"`
 	SelectedTeamID int    `json:"selected_team_id,omitempty"`
 	ResolvedTeamID int    `json:"resolved_team_id,omitempty"`
 	Civ            int    `json:"civ,omitempty"`
@@ -11075,6 +11077,8 @@ type ReplayEvent struct {
 	SourceOffset   int               `json:"source_offset,omitempty"`
 	PayloadBytes   int               `json:"payload_bytes,omitempty"`
 	RawHex         string            `json:"raw_hex,omitempty"`
+	Action11Flag   *int              `json:"action_11_flag,omitempty"`
+	Action11Format string            `json:"action_11_envelope,omitempty"`
 	RawText        string            `json:"raw_text,omitempty"`
 	Source         string            `json:"source"`
 	Confidence     string            `json:"confidence"`
@@ -11400,8 +11404,9 @@ type SummaryPlayer struct {
 	Human          bool   `json:"human"`
 	Civ            int    `json:"civ,omitempty"`
 	CivName        string `json:"civ_name,omitempty"`
-	Color          int    `json:"color,omitempty"`
+	Color          int    `json:"color"`
 	Team           int    `json:"team,omitempty"`
+	TeamSource     string `json:"team_source,omitempty"`
 	ProfileID      int    `json:"profile_id,omitempty"`
 	PlayerType     int    `json:"player_type"`
 	Rating         *int   `json:"rating,omitempty"`
@@ -11425,6 +11430,7 @@ type SummaryReport struct {
 	Map           *MapInfo          `json:"map,omitempty"`
 	DataSet       DataSetIdentity   `json:"data_set_identity"`
 	LobbySettings *LobbySettings    `json:"lobby_settings,omitempty"`
+	TeamContext   TeamContext       `json:"team_context"`
 	ScenarioName  string            `json:"scenario_name,omitempty"`
 	ScenarioMeta  *ScenarioMetadata `json:"scenario_metadata,omitempty"`
 	HeaderMeta    *HeaderMetadata   `json:"header_metadata,omitempty"`
@@ -11751,6 +11757,16 @@ type TauntCount struct {
 	Count  int    `json:"count"`
 	Text   string `json:"text,omitempty"`
 }
+
+type TeamContext struct {
+	Source                  string   `json:"source"`
+	InGameAlliancesVerified bool     `json:"in_game_alliances_verified"`
+	DiplomacyEffects        int      `json:"change_diplomacy_effects"`
+	GraphTier               string   `json:"trigger_graph_decode_tier"`
+	Warnings                []string `json:"warnings,omitempty"`
+}
+    Lobby team choices are independent of slot order, player numbers, colors,
+    trigger definitions and actual runtime alliances.
 
 type TelemetryEvent struct {
 	Prefix string            `json:"prefix"`

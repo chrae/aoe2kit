@@ -21,6 +21,7 @@ type SummaryReport struct {
 	Map           *MapInfo          `json:"map,omitempty"`
 	DataSet       DataSetIdentity   `json:"data_set_identity"`
 	LobbySettings *LobbySettings    `json:"lobby_settings,omitempty"`
+	TeamContext   TeamContext       `json:"team_context"`
 	ScenarioName  string            `json:"scenario_name,omitempty"`
 	ScenarioMeta  *ScenarioMetadata `json:"scenario_metadata,omitempty"`
 	HeaderMeta    *HeaderMetadata   `json:"header_metadata,omitempty"`
@@ -39,8 +40,9 @@ type SummaryPlayer struct {
 	Human          bool   `json:"human"`
 	Civ            int    `json:"civ,omitempty"`
 	CivName        string `json:"civ_name,omitempty"`
-	Color          int    `json:"color,omitempty"`
+	Color          int    `json:"color"`
 	Team           int    `json:"team,omitempty"`
+	TeamSource     string `json:"team_source,omitempty"`
 	ProfileID      int    `json:"profile_id,omitempty"`
 	PlayerType     int    `json:"player_type"`
 	Rating         *int   `json:"rating,omitempty"`
@@ -111,6 +113,7 @@ func BuildSummaryWithOptions(path string, opts SummaryOptions) (*SummaryReport, 
 			CivName:        CivDisplayName(player.Civ),
 			Color:          player.Color,
 			Team:           player.Team,
+			TeamSource:     "lobby_picks",
 			ProfileID:      player.ProfileID,
 			PlayerType:     player.PlayerType,
 			Resigned:       resignedSet[player.Number],
@@ -152,6 +155,7 @@ func BuildSummaryWithOptions(path string, opts SummaryOptions) (*SummaryReport, 
 		Duration:      events.Counts.Duration,
 		DataSet:       rec.DataSet,
 		LobbySettings: rec.LobbySettings,
+		TeamContext:   replayTeamContext(rec),
 		ScenarioName:  rec.ScenarioName,
 		ScenarioMeta:  rec.ScenarioMeta,
 		HeaderMeta:    rec.HeaderMeta,
@@ -159,6 +163,7 @@ func BuildSummaryWithOptions(path string, opts SummaryOptions) (*SummaryReport, 
 		Result:        events.Result,
 		Warnings:      warnings,
 	}
+	report.Warnings = append(report.Warnings, report.TeamContext.Warnings...)
 	if rec.Fallback != nil && rec.Fallback.Map != nil {
 		report.Map = rec.Fallback.Map
 	}

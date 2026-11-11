@@ -11,6 +11,7 @@ func extractCachedEvents(cache *ReplayCache, opts EventOptions) ([]ReplayEvent, 
 	seenChat := map[string]bool{}
 	counts := EventCounts{ActionIDs: map[int]int{}}
 	bytesUsed := 0
+	warnings := append([]string(nil), cache.Manifest.Warnings...)
 	emit := func(ev ReplayEvent) error {
 		bytesUsed += 1024 + len(ev.Text) + len(ev.RawHex) + len(ev.ObjectIDs)*8
 		if bytesUsed > maxReportBytes {
@@ -33,6 +34,10 @@ func extractCachedEvents(cache *ReplayCache, opts EventOptions) ([]ReplayEvent, 
 					return emit(ev)
 				case "resign":
 					counts.Resigns++
+					return emit(ev)
+				case "action_11_candidate":
+					counts.Candidates11++
+					warnings = appendUniqueWarning(warnings, action11Uncertainty)
 					return emit(ev)
 				default:
 					if ev.X != 0 || ev.Y != 0 || ev.TargetID != 0 {
@@ -129,5 +134,5 @@ func extractCachedEvents(cache *ReplayCache, opts EventOptions) ([]ReplayEvent, 
 		}
 		return nil
 	})
-	return finishReplayEvents(events, counts), names, counts, append([]string(nil), cache.Manifest.Warnings...), e
+	return finishReplayEvents(events, counts), names, counts, warnings, e
 }

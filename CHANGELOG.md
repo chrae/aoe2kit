@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.4.5 - 2026-11-11
+
+### Fixed
+- Decode modern embedded replay trigger sections using their complete declared
+  record count and display-order permutation instead of accepting a fragment.
+- Label team fields as lobby picks, warn about scenario diplomacy definitions
+  and uncertain graph coverage, and keep slot, player number and color separate.
+- Preserve nonzero-flag and unsupported action-11 packets as uncertain candidates,
+  excluding them from resignation, outcome and health-anchor inference.
+- Warn when chat metadata conflicts with the player-number roster while retaining
+  raw chat metadata. Emit color zero explicitly.
+
 ## v0.4.4 - 2026-11-04
 
 ### Fixed

@@ -152,7 +152,7 @@ func TestMetadataInvalidatesOldLobbyParse(t *testing.T) {
 	if r.GameVersion == "stale-players" {
 		t.Fatal("reused metadata from the old lobby parser")
 	}
-	if _, err := os.Stat(filepath.Join(c.Dir, "metadata-v4.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(c.Dir, replayMetadataFile)); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -1,6 +1,6 @@
 {
   "note": "Complete nested shape of every exported report type, extracted statically from source. No execution involved; this is the authoritative response schema.",
-  "type_count": 1144,
+  "type_count": 1145,
   "types": {
     "aifile.CatalogueInfo": {
       "package": "aifile",
@@ -32985,6 +32985,12 @@
           "go_type": "int"
         },
         {
+          "name": "Candidates11",
+          "json": "action_11_candidates",
+          "go_type": "int",
+          "optional": true
+        },
+        {
           "name": "UnknownOps",
           "json": "unknown_ops",
           "go_type": "int"
@@ -39279,13 +39285,18 @@
         {
           "name": "Color",
           "json": "color",
-          "go_type": "int",
-          "optional": true
+          "go_type": "int"
         },
         {
           "name": "Team",
           "json": "team",
           "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "TeamSource",
+          "json": "team_source",
+          "go_type": "string",
           "optional": true
         },
         {
@@ -41249,6 +41260,18 @@
           "optional": true
         },
         {
+          "name": "Action11Flag",
+          "json": "action_11_flag",
+          "go_type": "*int",
+          "optional": true
+        },
+        {
+          "name": "Action11Format",
+          "json": "action_11_envelope",
+          "go_type": "string",
+          "optional": true
+        },
+        {
           "name": "RawText",
           "json": "raw_text",
           "go_type": "string",
@@ -42680,13 +42703,18 @@
         {
           "name": "Color",
           "json": "color",
-          "go_type": "int",
-          "optional": true
+          "go_type": "int"
         },
         {
           "name": "Team",
           "json": "team",
           "go_type": "int",
+          "optional": true
+        },
+        {
+          "name": "TeamSource",
+          "json": "team_source",
+          "go_type": "string",
           "optional": true
         },
         {
@@ -42810,6 +42838,12 @@
           "go_type": "*LobbySettings",
           "ref": "replay.LobbySettings",
           "optional": true
+        },
+        {
+          "name": "TeamContext",
+          "json": "team_context",
+          "go_type": "TeamContext",
+          "ref": "replay.TeamContext"
         },
         {
           "name": "ScenarioName",
@@ -44262,6 +44296,39 @@
           "name": "Text",
           "json": "text",
           "go_type": "string",
+          "optional": true
+        }
+      ]
+    },
+    "replay.TeamContext": {
+      "package": "replay",
+      "name": "TeamContext",
+      "doc": "Lobby team choices are independent of slot order, player numbers, colors, trigger definitions and actual runtime alliances.",
+      "fields": [
+        {
+          "name": "Source",
+          "json": "source",
+          "go_type": "string"
+        },
+        {
+          "name": "InGameAlliancesVerified",
+          "json": "in_game_alliances_verified",
+          "go_type": "bool"
+        },
+        {
+          "name": "DiplomacyEffects",
+          "json": "change_diplomacy_effects",
+          "go_type": "int"
+        },
+        {
+          "name": "GraphTier",
+          "json": "trigger_graph_decode_tier",
+          "go_type": "string"
+        },
+        {
+          "name": "Warnings",
+          "json": "warnings",
+          "go_type": "[]string",
           "optional": true
         }
       ]

@@ -11,6 +11,7 @@ import (
 )
 
 const headerMetadataWindow = 8 << 20
+const replayMetadataFile = "metadata-v5.json"
 
 // OpenMetadata reads bounded windows, not the complete initial-state snapshot.
 // Consumers needing snapshot bytes must use ReplayCache.HeaderReader instead.
@@ -29,9 +30,9 @@ func OpenMetadata(path string) (*File, error) {
 // Metadata inspects bounded prefix/tail windows. Full snapshot bytes remain on
 // disk. An unavailable graph is explicit, never a guessed successful parse.
 func (c *ReplayCache) Metadata() (*File, error) {
-	// v4 invalidates player/AI metadata produced before complete lobby-slot
-	// consumption and active-slot marker support. Raw cached bytes remain valid.
-	target := filepath.Join(c.Dir, "metadata-v4.json")
+	// v5 invalidates fragmentary trigger graphs and adds explicit lobby-team
+	// provenance. Raw cached header/body bytes remain valid.
+	target := filepath.Join(c.Dir, replayMetadataFile)
 	if f, e := os.Open(target); e == nil {
 		var rec File
 		e = json.NewDecoder(io.LimitReader(f, maxReportBytes)).Decode(&rec)
@@ -100,7 +101,7 @@ func (c *ReplayCache) Metadata() (*File, error) {
 	} else {
 		rec.TriggerGraphOK = true
 		rec.TriggerGraphTier = classifyTriggerGraphTier(rec.TriggerGraph, rec.TriggerRegion)
-		if base > 0 {
+		if base > 0 && rec.TriggerGraphTier != "triggergraph_count_and_order_validated" {
 			rec.TriggerGraphTier = "triggergraph_bounded_candidate"
 			rec.TriggerGraph.Warnings = append(rec.TriggerGraph.Warnings, "graph searched within final 8 MiB of header; candidate parsing does not establish complete scenario coverage")
 		}

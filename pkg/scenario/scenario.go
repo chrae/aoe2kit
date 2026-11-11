@@ -781,6 +781,54 @@ func (f *File) TriggerGraph() (*triggergraph.Graph, error) {
 // this entry point separate lets replay readers reuse the versioned scenario
 // schema without pretending the surrounding replay header is a scenario file.
 func ParseInflatedTriggers(version string, data []byte) (*triggergraph.Graph, int, error) {
+	if version == "1.59" || version == "1.58" {
+		if graph, consumed, err := parseModernEmbeddedTriggers(data); err == nil {
+			return graph, consumed, nil
+		}
+	}
+	return parseLegacyEmbeddedTriggers(version, data)
+}
+
+func parseModernEmbeddedTriggers(data []byte) (*triggergraph.Graph, int, error) {
+	if len(data) < 13 {
+		return nil, 0, io.ErrUnexpectedEOF
+	}
+	version := math.Float64frombits(binary.LittleEndian.Uint64(data))
+	count := int(int32(binary.LittleEndian.Uint32(data[9:])))
+	if !(version >= 3 && version <= 6) || data[8] > 8 || count <= 0 || count > 20000 {
+		return nil, 0, errors.New("invalid embedded trigger header")
+	}
+	pos := 13
+	nodes := make([]*parsedNode, 0, count)
+	for i := 0; i < count; i++ {
+		node, used, err := DecodeTriggerNode(data[pos:])
+		if err != nil {
+			return nil, pos, fmt.Errorf("embedded trigger %d: %w", i, err)
+		}
+		node.Start, node.End = pos, pos+used
+		nodes = append(nodes, node)
+		pos += used
+	}
+	if count > (len(data)-pos)/4 {
+		return nil, pos, io.ErrUnexpectedEOF
+	}
+	seen := make([]bool, count)
+	for i := 0; i < count; i++ {
+		id := int(binary.LittleEndian.Uint32(data[pos+i*4:]))
+		if id >= count || seen[id] {
+			return nil, pos, errors.New("embedded trigger display order is not a permutation")
+		}
+		seen[id] = true
+	}
+	graph, err := triggerGraphFromTypedNodes(nodes, 13, pos)
+	if err != nil {
+		return nil, pos, err
+	}
+	graph.Warnings = append(graph.Warnings, "modern embedded trigger count and display-order validated")
+	return graph, pos + count*4, nil
+}
+
+func parseLegacyEmbeddedTriggers(version string, data []byte) (*triggergraph.Graph, int, error) {
 	spec, err := LoadDESpecForVersion(version)
 	if err != nil {
 		return nil, 0, err

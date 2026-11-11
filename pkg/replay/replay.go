@@ -95,8 +95,9 @@ type PlayerSlot struct {
 	Name           string `json:"name,omitempty"`
 	AIName         string `json:"ai_name,omitempty"`
 	DLCID          int    `json:"dlc_id,omitempty"`
-	Color          int    `json:"color,omitempty"`
+	Color          int    `json:"color"`
 	Team           int    `json:"team,omitempty"`
+	TeamSource     string `json:"team_source,omitempty"`
 	SelectedTeamID int    `json:"selected_team_id,omitempty"`
 	ResolvedTeamID int    `json:"resolved_team_id,omitempty"`
 	Civ            int    `json:"civ,omitempty"`
@@ -280,51 +281,38 @@ func Parse(data []byte) (*File, error) {
 }
 
 func parseTriggerGraphWithEmbeddedFallback(header []byte) (*triggergraph.Graph, *triggergraph.Region, error) {
+	if embedded, region, err := parseEmbedded159TriggerGraph(header); err == nil {
+		return embedded, region, nil
+	}
 	graph, region, err := triggergraph.ParseLocated(header)
 	if err == nil {
 		return graph, region, nil
 	}
-	if embedded, embeddedRegion, embeddedErr := parseEmbedded159TriggerGraph(header); embeddedErr == nil {
-		return embedded, embeddedRegion, nil
-	}
 	return nil, nil, err
 }
 
-// parseEmbedded159TriggerGraph handles the scenario section copied into a
-// current DE replay. The replay copy is not the older standalone trigger
-// graph wire shape: it carries a five-byte trailer between trigger records
-// and condition records use marker 34. The versioned scenario parser owns
-// those details, so this fallback only locates a bounded section candidate.
+// parseEmbedded159TriggerGraph locates a scenario section in bounded header
+// bytes. The scenario parser distinguishes modern contiguous records with
+// validated count/order from older replay copies with five-byte trailers.
 func parseEmbedded159TriggerGraph(header []byte) (*triggergraph.Graph, *triggergraph.Region, error) {
-	region, err := triggergraph.FindRegion(header)
-	if err != nil {
-		return nil, nil, err
-	}
-	strings := triggergraph.ScenarioStrings(header)
-	start := region.Start
-	if len(strings) > 0 {
-		start = strings[len(strings)-1].EndOffset
-	}
-	end := region.End
-	if end <= start || end > len(header) {
-		return nil, nil, fmt.Errorf("invalid embedded scenario search bounds %d..%d", start, end)
-	}
-	const maxCandidates = 256 * 1024
-	if end-start > maxCandidates {
-		end = start + maxCandidates
-	}
+	start, end := 0, len(header)
+	attempts := 0
 	for candidate := start; candidate+13 <= end; candidate++ {
 		// Triggers begins with f64 version, s8 instruction marker, and s32
 		// trigger count. This cheap shape gate avoids invoking the full parser
 		// on the surrounding replay state tail.
 		versionBits := binary.LittleEndian.Uint64(header[candidate:])
 		version := math.Float64frombits(versionBits)
-		if version < 3 || version > 6 || header[candidate+8] > 8 {
+		if !(version >= 3 && version <= 6) || header[candidate+8] > 8 {
 			continue
 		}
 		count := int(int32(binary.LittleEndian.Uint32(header[candidate+9:])))
 		if count <= 0 || count > 20000 {
 			continue
+		}
+		attempts++
+		if attempts > 64 {
+			return nil, nil, fmt.Errorf("embedded scenario candidate budget exceeded")
 		}
 		graph, consumed, parseErr := scenario.ParseInflatedTriggers("1.59", header[candidate:end])
 		if parseErr != nil || graph == nil || graph.TriggerCount != count || graph.EffectCount+graph.ConditionCount == 0 {
@@ -333,9 +321,7 @@ func parseEmbedded159TriggerGraph(header []byte) (*triggergraph.Graph, *triggerg
 		graph.Start += candidate
 		graph.End += candidate
 		graph.Warnings = append(graph.Warnings, "trigger graph decoded from embedded DE 1.59 scenario section")
-		located := *region
-		located.Start = candidate
-		located.End = candidate + consumed
+		located := triggergraph.Region{Start: candidate, End: candidate + consumed}
 		located.Warnings = append(located.Warnings, "embedded DE 1.59 scenario section located by bounded schema probe")
 		return graph, &located, nil
 	}
@@ -868,6 +854,7 @@ func readDEPlayers(c *cursor, save float64) ([]PlayerSlot, error) {
 				DLCID:          dlcID,
 				Color:          int(color),
 				Team:           normalizedLobbyTeam(resolvedTeam),
+				TeamSource:     "lobby_picks",
 				SelectedTeamID: selectedTeam,
 				ResolvedTeamID: resolvedTeam,
 				Civ:            int(civ),

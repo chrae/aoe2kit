@@ -52,6 +52,7 @@ type EventCounts struct {
 	UntypedActions int            `json:"untyped_actions"`
 	SpatialActions int            `json:"spatial_actions"`
 	Resigns        int            `json:"resigns"`
+	Candidates11   int            `json:"action_11_candidates,omitempty"`
 	UnknownOps     int            `json:"unknown_ops"`
 	ActionIDs      map[int]int    `json:"action_ids,omitempty"`
 	EventTypes     map[string]int `json:"event_types,omitempty"`
@@ -85,6 +86,8 @@ type ReplayEvent struct {
 	SourceOffset   int               `json:"source_offset,omitempty"`
 	PayloadBytes   int               `json:"payload_bytes,omitempty"`
 	RawHex         string            `json:"raw_hex,omitempty"`
+	Action11Flag   *int              `json:"action_11_flag,omitempty"`
+	Action11Format string            `json:"action_11_envelope,omitempty"`
 	RawText        string            `json:"raw_text,omitempty"`
 	Source         string            `json:"source"`
 	Confidence     string            `json:"confidence"`
@@ -155,6 +158,11 @@ func ExtractEvents(path string, opts EventOptions) (*EventReport, error) {
 		}
 	}
 	players := feedbackPlayers(rec.Players, names, eventsToFeedback(events))
+	for _, player := range players {
+		if raw := names[player.PlayerID]; raw != "" && raw != player.Name {
+			warnings = appendUniqueWarning(warnings, "chat metadata names conflict with the header player-number roster; roster names are retained and raw MessageAGP is preserved, but conflicting speaker identity remains unverified")
+		}
+	}
 	AnnotateFeedbackPhases(events)
 	fillEventPlayerNames(events, players)
 	if opts.IncludeObjectIndex {
@@ -219,6 +227,10 @@ func ExtractActionStreamEvents(body []byte, opts EventOptions) ([]ReplayEvent, m
 					events = append(events, event)
 				case "resign":
 					counts.Resigns++
+					events = append(events, event)
+				case "action_11_candidate":
+					counts.Candidates11++
+					warnings = appendUniqueWarning(warnings, action11Uncertainty)
 					events = append(events, event)
 				default:
 					if event.X != 0 || event.Y != 0 || event.TargetID != 0 {
@@ -433,6 +445,8 @@ func CountReplayEvents(events []ReplayEvent) EventCounts {
 			counts.UntypedActions++
 		case "resign":
 			counts.Resigns++
+		case "action_11_candidate":
+			counts.Candidates11++
 		case "move", "order", "patrol", "attack_move", "attack_ground", "build", "wall", "gather_point", "de_multi_gatherpoint", "special", "ungarrison", "ai_order":
 			counts.SpatialActions++
 		case "unknown_operation":

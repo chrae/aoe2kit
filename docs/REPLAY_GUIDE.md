@@ -14,6 +14,16 @@ inferred says so in its label.
 
 ## Orientation
 
+Action 11 is not unconditionally classified as a resignation. A validated
+DE length-prefixed packet with a one-byte zero flag and player 1..8 retains
+the `resign` classification. Nonzero flags, ambiguous legacy layouts and
+unsupported payloads are retained as `action_11_candidate`, with raw bytes,
+envelope information, the flag when decoded, and an explicit warning. These
+candidates do not count as resignations, establish losers/winners, or set the
+health report's last-resign anchor. A legacy upstream schema calls the flag
+`disconnected`; that meaning in DE, actual player departure and any crash
+relationship remain unverified. Repeated candidates are preserved individually.
+
 ```sh
 ./kit replay summary game.aoe2record --text     # players, civs, teams, result, map
 ./kit replay info game.aoe2record --text        # compact metadata
@@ -236,3 +246,16 @@ heavy: run one replay command at a time. Details and limits are in
 - Effective technology arrays are not yet mapped to DAT tech ids.
 - Full deterministic trigger-section walking in recordings is not complete;
   some recordings identify by `fallback:terrain`.
+
+Player identity and team provenance: lobby `slot`, decoded player number
+(`player_id` in summaries), and raw lobby `color` are separate fields. Color
+zero is emitted explicitly. Feedback names use the decoded player-number
+roster; conflicting chat metadata remains available in raw MessageAGP and
+produces a speaker-identity warning. The `team`, `selected_team_id`, and
+`resolved_team_id` keys remain compatible and carry `team_source=lobby_picks`.
+Summary/info add `team_context` and never claim verified in-game alliances.
+Warnings flag defined change-diplomacy effects or heuristic/missing graph
+coverage. Definitions do not establish which triggers or scripts executed.
+Modern embedded trigger sections are validated against their declared record
+count and display-order permutation before taking precedence over fragments.
+Derived metadata caches are refreshed; the raw replay cache stays reusable.

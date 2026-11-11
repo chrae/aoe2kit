@@ -50,7 +50,7 @@ go run ./cmd/apiref --kit ./kit \
 Flags marked **required** in the tables below appear unbracketed in the tool's own
 usage line and must be supplied.
 
-Tool version `v0.4.4` — 257 commands, 19 probed.
+Tool version `0.4.5` — 257 commands, 19 probed.
 
 ## Command index
 

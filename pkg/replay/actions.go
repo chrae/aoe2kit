@@ -74,8 +74,30 @@ func DecodeActionEvent(actionID int, payload []byte, timeMS int, offset int, inc
 	}
 	switch actionID {
 	case actionResign:
-		event.Type = "resign"
-		return event, playerID > 0
+		event.Action11Format = "unrecognized"
+		var flag *int
+		if ok && len(body) == 1 {
+			value := int(body[0])
+			flag = &value
+			event.Action11Format = "de_length_prefixed"
+		} else if !ok && len(payload) == 3 && payload[1] <= 8 {
+			// Legacy schema: player id, player number, disconnected flag.
+			value := int(payload[2])
+			flag = &value
+			event.Action11Format = "legacy_three_byte"
+		}
+		event.Action11Flag = flag
+		if ok && flag != nil && *flag == 0 && playerID >= 1 && playerID <= 8 {
+			event.Type = "resign"
+			return event, true
+		}
+		event.Type, event.ActionName = "action_11_candidate", "ACTION_11_CANDIDATE"
+		event.Confidence = "unverified_not_resignation"
+		event.RawHex = hex.EncodeToString(payload)
+		if playerID < 1 || playerID > 8 {
+			event.PlayerID = 0
+		}
+		return event, true
 	case actionMove:
 		if len(body) < 20 {
 			return ReplayEvent{}, false
@@ -341,6 +363,8 @@ func DecodeActionEvent(actionID int, payload []byte, timeMS int, offset int, inc
 	}
 	return ReplayEvent{}, false
 }
+
+const action11Uncertainty = "action-11 records with nonzero flags or unsupported payloads are preserved as candidates, not resignations; an upstream legacy schema calls the flag disconnected, but its DE meaning, player departure and any crash relationship remain unverified"
 
 func actionEnvelope(payload []byte) (int, []byte, bool) {
 	if len(payload) < 3 {
